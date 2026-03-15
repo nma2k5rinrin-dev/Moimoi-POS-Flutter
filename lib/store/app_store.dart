@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_model.dart';
 import '../models/store_info_model.dart';
@@ -8,9 +9,14 @@ import '../models/product_model.dart';
 import '../models/category_model.dart';
 import '../models/notification_model.dart';
 import '../models/upgrade_request_model.dart';
+import '../utils/quota_helper.dart';
+import '../widgets/upgrade_dialog.dart';
 
 class AppStore extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
+
+  /// Global context set by MaterialApp builder for showing dialogs.
+  BuildContext? rootContext;
 
   /// Lightweight notifier that ONLY fires when auth state changes (login/logout).
   /// Used by GoRouter.refreshListenable so router doesn't re-evaluate on every
@@ -20,6 +26,10 @@ class AppStore extends ChangeNotifier {
   // ── Auth & Users ─────────────────────────────────────────
   UserModel? currentUser;
   List<UserModel> users = [];
+
+  /// Users visible to admin/staff — never includes sadmin accounts.
+  List<UserModel> get visibleUsers =>
+      users.where((u) => u.role != 'sadmin').toList();
   bool isLoading = false;
 
   // Store data keyed by storeId
@@ -211,9 +221,104 @@ class AppStore extends ChangeNotifier {
       authNotifier.notify();
       notifyListeners();
       await loadInitialData(user);
+
+      // Cache credentials for biometric login
+      await saveLoginCredentials(cleanUsername, password);
+
       return 'success';
     } catch (e) {
       debugPrint('[login] $e');
+      return 'invalid';
+    }
+  }
+
+  // ── Biometric Credential Caching ────────────────────────────
+  static const _kBioUser = 'bio_username';
+  static const _kBioPass = 'bio_password';
+
+  /// Save login credentials for biometric re-authentication.
+  Future<void> saveLoginCredentials(String username, String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kBioUser, username);
+    await prefs.setString(_kBioPass, password);
+  }
+
+  /// Check if saved credentials exist.
+  Future<bool> hasSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.containsKey(_kBioUser) && prefs.containsKey(_kBioPass);
+  }
+
+  /// Get saved credentials (returns null if none).
+  Future<Map<String, String>?> getSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString(_kBioUser);
+    final password = prefs.getString(_kBioPass);
+    if (username == null || password == null) return null;
+    return {'username': username, 'password': password};
+  }
+
+  /// Clear saved credentials (call on logout).
+  Future<void> clearSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kBioUser);
+    await prefs.remove(_kBioPass);
+  }
+
+  /// Login using saved credentials after biometric verification.
+  Future<String> loginWithBiometric() async {
+    final creds = await getSavedCredentials();
+    if (creds == null) return 'no_credentials';
+    return login(creds['username']!, creds['password']!);
+  }
+
+  // ── Login with PIN ────────────────────────────────────────
+  /// Requires both username and PIN for secure authentication.
+  Future<String> loginWithPin(String username, String pin) async {
+    final cleanUsername = username.toLowerCase().replaceAll(RegExp(r'\s'), '');
+    try {
+      final response = await _supabase
+          .from('users')
+          .select()
+          .ilike('username', cleanUsername);
+
+      if (response.isEmpty) return 'user_not_found';
+
+      final rawUser = (response as List).cast<Map<String, dynamic>>().first;
+      final userPin = rawUser['pin'];
+
+      // Check if user has set up a PIN
+      if (userPin == null || userPin.toString().isEmpty) {
+        return 'no_pin';
+      }
+
+      // Compare PIN
+      if (userPin.toString() != pin) {
+        return 'wrong_pin';
+      }
+
+      var user = UserModel.fromMap(rawUser);
+
+      // Check VIP expiration
+      if (user.role == 'admin' && user.expiresAt != null) {
+        final isExpired =
+            DateTime.now().isAfter(DateTime.parse(user.expiresAt!));
+        if (isExpired && user.isPremium) {
+          user = user.copyWith(isPremium: false, showVipExpired: true);
+          await _supabase
+              .from('users')
+              .update({'is_premium': false, 'show_vip_expired': true})
+              .eq('username', user.username);
+        }
+      }
+
+      currentUser = user;
+      authNotifier.notify();
+      notifyListeners();
+      await loadInitialData(user);
+      return 'success';
+    } catch (e) {
+      debugPrint('[loginWithPin] $e');
       return 'invalid';
     }
   }
@@ -225,6 +330,7 @@ class AppStore extends ChangeNotifier {
     required String storeName,
     required String username,
     required String password,
+    String address = '',
   }) async {
     try {
       final existing = await _supabase
@@ -246,12 +352,14 @@ class AppStore extends ChangeNotifier {
       };
 
       await _supabase.from('users').insert(newUser);
-      await _supabase.from('store_infos').insert({
+      final storeData = <String, dynamic>{
         'store_id': username,
         'name': storeName.isNotEmpty ? storeName : fullname,
         'phone': phone,
         'is_premium': false,
-      });
+      };
+      if (address.isNotEmpty) storeData['address'] = address;
+      await _supabase.from('store_infos').insert(storeData);
 
       final mappedUser = UserModel.fromMap(newUser);
       currentUser = mappedUser;
@@ -296,6 +404,7 @@ class AppStore extends ChangeNotifier {
     if (updatedData.containsKey('showVipExpired')) dbData['show_vip_expired'] = updatedData['showVipExpired'];
     if (updatedData.containsKey('showVipCongrat')) dbData['show_vip_congrat'] = updatedData['showVipCongrat'];
     if (updatedData.containsKey('avatar')) dbData['avatar'] = updatedData['avatar'];
+    if (updatedData.containsKey('pin')) dbData['pin'] = updatedData['pin'];
 
     try {
       await _supabase.from('users').update(dbData).eq('username', username);
@@ -314,6 +423,7 @@ class AppStore extends ChangeNotifier {
             isPremium: updatedData['isPremium'] ?? u.isPremium,
             expiresAt: updatedData['expiresAt'] ?? u.expiresAt,
             createdBy: u.createdBy,
+            pin: updatedData['pin'] ?? u.pin,
             showVipExpired: updatedData['showVipExpired'] ?? u.showVipExpired,
             showVipCongrat: updatedData['showVipCongrat'] ?? u.showVipCongrat,
           );
@@ -358,6 +468,14 @@ class AppStore extends ChangeNotifier {
       return;
     }
 
+    // Quota check for Basic tier
+    final quota = QuotaHelper(this);
+    if (!quota.canAddStaff) {
+      final ctx = rootContext;
+      if (ctx != null) await showUpgradePrompt(ctx, quota.staffLimitMsg);
+      return;
+    }
+
     final newStaffRow = {
       'username': username,
       'pass': password,
@@ -396,6 +514,8 @@ class AppStore extends ChangeNotifier {
       'phone': info.phone,
       'address': info.address,
       'logo_url': info.logoUrl,
+      'tax_id': info.taxId,
+      'open_hours': info.openHours,
       'bank_id': info.bankId,
       'bank_account': info.bankAccount,
       'bank_owner': info.bankOwner,
@@ -410,6 +530,13 @@ class AppStore extends ChangeNotifier {
 
   // ── Tables ──────────────────────────────────────────────
   Future<void> addTable(String tableName) async {
+    // Quota check for Basic tier
+    final quota = QuotaHelper(this);
+    if (!quota.canAddTable) {
+      final ctx = rootContext;
+      if (ctx != null) await showUpgradePrompt(ctx, quota.tableLimitMsg);
+      return;
+    }
     final storeId = getStoreId();
     final currentTablesList = storeTables[storeId] ?? [];
     if (currentTablesList.contains(tableName)) return;
@@ -456,6 +583,13 @@ class AppStore extends ChangeNotifier {
 
   // ── Categories ──────────────────────────────────────────
   Future<void> addCategory(String categoryName) async {
+    // Quota check for Basic tier
+    final quota = QuotaHelper(this);
+    if (!quota.canAddCategory) {
+      final ctx = rootContext;
+      if (ctx != null) await showUpgradePrompt(ctx, quota.categoryLimitMsg);
+      return;
+    }
     final storeId = getStoreId();
     final newCat = {
       'id': 'cat_${DateTime.now().millisecondsSinceEpoch}',
@@ -497,6 +631,13 @@ class AppStore extends ChangeNotifier {
 
   // ── Products ────────────────────────────────────────────
   Future<void> addProduct(ProductModel product) async {
+    // Quota check for Basic tier
+    final quota = QuotaHelper(this);
+    if (!quota.canAddProduct) {
+      final ctx = rootContext;
+      if (ctx != null) await showUpgradePrompt(ctx, quota.productLimitMsg);
+      return;
+    }
     final storeId = getStoreId();
     final newProd = {
       'id': DateTime.now().millisecondsSinceEpoch.toString(),
@@ -506,6 +647,8 @@ class AppStore extends ChangeNotifier {
       'image': product.image,
       'category': product.category,
       'description': product.description,
+      'is_out_of_stock': product.isOutOfStock,
+      'is_hot': product.isHot,
     };
     await _supabase.from('products').insert(newProd);
     products.putIfAbsent(storeId, () => []);
@@ -521,6 +664,8 @@ class AppStore extends ChangeNotifier {
       'image': updatedProduct.image,
       'category': updatedProduct.category,
       'description': updatedProduct.description,
+      'is_out_of_stock': updatedProduct.isOutOfStock,
+      'is_hot': updatedProduct.isHot,
     }).eq('id', updatedProduct.id);
     products[storeId] = (products[storeId] ?? [])
         .map((p) => p.id == updatedProduct.id ? updatedProduct : p)
@@ -574,6 +719,24 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateOrderItemNote(
+      String orderId, String itemId, String note) async {
+    final order = orders.firstWhere((o) => o.id == orderId,
+        orElse: () => const OrderModel(id: ''));
+    if (order.id.isEmpty) return;
+    final newItems =
+        order.items.map((i) => i.id == itemId ? i.copyWith(note: note) : i).toList();
+    await _supabase
+        .from('orders')
+        .update({'items': newItems.map((i) => i.toMap()).toList()})
+        .eq('id', orderId);
+    orders = orders
+        .map((o) => o.id == orderId ? o.copyWith(items: newItems) : o)
+        .toList();
+    notifyListeners();
+  }
+
+
   Future<void> updateOrderItems(
       String orderId, List<OrderItemModel> newItems, double newTotal) async {
     await _supabase.from('orders').update({
@@ -597,6 +760,14 @@ class AppStore extends ChangeNotifier {
   Future<void> checkoutOrder({String paymentStatus = 'unpaid'}) async {
     if (cart.isEmpty) return;
 
+    // Quota check for Basic tier
+    final quota = QuotaHelper(this);
+    if (!quota.canPlaceOrder) {
+      final ctx = rootContext;
+      if (ctx != null) await showUpgradePrompt(ctx, quota.orderLimitMsg);
+      return;
+    }
+
     final totalAmount = getCartTotal();
     final storeId = getStoreId();
     final orderId =
@@ -611,7 +782,7 @@ class AppStore extends ChangeNotifier {
       'payment_status': paymentStatus,
       'time': DateTime.now().toIso8601String(),
       'total_amount': totalAmount,
-      'created_by': currentUser?.username ?? 'unknown',
+      'created_by': (currentUser?.fullname.isNotEmpty == true ? currentUser!.fullname : currentUser?.username) ?? 'unknown',
     };
 
     try {
@@ -995,7 +1166,10 @@ class AppStore extends ChangeNotifier {
       orders.where((o) => storeUsernames.contains(o.createdBy)).toList();
 
   int get pendingKitchen =>
-      storeOrders.where((o) => o.status == 'pending').length;
+      visibleOrders.where((o) => o.status == 'pending').length;
+
+  int get cookingKitchen =>
+      visibleOrders.where((o) => o.status == 'cooking').length;
 
   int get unpaidTables =>
       storeOrders.where((o) => o.status == 'cooking').length;

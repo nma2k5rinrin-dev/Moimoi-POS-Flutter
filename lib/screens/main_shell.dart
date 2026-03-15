@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -72,9 +74,6 @@ class _MainShellState extends State<MainShell> {
                 if (!isWide)
                   _MobileHeader(store: store, storeInfo: storeInfo),
 
-                // SuperAdmin store selector
-                if (store.currentUser?.role == 'sadmin')
-                  const StoreSelector(),
 
                 Expanded(child: widget.child),
               ],
@@ -83,42 +82,25 @@ class _MainShellState extends State<MainShell> {
         ],
       ),
 
-      // ── Mobile Cart FAB ──────────────────
-      floatingActionButton: (!isWide && isOnOrderPage && store.cart.isNotEmpty)
-          ? FloatingActionButton.extended(
-              onPressed: () => MobileCartSheet.show(context),
-              backgroundColor: AppColors.emerald500,
-              icon: const Icon(Icons.shopping_cart, color: Colors.white),
-              label: Text(
-                '${store.cartItemCount} món · ${_formatShortCurrency(store.getCartTotal())}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-
-      // ── Bottom Nav (Mobile) ──────────────
+      // ── Cart Bar (Mobile) ──────────────────
       bottomNavigationBar: isWide
           ? null
-          : _MobileBottomNav(
-              menuItems: menuItems,
-              currentIndex: currentIdx,
-              store: store,
-              onTap: (i) => _onTabTapped(i, menuItems),
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Gradient cart bar
+                if (!isWide && isOnOrderPage && store.cart.isNotEmpty)
+                  _MobileCartBar(store: store),
+                // Bottom Navigation
+                _MobileBottomNav(
+                  menuItems: menuItems,
+                  currentIndex: currentIdx,
+                  store: store,
+                  onTap: (i) => _onTabTapped(i, menuItems),
+                ),
+              ],
             ),
     );
-  }
-
-  String _formatShortCurrency(double amount) {
-    if (amount >= 1000000) {
-      return '${(amount / 1000000).toStringAsFixed(1)}tr';
-    } else if (amount >= 1000) {
-      return '${(amount / 1000).toStringAsFixed(0)}k';
-    }
-    return '${amount.toStringAsFixed(0)}đ';
   }
 }
 
@@ -391,7 +373,7 @@ class _DesktopSidebar extends StatelessWidget {
                     backgroundColor: AppColors.emerald100,
                     backgroundImage:
                         store.currentUser?.avatar.isNotEmpty == true
-                            ? NetworkImage(store.currentUser!.avatar)
+                            ? MemoryImage(_decodeAvatar(store.currentUser!.avatar))
                             : null,
                     child: store.currentUser?.avatar.isEmpty != false
                         ? Text(
@@ -473,17 +455,23 @@ class _DesktopSidebar extends StatelessWidget {
                     CircleAvatar(
                       radius: 24,
                       backgroundColor: AppColors.emerald100,
-                      child: Text(
-                        store.currentUser?.username.isNotEmpty == true
-                            ? store.currentUser!.username[0]
-                                .toUpperCase()
-                            : 'U',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.emerald600,
-                          fontSize: 18,
-                        ),
-                      ),
+                      backgroundImage:
+                          store.currentUser?.avatar.isNotEmpty == true
+                              ? MemoryImage(_decodeAvatar(store.currentUser!.avatar))
+                              : null,
+                      child: store.currentUser?.avatar.isEmpty != false
+                          ? Text(
+                              store.currentUser?.username.isNotEmpty == true
+                                  ? store.currentUser!.username[0]
+                                      .toUpperCase()
+                                  : 'U',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.emerald600,
+                                fontSize: 18,
+                              ),
+                            )
+                          : null,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -665,18 +653,24 @@ class _MobileHeader extends StatelessWidget {
                             CircleAvatar(
                               radius: 20,
                               backgroundColor: AppColors.emerald100,
-                              child: Text(
-                                store.currentUser?.username
-                                            .isNotEmpty ==
-                                        true
-                                    ? store.currentUser!.username[0]
-                                        .toUpperCase()
-                                    : 'U',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.emerald600,
-                                ),
-                              ),
+                              backgroundImage:
+                                  store.currentUser?.avatar.isNotEmpty == true
+                                      ? MemoryImage(_decodeAvatar(store.currentUser!.avatar))
+                                      : null,
+                              child: store.currentUser?.avatar.isEmpty != false
+                                  ? Text(
+                                      store.currentUser?.username
+                                                  .isNotEmpty ==
+                                              true
+                                          ? store.currentUser!.username[0]
+                                              .toUpperCase()
+                                          : 'U',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.emerald600,
+                                      ),
+                                    )
+                                  : null,
                             ),
                             const SizedBox(width: 12),
                             Column(
@@ -737,21 +731,140 @@ class _MobileHeader extends StatelessWidget {
             child: CircleAvatar(
               radius: 16,
               backgroundColor: AppColors.emerald100,
-              child: Text(
-                store.currentUser?.username.isNotEmpty == true
-                    ? store.currentUser!.username[0].toUpperCase()
-                    : 'U',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  color: AppColors.emerald600,
-                ),
-              ),
+              backgroundImage:
+                  store.currentUser?.avatar.isNotEmpty == true
+                      ? MemoryImage(_decodeAvatar(store.currentUser!.avatar))
+                      : null,
+              child: store.currentUser?.avatar.isEmpty != false
+                  ? Text(
+                      store.currentUser?.username.isNotEmpty == true
+                          ? store.currentUser!.username[0].toUpperCase()
+                          : 'U',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: AppColors.emerald600,
+                      ),
+                    )
+                  : null,
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+// ─── Mobile Cart Bar ──────────────────────────────────
+class _MobileCartBar extends StatelessWidget {
+  final AppStore store;
+  const _MobileCartBar({required this.store});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => MobileCartSheet.show(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.emerald500, AppColors.emerald600],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.emerald500.withValues(alpha: 0.25),
+              blurRadius: 16,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Cart icon with badge
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.shopping_bag_rounded,
+                    color: Colors.white, size: 28),
+                Positioned(
+                  top: -6,
+                  right: -8,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: AppColors.red500,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '${store.cartItemCount}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 10),
+            // Price
+            Expanded(
+              child: Text(
+                _formatCurrency(store.getCartTotal()),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            // View cart button
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Xem giỏ hàng',
+                    style: TextStyle(
+                      color: AppColors.emerald600,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(width: 6),
+                  Icon(Icons.arrow_forward_rounded,
+                      size: 16, color: AppColors.emerald600),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatCurrency(double amount) {
+    final formatted = amount.toStringAsFixed(0).replaceAllMapped(
+        RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.');
+    return '$formatted đ';
   }
 }
 
@@ -794,30 +907,35 @@ class _MobileBottomNav extends StatelessWidget {
                       Stack(
                         clipBehavior: Clip.none,
                         children: [
+                          // Pill-shaped active indicator
                           AnimatedContainer(
                             duration:
                                 const Duration(milliseconds: 300),
-                            padding: const EdgeInsets.all(6),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isActive ? 16 : 6,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: isActive
                                   ? AppColors.emerald50
                                   : Colors.transparent,
                               borderRadius:
-                                  BorderRadius.circular(12),
+                                  BorderRadius.circular(16),
                             ),
                             child: Icon(
                               item.icon,
                               color: isActive
                                   ? AppColors.emerald600
                                   : AppColors.slate400,
-                              size: 24,
+                              size: isActive ? 22 : 24,
                             ),
                           ),
+                          // Pending badge (red, left)
                           if (item.path == '/kitchen' &&
                               store.pendingKitchen > 0)
                             Positioned(
                               top: -4,
-                              right: -6,
+                              left: -6,
                               child: Container(
                                 padding:
                                     const EdgeInsets.symmetric(
@@ -846,6 +964,40 @@ class _MobileBottomNav extends StatelessWidget {
                                 ),
                               ),
                             ),
+                          // Cooking badge (orange, right)
+                          if (item.path == '/kitchen' &&
+                              store.cookingKitchen > 0)
+                            Positioned(
+                              top: -4,
+                              right: -6,
+                              child: Container(
+                                padding:
+                                    const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: AppColors.amber500,
+                                  borderRadius:
+                                      BorderRadius.circular(10),
+                                  border: Border.all(
+                                      color: Colors.white,
+                                      width: 2),
+                                ),
+                                constraints:
+                                    const BoxConstraints(
+                                        minWidth: 17,
+                                        minHeight: 17),
+                                child: Text(
+                                  '${store.cookingKitchen > 99 ? '99+' : store.cookingKitchen}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 2),
@@ -853,8 +1005,10 @@ class _MobileBottomNav extends StatelessWidget {
                         duration:
                             const Duration(milliseconds: 300),
                         style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
+                          fontSize: isActive ? 12 : 10,
+                          fontWeight: isActive
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                           color: isActive
                               ? AppColors.emerald600
                               : AppColors.slate400,
@@ -871,4 +1025,9 @@ class _MobileBottomNav extends StatelessWidget {
       ),
     );
   }
+}
+
+Uint8List _decodeAvatar(String dataUri) {
+  final base64Part = dataUri.contains(',') ? dataUri.split(',').last : dataUri;
+  return base64Decode(base64Part);
 }

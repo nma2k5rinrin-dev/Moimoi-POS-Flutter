@@ -5,6 +5,8 @@ import '../../models/product_model.dart';
 import '../../models/category_model.dart';
 import '../../utils/constants.dart';
 import '../../utils/format.dart';
+import 'add_category_screen.dart';
+import 'add_product_screen.dart';
 
 class MenuManagementSection extends StatefulWidget {
   final VoidCallback? onBack;
@@ -18,11 +20,16 @@ class _MenuManagementSectionState extends State<MenuManagementSection>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _searchQuery = '';
+  String? _subScreen; // 'addCategory' | 'addProduct' | null
+  ProductModel? _editingProduct;
+  CategoryModel? _editingCategory;
+
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() => setState(() {}));
   }
 
   @override
@@ -33,202 +40,254 @@ class _MenuManagementSectionState extends State<MenuManagementSection>
 
   @override
   Widget build(BuildContext context) {
+    // Sub-screen routing
+    if (_subScreen == 'addCategory') {
+      return AddCategoryScreen(
+          existingCategory: _editingCategory,
+          onBack: () => setState(() {
+            _subScreen = null;
+            _editingCategory = null;
+          }));
+    }
+    if (_subScreen == 'addProduct') {
+      return AddProductScreen(
+          existingProduct: _editingProduct,
+          onBack: () => setState(() {
+            _subScreen = null;
+            _editingProduct = null;
+          }));
+    }
+
+    final store = context.watch<AppStore>();
+    final categories = store.currentCategories;
+    final isProductsTab = _tabController.index == 0;
+
+
     return Container(
       color: AppColors.slate50,
       child: Column(
         children: [
-          // Header
-          Container(
+          // ── Header ──────────────────────────────────
+          Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    if (widget.onBack != null)
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: widget.onBack,
-                      ),
-                    const Expanded(
-                      child: Text(
-                        'Quản Lý Thực Đơn',
+                if (widget.onBack != null)
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded, size: 22),
+                    onPressed: widget.onBack,
+                  ),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.emerald50,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.restaurant_menu_rounded,
+                      color: AppColors.emerald600),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Quản Lý Danh Mục & Thực Đơn',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
                           color: AppColors.slate800,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.slate200),
-                  ),
-                  child: TabBar(
-                    controller: _tabController,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: AppColors.slate500,
-                    labelStyle: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 14),
-                    indicator: BoxDecoration(
-                      color: AppColors.emerald500,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    dividerColor: Colors.transparent,
-                    padding: const EdgeInsets.all(4),
-                    tabs: const [
-                      Tab(text: '🍽️ Sản Phẩm'),
-                      Tab(text: '🏷️ Danh Mục'),
+                      Text(
+                        'Thêm/sửa món ăn, danh mục',
+                        style:
+                            TextStyle(fontSize: 13, color: AppColors.slate500),
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
           ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _ProductsTab(
-                  searchQuery: _searchQuery,
-                  onSearchChanged: (q) => setState(() => _searchQuery = q),
+          const SizedBox(height: 16),
+
+          // ── Panel 1: Pill Tab Bar ───────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.slate200),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                labelColor: Colors.white,
+                unselectedLabelColor: AppColors.slate500,
+                labelStyle: const TextStyle(
+                    fontWeight: FontWeight.w700, fontSize: 14),
+                unselectedLabelStyle: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 14),
+                indicator: BoxDecoration(
+                  color: AppColors.emerald500,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const _CategoriesTab(),
-              ],
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                padding: const EdgeInsets.all(4),
+                tabs: const [
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.restaurant_menu_rounded, size: 18),
+                        SizedBox(width: 6),
+                        Text('Sản Phẩm'),
+                      ],
+                    ),
+                  ),
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.sell_outlined, size: 18),
+                        SizedBox(width: 6),
+                        Text('Danh Mục'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Panel 2: Search Bar ────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.slate200),
+              ),
+              child: TextField(
+                onChanged: (q) => setState(() => _searchQuery = q),
+                decoration: InputDecoration(
+                  hintText: isProductsTab
+                      ? 'Tìm kiếm sản phẩm...'
+                      : 'Tìm kiếm danh mục...',
+                  hintStyle: const TextStyle(
+                      color: AppColors.slate400,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500),
+                  prefixIcon: const Icon(Icons.search,
+                      color: AppColors.slate400, size: 20),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Panel 3: List Content ──────────────────
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.slate200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _ProductsTab(
+                      searchQuery: _searchQuery,
+                      onEditProduct: (product) {
+                        setState(() {
+                          _editingProduct = product;
+                          _subScreen = 'addProduct';
+                        });
+                      },
+                    ),
+                    _CategoriesTab(
+                      searchQuery: _searchQuery,
+                      onEditCategory: (cat) {
+                        setState(() {
+                          _editingCategory = cat;
+                          _subScreen = 'addCategory';
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Bottom Add Button ──────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  if (isProductsTab) {
+                    setState(() => _subScreen = 'addProduct');
+                  } else {
+                    setState(() => _subScreen = 'addCategory');
+                  }
+                },
+                icon: const Icon(Icons.add_circle_outline, size: 20),
+                label: Text(isProductsTab
+                    ? 'Thêm sản phẩm mới'
+                    : 'Thêm danh mục mới'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.emerald500,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  textStyle: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 15),
+                ),
+              ),
             ),
           ),
         ],
       ),
     );
   }
-}
 
-// ─── Products Tab ──────────────────────────────────
-class _ProductsTab extends StatelessWidget {
-  final String searchQuery;
-  final ValueChanged<String> onSearchChanged;
-
-  const _ProductsTab({
-    required this.searchQuery,
-    required this.onSearchChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
-    final products = store.currentProducts;
-    final categories = store.currentCategories;
-
-    var filtered = products.toList();
-    if (searchQuery.isNotEmpty) {
-      filtered = filtered
-          .where(
-              (p) => p.name.toLowerCase().contains(searchQuery.toLowerCase()))
-          .toList();
-    }
-
-    return Column(
-      children: [
-        // Search + Add
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  onChanged: onSearchChanged,
-                  decoration: InputDecoration(
-                    hintText: 'Tìm sản phẩm...',
-                    hintStyle: const TextStyle(color: AppColors.slate400),
-                    prefixIcon:
-                        const Icon(Icons.search, color: AppColors.slate400),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppColors.slate200),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppColors.slate200),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              ElevatedButton.icon(
-                onPressed: () =>
-                    _showProductDialog(context, store, categories, null),
-                icon: const Icon(Icons.add, size: 20),
-                label: const Text('Thêm'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.emerald500,
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Product List
-        Expanded(
-          child: filtered.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.restaurant_menu,
-                          size: 56, color: AppColors.slate300),
-                      const SizedBox(height: 12),
-                      const Text('Chưa có sản phẩm nào',
-                          style: TextStyle(color: AppColors.slate400)),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: filtered.length,
-                  itemBuilder: (_, i) {
-                    final p = filtered[i];
-                    final catName = categories
-                        .where((c) => c.id == p.category)
-                        .map((c) => c.name)
-                        .firstOrNull;
-                    return _ProductListTile(
-                      product: p,
-                      categoryName: catName,
-                      onEdit: () => _showProductDialog(
-                          context, store, categories, p),
-                      onDelete: () {
-                        store.showConfirm(
-                          'Xóa sản phẩm "${p.name}"?',
-                          () => store.deleteProduct(p.id),
-                        );
-                      },
-                      onToggleStock: () {
-                        store.updateProduct(
-                            p.copyWith(isOutOfStock: !p.isOutOfStock));
-                      },
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
+  // ── Product Dialog ───────────────────────────────
   void _showProductDialog(BuildContext context, AppStore store,
       List<CategoryModel> categories, ProductModel? existing) {
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
@@ -305,8 +364,8 @@ class _ProductsTab extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child:
-                  const Text('Hủy', style: TextStyle(color: AppColors.slate500)),
+              child: const Text('Hủy',
+                  style: TextStyle(color: AppColors.slate500)),
             ),
             ElevatedButton(
               onPressed: () {
@@ -320,7 +379,6 @@ class _ProductsTab extends StatelessWidget {
                   store.showToast('Giá phải lớn hơn 0', 'error');
                   return;
                 }
-
                 if (existing != null) {
                   store.updateProduct(existing.copyWith(
                     name: nameCtrl.text.trim(),
@@ -356,279 +414,8 @@ class _ProductsTab extends StatelessWidget {
       ),
     );
   }
-}
 
-class _ProductListTile extends StatelessWidget {
-  final ProductModel product;
-  final String? categoryName;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-  final VoidCallback onToggleStock;
-
-  const _ProductListTile({
-    required this.product,
-    required this.categoryName,
-    required this.onEdit,
-    required this.onDelete,
-    required this.onToggleStock,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.slate200),
-      ),
-      child: Row(
-        children: [
-          // Image
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: AppColors.slate100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: product.image.isNotEmpty
-                ? Image.network(product.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(
-                        Icons.restaurant,
-                        color: AppColors.slate300))
-                : const Icon(Icons.restaurant, color: AppColors.slate300),
-          ),
-          const SizedBox(width: 12),
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        product.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.slate800,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (product.isOutOfStock)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.red100,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          'Hết hàng',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.red500,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Text(
-                      formatCurrency(product.price),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.emerald500,
-                        fontSize: 13,
-                      ),
-                    ),
-                    if (categoryName != null) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.blue50,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          categoryName!,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AppColors.blue600,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-          // Actions
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: Icon(
-                  product.isOutOfStock
-                      ? Icons.check_circle_outline
-                      : Icons.block,
-                  color: product.isOutOfStock
-                      ? AppColors.emerald500
-                      : AppColors.amber500,
-                  size: 20,
-                ),
-                tooltip:
-                    product.isOutOfStock ? 'Còn hàng' : 'Đánh dấu hết hàng',
-                onPressed: onToggleStock,
-              ),
-              IconButton(
-                icon: const Icon(Icons.edit_outlined,
-                    color: AppColors.blue500, size: 20),
-                onPressed: onEdit,
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline,
-                    color: AppColors.red400, size: 20),
-                onPressed: onDelete,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Categories Tab ────────────────────────────────
-class _CategoriesTab extends StatelessWidget {
-  const _CategoriesTab();
-
-  @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
-    final categories = store.currentCategories;
-    final products = store.currentProducts;
-
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => _showCategoryDialog(context, store, null),
-              icon: const Icon(Icons.add, size: 20),
-              label: const Text('Thêm Danh Mục'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.emerald500,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: categories.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.category_outlined,
-                          size: 56, color: AppColors.slate300),
-                      const SizedBox(height: 12),
-                      const Text('Chưa có danh mục nào',
-                          style: TextStyle(color: AppColors.slate400)),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: categories.length,
-                  itemBuilder: (_, i) {
-                    final cat = categories[i];
-                    final count =
-                        products.where((p) => p.category == cat.id).length;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.slate200),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: AppColors.emerald50,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(Icons.category,
-                                color: AppColors.emerald500),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  cat.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.slate800,
-                                  ),
-                                ),
-                                Text(
-                                  '$count sản phẩm',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.slate500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined,
-                                color: AppColors.blue500, size: 20),
-                            onPressed: () =>
-                                _showCategoryDialog(context, store, cat),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline,
-                                color: AppColors.red400, size: 20),
-                            onPressed: () {
-                              store.showConfirm(
-                                'Xóa danh mục "${cat.name}"?\nCác sản phẩm trong danh mục này sẽ không bị xóa.',
-                                () => store.deleteCategory(cat.id),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
+  // ── Category Dialog ──────────────────────────────
   void _showCategoryDialog(
       BuildContext context, AppStore store, CategoryModel? existing) {
     final controller = TextEditingController(text: existing?.name ?? '');
@@ -692,7 +479,461 @@ class _CategoriesTab extends StatelessWidget {
   }
 }
 
-// ─── Shared Dialog Input ───────────────────────────
+// ─── Products Tab ──────────────────────────────────
+class _ProductsTab extends StatelessWidget {
+  final String searchQuery;
+  final void Function(ProductModel) onEditProduct;
+  const _ProductsTab({required this.searchQuery, required this.onEditProduct});
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final products = store.currentProducts;
+    final categories = store.currentCategories;
+
+    var filtered = products.toList();
+    if (searchQuery.isNotEmpty) {
+      filtered = filtered
+          .where((p) => p.name.toLowerCase().contains(searchQuery.toLowerCase()))
+          .toList();
+    }
+
+    if (filtered.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 64, height: 64,
+              decoration: BoxDecoration(
+                color: AppColors.slate100,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.restaurant_menu,
+                  size: 32, color: AppColors.slate300),
+            ),
+            const SizedBox(height: 12),
+            const Text('Chưa có sản phẩm nào',
+                style: TextStyle(color: AppColors.slate400, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: filtered.length,
+      itemBuilder: (_, i) {
+        final p = filtered[i];
+        final catName = categories
+            .where((c) => c.id == p.category)
+            .map((c) => c.name)
+            .firstOrNull;
+        return _ProductListTile(
+          product: p,
+          categoryName: catName,
+          onEdit: () => onEditProduct(p),
+          onDelete: () {
+            store.showConfirm('Xóa sản phẩm "${p.name}"?',
+                () => store.deleteProduct(p.id));
+          },
+          onToggleStock: () {
+            store.updateProduct(p.copyWith(isOutOfStock: !p.isOutOfStock));
+          },
+        );
+      },
+    );
+  }
+
+  void _showProductDialog(BuildContext context, AppStore store,
+      List<CategoryModel> categories, ProductModel? existing) {
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    final priceCtrl =
+        TextEditingController(text: existing?.price.toStringAsFixed(0) ?? '');
+    final imageCtrl = TextEditingController(text: existing?.image ?? '');
+    final descCtrl = TextEditingController(text: existing?.description ?? '');
+    String selectedCat = existing?.category ?? '';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text(
+            existing != null ? 'Sửa Sản Phẩm' : 'Thêm Sản Phẩm Mới',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _DialogInput(controller: nameCtrl, label: 'Tên sản phẩm *'),
+                const SizedBox(height: 10),
+                _DialogInput(controller: priceCtrl, label: 'Giá (VNĐ) *',
+                    keyboardType: TextInputType.number),
+                const SizedBox(height: 10),
+                const Text('Danh mục', style: TextStyle(fontSize: 13,
+                    fontWeight: FontWeight.w600, color: AppColors.slate700)),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.slate50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.slate200),
+                  ),
+                  child: DropdownButton<String>(
+                    value: selectedCat.isNotEmpty ? selectedCat : null,
+                    hint: const Text('Chọn danh mục', style: TextStyle(fontSize: 14)),
+                    isExpanded: true,
+                    underline: const SizedBox(),
+                    items: [
+                      const DropdownMenuItem(value: '', child: Text('Không có')),
+                      ...categories.map((c) =>
+                          DropdownMenuItem(value: c.id, child: Text(c.name))),
+                    ],
+                    onChanged: (v) => setDialogState(() => selectedCat = v ?? ''),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _DialogInput(controller: imageCtrl, label: 'URL hình ảnh (tùy chọn)'),
+                const SizedBox(height: 10),
+                _DialogInput(controller: descCtrl, label: 'Mô tả (tùy chọn)', maxLines: 2),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Hủy', style: TextStyle(color: AppColors.slate500)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty) {
+                  store.showToast('Tên sản phẩm không được trống', 'error');
+                  return;
+                }
+                final price = double.tryParse(priceCtrl.text.replaceAll(',', '')) ?? 0;
+                if (price <= 0) {
+                  store.showToast('Giá phải lớn hơn 0', 'error');
+                  return;
+                }
+                if (existing != null) {
+                  store.updateProduct(existing.copyWith(
+                    name: nameCtrl.text.trim(), price: price,
+                    image: imageCtrl.text.trim(), category: selectedCat,
+                    description: descCtrl.text.trim(),
+                  ));
+                  store.showToast('Đã cập nhật sản phẩm!');
+                } else {
+                  store.addProduct(ProductModel(
+                    id: '', name: nameCtrl.text.trim(), price: price,
+                    image: imageCtrl.text.trim(), category: selectedCat,
+                    description: descCtrl.text.trim(),
+                  ));
+                  store.showToast('Đã thêm sản phẩm!');
+                }
+                Navigator.pop(ctx);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.emerald500,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(existing != null ? 'Cập nhật' : 'Thêm'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Product List Tile ─────────────────────────────
+class _ProductListTile extends StatelessWidget {
+  final ProductModel product;
+  final String? categoryName;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback onToggleStock;
+
+  const _ProductListTile({
+    required this.product, required this.categoryName,
+    required this.onEdit, required this.onDelete, required this.onToggleStock,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.slate50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.slate200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.slate100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: product.image.isNotEmpty
+                ? Image.network(product.image, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.restaurant,
+                        size: 22, color: AppColors.slate300))
+                : const Icon(Icons.restaurant, size: 22, color: AppColors.slate300),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Expanded(child: Text(product.name,
+                      style: const TextStyle(fontSize: 15,
+                          fontWeight: FontWeight.w700, color: AppColors.slate800),
+                      overflow: TextOverflow.ellipsis)),
+                  if (product.isHot)
+                    Container(
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF7ED), borderRadius: BorderRadius.circular(6)),
+                      child: const Text('Bán chạy', style: TextStyle(fontSize: 10,
+                          fontWeight: FontWeight.w700, color: Color(0xFFF59E0B))),
+                    ),
+                  if (product.isOutOfStock)
+                    Container(
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.red100, borderRadius: BorderRadius.circular(6)),
+                      child: const Text('Hết hàng', style: TextStyle(fontSize: 10,
+                          fontWeight: FontWeight.w700, color: AppColors.red500)),
+                    ),
+                ]),
+                const SizedBox(height: 2),
+                Row(children: [
+                  Text(formatCurrency(product.price),
+                      style: const TextStyle(fontWeight: FontWeight.w700,
+                          color: AppColors.emerald500, fontSize: 12)),
+                  if (categoryName != null) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.blue50, borderRadius: BorderRadius.circular(6)),
+                      child: Text(categoryName!, style: const TextStyle(fontSize: 10,
+                          color: AppColors.blue600, fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                ]),
+              ],
+            ),
+          ),
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            _ActionButton(icon: Icons.edit_outlined, bgColor: AppColors.slate100,
+                iconColor: AppColors.slate500, tooltip: 'Sửa', onTap: onEdit),
+            const SizedBox(width: 6),
+            _ActionButton(icon: Icons.delete_outline,
+                bgColor: const Color(0xFFFEF2F2), iconColor: AppColors.red500,
+                tooltip: 'Xóa', onTap: onDelete),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Categories Tab ────────────────────────────────
+class _CategoriesTab extends StatelessWidget {
+  final String searchQuery;
+  final void Function(CategoryModel) onEditCategory;
+  const _CategoriesTab({required this.searchQuery, required this.onEditCategory});
+
+  static const _catColors = [
+    (AppColors.emerald50, AppColors.emerald500, Icons.local_cafe),
+    (AppColors.blue50, Color(0xFF3B82F6), Icons.restaurant),
+    (Color(0xFFFFF7ED), Color(0xFFF59E0B), Icons.cake),
+    (Color(0xFFFFF7ED), Color(0xFFF97316), Icons.ramen_dining),
+    (Color(0xFFFEF2F2), Color(0xFFEF4444), Icons.local_pizza),
+    (Color(0xFFF5F3FF), Color(0xFF8B5CF6), Icons.icecream),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final categories = store.currentCategories;
+    final products = store.currentProducts;
+
+    var filtered = categories.toList();
+    if (searchQuery.isNotEmpty) {
+      filtered = filtered
+          .where((c) => c.name.toLowerCase().contains(searchQuery.toLowerCase()))
+          .toList();
+    }
+
+    if (filtered.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 64, height: 64,
+              decoration: BoxDecoration(
+                color: AppColors.slate100,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.category_outlined,
+                  size: 32, color: AppColors.slate300),
+            ),
+            const SizedBox(height: 12),
+            const Text('Chưa có danh mục nào',
+                style: TextStyle(color: AppColors.slate400, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: filtered.length,
+      itemBuilder: (_, i) {
+        final cat = filtered[i];
+        final count = products.where((p) => p.category == cat.id).length;
+        final colorSet = _catColors[i % _catColors.length];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.slate50,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.slate200),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  color: colorSet.$1,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(colorSet.$3, color: colorSet.$2, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(cat.name, style: const TextStyle(fontSize: 15,
+                        fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                    Text('$count sản phẩm', style: const TextStyle(
+                        fontSize: 12, color: AppColors.slate500)),
+                  ],
+                ),
+              ),
+              _ActionButton(icon: Icons.edit_outlined, bgColor: AppColors.slate100,
+                  iconColor: AppColors.slate500, tooltip: 'Sửa',
+                  onTap: () => onEditCategory(cat)),
+              const SizedBox(width: 6),
+              _ActionButton(icon: Icons.delete_outline,
+                  bgColor: const Color(0xFFFEF2F2), iconColor: AppColors.red500,
+                  tooltip: 'Xóa', onTap: () {
+                    store.showConfirm(
+                      'Xóa danh mục "${cat.name}"?\nCác sản phẩm trong danh mục này sẽ không bị xóa.',
+                      () => store.deleteCategory(cat.id));
+                  }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCategoryDialog(
+      BuildContext context, AppStore store, CategoryModel? existing) {
+    final controller = TextEditingController(text: existing?.name ?? '');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(existing != null ? 'Sửa Danh Mục' : 'Thêm Danh Mục',
+            style: const TextStyle(fontWeight: FontWeight.w700)),
+        content: TextField(
+          controller: controller, autofocus: true,
+          decoration: InputDecoration(
+            hintText: 'VD: Đồ uống, Cơm, Phở...',
+            filled: true, fillColor: AppColors.slate50,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.slate200)),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+          ElevatedButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isEmpty) {
+                store.showToast('Tên danh mục không được trống', 'error');
+                return;
+              }
+              if (existing != null) {
+                store.updateCategory(CategoryModel(
+                    id: existing.id, name: name, storeId: existing.storeId));
+                store.showToast('Đã cập nhật danh mục!');
+              } else {
+                store.addCategory(name);
+                store.showToast('Đã thêm danh mục!');
+              }
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.emerald500, foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            child: Text(existing != null ? 'Cập nhật' : 'Thêm'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Shared Widgets ────────────────────────────────
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final Color bgColor;
+  final Color iconColor;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _ActionButton({
+    required this.icon, required this.bgColor, required this.iconColor,
+    required this.tooltip, required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 32, height: 32,
+          decoration: BoxDecoration(
+            color: bgColor, borderRadius: BorderRadius.circular(8)),
+          child: Icon(icon, color: iconColor, size: 16),
+        ),
+      ),
+    );
+  }
+}
+
 class _DialogInput extends StatelessWidget {
   final TextEditingController controller;
   final String label;
@@ -700,10 +941,8 @@ class _DialogInput extends StatelessWidget {
   final int maxLines;
 
   const _DialogInput({
-    required this.controller,
-    required this.label,
-    this.keyboardType,
-    this.maxLines = 1,
+    required this.controller, required this.label,
+    this.keyboardType, this.maxLines = 1,
   });
 
   @override
@@ -711,29 +950,20 @@ class _DialogInput extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.slate700)),
+        Text(label, style: const TextStyle(fontSize: 13,
+            fontWeight: FontWeight.w600, color: AppColors.slate700)),
         const SizedBox(height: 4),
         TextField(
-          controller: controller,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
+          controller: controller, keyboardType: keyboardType, maxLines: maxLines,
           decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.slate50,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            filled: true, fillColor: AppColors.slate50,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.slate200),
-            ),
+              borderSide: const BorderSide(color: AppColors.slate200)),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.slate200),
-            ),
+              borderSide: const BorderSide(color: AppColors.slate200)),
           ),
         ),
       ],

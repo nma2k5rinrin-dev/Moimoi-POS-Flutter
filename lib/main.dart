@@ -56,6 +56,7 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> {
             surface: AppColors.slate50,
             error: AppColors.red500,
           ),
+          fontFamily: GoogleFonts.inter().fontFamily,
           textTheme: GoogleFonts.interTextTheme(),
           scaffoldBackgroundColor: AppColors.slate50,
           useMaterial3: true,
@@ -68,6 +69,7 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> {
         ),
         routerConfig: _router,
         builder: (context, child) {
+          _store.rootContext = context;
           return Stack(
             children: [
               child ?? const SizedBox.shrink(),

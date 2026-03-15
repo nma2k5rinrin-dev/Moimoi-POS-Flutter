@@ -79,91 +79,70 @@ class _DashboardPageState extends State<DashboardPage> {
             const SizedBox(height: 20),
 
             // Time Range Selector
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: AppColors.slate100,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  children: [
-                    _TimeChip(
-                        label: 'Hôm nay',
-                        isActive: _timeRange == 'today',
-                        onTap: () =>
-                            setState(() => _timeRange = 'today')),
-                    _TimeChip(
-                        label: 'Tháng này',
-                        isActive: _timeRange == 'month',
-                        onTap: () =>
-                            setState(() => _timeRange = 'month')),
-                    _TimeChip(
-                        label: 'Năm nay',
-                        isActive: _timeRange == 'year',
-                        onTap: () =>
-                            setState(() => _timeRange = 'year')),
-                    _TimeChip(
-                        label: 'Tuỳ chọn',
-                        isActive: _timeRange == 'range',
-                        onTap: () =>
-                            setState(() => _timeRange = 'range')),
-                  ],
-                ),
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppColors.slate100,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _TimeChip(
+                      label: 'Hôm nay',
+                      isActive: _timeRange == 'today',
+                      onTap: () =>
+                          setState(() => _timeRange = 'today')),
+                  _TimeChip(
+                      label: 'Tháng này',
+                      isActive: _timeRange == 'month',
+                      onTap: () =>
+                          setState(() => _timeRange = 'month')),
+                ],
               ),
             ),
 
-            if (_timeRange == 'range') ...[
-              const SizedBox(height: 12),
-              _DateRangePicker(
-                dateFrom: _dateFrom,
-                dateTo: _dateTo,
-                onFromChanged: (d) => setState(() => _dateFrom = d),
-                onToChanged: (d) => setState(() => _dateTo = d),
-              ),
-            ],
+            const SizedBox(height: 12),
+            _DateRangePicker(
+              dateFrom: _dateFrom,
+              dateTo: _dateTo,
+              onFromChanged: (d) => setState(() => _dateFrom = d),
+              onToChanged: (d) => setState(() => _dateTo = d),
+            ),
 
             const SizedBox(height: 20),
 
-            // Stats Cards
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final isWide = constraints.maxWidth >= 600;
-                return Wrap(
-                  spacing: 14,
-                  runSpacing: 14,
-                  children: [
-                    _StatCard(
-                      label: 'Doanh thu',
-                      value: formatCurrency(totalRevenue),
-                      icon: Icons.trending_up_rounded,
-                      gradient: const [Color(0xFF10B981), Color(0xFF059669)],
-                      width: isWide
-                          ? (constraints.maxWidth - 28) / 3
-                          : constraints.maxWidth,
-                    ),
-                    _StatCard(
-                      label: 'Tổng đơn hàng',
-                      value: '$totalOrders',
-                      icon: Icons.receipt_long_rounded,
-                      gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
-                      width: isWide
-                          ? (constraints.maxWidth - 28) / 3
-                          : constraints.maxWidth,
-                    ),
-                    _StatCard(
-                      label: 'Trung bình/đơn',
-                      value: formatCurrency(avgOrder),
-                      icon: Icons.analytics_outlined,
-                      gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
-                      width: isWide
-                          ? (constraints.maxWidth - 28) / 3
-                          : constraints.maxWidth,
-                    ),
-                  ],
-                );
-              },
+            // Stats Cards — 1 large + 2 small
+            _StatCard(
+              label: 'Doanh thu',
+              value: formatCurrency(totalRevenue),
+              icon: Icons.trending_up_rounded,
+              gradient: const [Color(0xFF10B981), Color(0xFF059669)],
+              width: double.infinity,
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    label: 'Tổng đơn',
+                    value: '$totalOrders',
+                    icon: Icons.receipt_long_rounded,
+                    gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                    width: double.infinity,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: _StatCard(
+                    label: 'TB/đơn',
+                    value: _formatShortCurrency(avgOrder),
+                    icon: Icons.analytics_outlined,
+                    gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+                    width: double.infinity,
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 24),
@@ -183,7 +162,13 @@ class _DashboardPageState extends State<DashboardPage> {
                       const SizedBox(width: 14),
                       Expanded(
                         flex: 1,
-                        child: _BestSellersCard(items: bestSellers),
+                        child: Column(
+                          children: [
+                            _BestSellersCard(items: bestSellers),
+                            const SizedBox(height: 14),
+                            _StaffRankingCard(orders: filteredOrders),
+                          ],
+                        ),
                       ),
                     ],
                   );
@@ -193,6 +178,8 @@ class _DashboardPageState extends State<DashboardPage> {
                     _RevenueChart(weekData: weekData),
                     const SizedBox(height: 14),
                     _BestSellersCard(items: bestSellers),
+                    const SizedBox(height: 14),
+                    _StaffRankingCard(orders: filteredOrders),
                   ],
                 );
               },
@@ -273,6 +260,15 @@ class _DashboardPageState extends State<DashboardPage> {
       _WeekDay(name: days[6], total: totals[6]),
       _WeekDay(name: days[0], total: totals[0]),
     ];
+  }
+
+  String _formatShortCurrency(double amount) {
+    if (amount >= 1000000) {
+      return '${(amount / 1000000).toStringAsFixed(1)}M';
+    } else if (amount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(0)}K';
+    }
+    return '${amount.toInt()}';
   }
 }
 
@@ -687,43 +683,41 @@ class _BestSellersCard extends StatelessWidget {
                 ],
               ),
             )
-          else
-            ...List.generate(items.length, (i) {
+          else ...[
+            ...List.generate(items.length > 4 ? 4 : items.length, (i) {
               final item = items[i];
-              final medals = ['🥇', '🥈', '🥉'];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: i == 0
-                      ? const Color(0xFFFFFBEB)
-                      : AppColors.slate50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
+              final maxSold = items.first.sold;
+              final fraction = maxSold > 0 ? item.sold / maxSold : 0.0;
+              final barColors = [
+                [const Color(0xFF10B981), const Color(0xFF059669)], // emerald
+                [const Color(0xFF3B82F6), const Color(0xFF2563EB)], // blue
+                [const Color(0xFFF59E0B), const Color(0xFFD97706)], // amber
+                [const Color(0xFF8B5CF6), const Color(0xFF7C3AED)], // violet
+                [const Color(0xFFEC4899), const Color(0xFFDB2777)], // pink
+              ];
+              final colors = barColors[i % barColors.length];
+              final unitLabel = item.name.toLowerCase().contains('trà') ||
+                      item.name.toLowerCase().contains('cà phê') ||
+                      item.name.toLowerCase().contains('nước')
+                  ? 'ly'
+                  : 'phần';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
                   children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      alignment: Alignment.center,
-                      child: i < 3
-                          ? Text(medals[i],
-                              style: const TextStyle(fontSize: 18))
-                          : Text(
-                              '#${i + 1}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                                color: AppColors.slate400,
-                              ),
-                            ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
+                    Row(
+                      children: [
+                        Text(
+                          '${i + 1}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            color: i < 3 ? AppColors.emerald600 : AppColors.slate500,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
                             item.name,
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
@@ -732,31 +726,65 @@ class _BestSellersCard extends StatelessWidget {
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
-                          Text(
-                            '${item.sold} phần đã bán',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.slate500,
-                            ),
+                        ),
+                        Text(
+                          '${item.sold} $unitLabel',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.slate500,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _formatShortRevenue(item.revenue),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            color: colors[0],
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      formatCurrency(item.revenue),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: AppColors.emerald600,
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: fraction,
+                        minHeight: 6,
+                        backgroundColor: AppColors.slate100,
+                        valueColor: AlwaysStoppedAnimation<Color>(colors[0]),
                       ),
                     ),
                   ],
                 ),
               );
             }),
+            if (items.length > 4)
+              Center(
+                child: TextButton.icon(
+                  onPressed: () {},
+                  icon: const Text('Xem thêm',
+                      style: TextStyle(
+                          color: AppColors.emerald600,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13)),
+                  label: const Icon(Icons.keyboard_arrow_down_rounded,
+                      size: 18, color: AppColors.emerald600),
+                ),
+              ),
+          ],
         ],
       ),
     );
+  }
+
+  static String _formatShortRevenue(double amount) {
+    if (amount >= 1000000) {
+      return '${(amount / 1000000).toStringAsFixed(1)}M';
+    } else if (amount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(0)}K';
+    }
+    return '${amount.toInt()}';
   }
 }
 
@@ -772,4 +800,138 @@ class _WeekDay {
   final String name;
   final double total;
   const _WeekDay({required this.name, required this.total});
+}
+
+// ─── Staff Ranking ──────────────────────────────────
+class _StaffRankingCard extends StatelessWidget {
+  final List<OrderModel> orders;
+  const _StaffRankingCard({required this.orders});
+
+  @override
+  Widget build(BuildContext context) {
+    // Aggregate staff data from orders
+    final Map<String, int> staffOrders = {};
+    for (final o in orders) {
+      final name = o.createdBy.isEmpty ? 'Nhân viên' : o.createdBy;
+      staffOrders[name] = (staffOrders[name] ?? 0) + 1;
+    }
+    final sorted = staffOrders.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topStaff = sorted.take(5).toList();
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.slate100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.emoji_events_rounded,
+                  size: 20, color: AppColors.amber500),
+              const SizedBox(width: 8),
+              const Text(
+                'Bảng Xếp Hạng NV',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.slate800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (topStaff.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(
+                child: Text(
+                  'Chưa có dữ liệu',
+                  style: TextStyle(
+                    color: AppColors.slate400,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            )
+          else
+            ...List.generate(topStaff.length, (i) {
+              final entry = topStaff[i];
+              final medals = ['🥇', '🥈', '🥉'];
+              final colors = [
+                const Color(0xFFFFFBEB),
+                const Color(0xFFF0F9FF),
+                const Color(0xFFFFF1F2),
+              ];
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: i < 3 ? colors[i] : AppColors.slate50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 28,
+                      child: i < 3
+                          ? Text(medals[i],
+                              style: const TextStyle(fontSize: 16))
+                          : Text(
+                              '#${i + 1}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                                color: AppColors.slate400,
+                              ),
+                            ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        entry.key,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: AppColors.slate800,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.blue50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${entry.value} đơn',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          color: AppColors.blue500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
 }
