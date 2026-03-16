@@ -120,7 +120,7 @@ class AppStore extends ChangeNotifier {
       for (final t in tablesData) {
         final sid = t['store_id'] as String;
         storeTables.putIfAbsent(sid, () => []);
-        storeTables[sid]!.add(t['name'] as String);
+        storeTables[sid]!.add(t['table_name'] as String);
       }
 
       // Load categories
@@ -542,7 +542,7 @@ class AppStore extends ChangeNotifier {
     if (currentTablesList.contains(tableName)) return;
     await _supabase.from('store_tables').insert({
       'store_id': storeId,
-      'name': tableName,
+      'table_name': tableName,
       'sort_order': currentTablesList.length,
     });
     storeTables.putIfAbsent(storeId, () => []);
@@ -556,7 +556,7 @@ class AppStore extends ChangeNotifier {
         .from('store_tables')
         .delete()
         .eq('store_id', storeId)
-        .eq('name', tableName);
+        .eq('table_name', tableName);
     storeTables[storeId]?.remove(tableName);
     if (selectedTable == tableName) {
       selectedTable = storeTables[storeId]?.isNotEmpty == true
@@ -571,9 +571,9 @@ class AppStore extends ChangeNotifier {
     final storeId = getStoreId();
     await _supabase
         .from('store_tables')
-        .update({'name': newName})
+        .update({'table_name': newName})
         .eq('store_id', storeId)
-        .eq('name', oldName);
+        .eq('table_name', oldName);
     final tablesList = storeTables[storeId] ?? [];
     final idx = tablesList.indexOf(oldName);
     if (idx >= 0) tablesList[idx] = newName;
@@ -886,8 +886,30 @@ class AppStore extends ChangeNotifier {
   }
 
   // ── Confirm Dialog ──────────────────────────────────────
-  void showConfirm(String message, VoidCallback onConfirm) {
-    confirmDialog = ConfirmDialogData(message: message, onConfirm: onConfirm);
+  void showConfirm(
+    String message,
+    VoidCallback onConfirm, {
+    String? title,
+    String? description,
+    String? itemName,
+    String? itemSubtitle,
+    IconData? icon,
+    String? avatarInitials,
+    Color? avatarColor,
+    String? confirmLabel,
+  }) {
+    confirmDialog = ConfirmDialogData(
+      message: message,
+      onConfirm: onConfirm,
+      title: title,
+      description: description,
+      itemName: itemName,
+      itemSubtitle: itemSubtitle,
+      icon: icon,
+      avatarInitials: avatarInitials,
+      avatarColor: avatarColor,
+      confirmLabel: confirmLabel,
+    );
     notifyListeners();
   }
 
@@ -1197,7 +1219,26 @@ class AppStore extends ChangeNotifier {
 class ConfirmDialogData {
   final String message;
   final VoidCallback onConfirm;
-  const ConfirmDialogData({required this.message, required this.onConfirm});
+  final String? title;
+  final String? description;
+  final String? itemName;
+  final String? itemSubtitle;
+  final IconData? icon;
+  final String? avatarInitials;
+  final Color? avatarColor;
+  final String? confirmLabel;
+  const ConfirmDialogData({
+    required this.message,
+    required this.onConfirm,
+    this.title,
+    this.description,
+    this.itemName,
+    this.itemSubtitle,
+    this.icon,
+    this.avatarInitials,
+    this.avatarColor,
+    this.confirmLabel,
+  });
 }
 
 /// Lightweight [ChangeNotifier] that fires ONLY on auth state changes.

@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../store/app_store.dart';
 import '../../models/product_model.dart';
-import '../../models/category_model.dart';
 import '../../utils/constants.dart';
 
 /// Formats number with thousand separators (e.g. 15000 → 15.000)
@@ -36,21 +35,22 @@ class _ThousandSeparatorFormatter extends TextInputFormatter {
   }
 }
 
-class AddProductScreen extends StatefulWidget {
-  final VoidCallback? onBack;
+class AddProductPanel extends StatefulWidget {
+  final VoidCallback onClose;
   final ProductModel? existingProduct;
 
-  const AddProductScreen({
+  const AddProductPanel({
     super.key,
-    this.onBack,
+    required this.onClose,
     this.existingProduct,
   });
 
   @override
-  State<AddProductScreen> createState() => _AddProductScreenState();
+  State<AddProductPanel> createState() => _AddProductPanelState();
 }
 
-class _AddProductScreenState extends State<AddProductScreen> {
+class _AddProductPanelState extends State<AddProductPanel>
+    with SingleTickerProviderStateMixin {
   final _nameCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
   final _unitCtrl = TextEditingController();
@@ -58,12 +58,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
   String _selectedCategory = '';
   bool _isOutOfStock = false;
   bool _isHot = false;
-  bool _showImagePicker = false;
 
   // Image
   final ImagePicker _picker = ImagePicker();
   XFile? _pickedImage;
   String _imageUrl = '';
+
+  late final AnimationController _animCtrl;
+  late final Animation<double> _fadeAnim;
+  late final Animation<Offset> _slideAnim;
 
   bool get _isEditMode => widget.existingProduct != null;
 
@@ -73,13 +76,27 @@ class _AddProductScreenState extends State<AddProductScreen> {
     final p = widget.existingProduct;
     if (p != null) {
       _nameCtrl.text = p.name;
-      _priceCtrl.text = _ThousandSeparatorFormatter._formatNumber(p.price.toInt());
-      _descCtrl.text = p.description;
+      _priceCtrl.text =
+          _ThousandSeparatorFormatter._formatNumber(p.price.toInt());
       _selectedCategory = p.category;
       _isOutOfStock = p.isOutOfStock;
       _isHot = p.isHot;
       _imageUrl = p.image;
+      if (p.description.isNotEmpty) {
+        _descCtrl.text = p.description;
+      }
     }
+
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.15),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutCubic));
+    _animCtrl.forward();
   }
 
   @override
@@ -88,7 +105,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _priceCtrl.dispose();
     _unitCtrl.dispose();
     _descCtrl.dispose();
+    _animCtrl.dispose();
     super.dispose();
+  }
+
+  void _closeWithAnimation() async {
+    await _animCtrl.reverse();
+    widget.onClose();
   }
 
   @override
@@ -96,470 +119,233 @@ class _AddProductScreenState extends State<AddProductScreen> {
     final store = context.watch<AppStore>();
     final categories = store.currentCategories;
 
-    return Stack(
-      children: [
-        // ── Main Content ──────────────────────────
-        Container(
-          color: AppColors.slate50,
-          child: Column(
-            children: [
-              // ── Header ────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Row(
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: Stack(
+        children: [
+          // ── Dim Overlay ─────────────────────
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _closeWithAnimation,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.4),
+                ),
+              ),
+            ),
+          ),
+
+          // ── Panel ───────────────────────────
+          Positioned(
+            left: 16,
+            right: 16,
+            top: MediaQuery.of(context).padding.top + 80,
+            child: SlideTransition(
+              position: _slideAnim,
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.78,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 40,
+                      offset: const Offset(0, 12),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (widget.onBack != null)
-                      GestureDetector(
-                        onTap: widget.onBack,
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.slate200),
-                          ),
-                          child: const Icon(Icons.arrow_back_rounded,
-                              size: 20, color: AppColors.slate800),
+                    // ── Panel Header ──────────────
+                    _buildHeader(),
+
+                    // ── Form Body ────────────────
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // ── Image Upload Area ────
+                            _buildImageSection(),
+                            const SizedBox(height: 18),
+
+                            // ── Tên sản phẩm ────────
+                            _buildLabel('Tên sản phẩm'),
+                            const SizedBox(height: 6),
+                            _buildTextField(
+                              controller: _nameCtrl,
+                              hint: 'VD: Trà sữa trân châu...',
+                              icon: Icons.restaurant,
+                            ),
+                            const SizedBox(height: 18),
+
+                            // ── Giá + Đơn vị ────────
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _buildLabel('Giá'),
+                                      const SizedBox(height: 6),
+                                      _buildTextField(
+                                        controller: _priceCtrl,
+                                        hint: '0',
+                                        icon: Icons.monetization_on_outlined,
+                                        keyboardType: TextInputType.number,
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter.digitsOnly,
+                                          _ThousandSeparatorFormatter(),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _buildLabel('Đơn vị'),
+                                      const SizedBox(height: 6),
+                                      _buildTextField(
+                                        controller: _unitCtrl,
+                                        hint: 'VD: ly, phần...',
+                                        icon: Icons.straighten_outlined,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 18),
+
+                            // ── Danh mục ─────────────
+                            _buildLabel('Danh mục'),
+                            const SizedBox(height: 6),
+                            _buildCategoryDropdown(categories),
+                            const SizedBox(height: 18),
+
+                            // ── Mô tả ────────────────
+                            _buildLabel('Mô tả (tùy chọn)'),
+                            const SizedBox(height: 6),
+                            _buildTextField(
+                              controller: _descCtrl,
+                              hint: 'Mô tả ngắn về sản phẩm',
+                              icon: Icons.description_outlined,
+                            ),
+                            const SizedBox(height: 18),
+
+                            // ── Action Buttons ───────
+                            _buildButtons(),
+                          ],
                         ),
-                      ),
-                    const SizedBox(width: 12),
-                    Text(
-                      _isEditMode ? 'Sửa sản phẩm' : 'Thêm sản phẩm',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.slate800,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-
-              // ── Content Panel ─────────────────────
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.slate200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ── Image Upload Area ─────────
-                        Center(
-                          child: Column(
-                            children: [
-                              GestureDetector(
-                                onTap: () => setState(
-                                    () => _showImagePicker = true),
-                                child: Container(
-                                  width: 120,
-                                  height: 120,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.slate50,
-                                    borderRadius:
-                                        BorderRadius.circular(20),
-                                    border: Border.all(
-                                        color: AppColors.slate200,
-                                        width: 1.5),
-                                  ),
-                                  child: _buildImagePreview(),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _isEditMode
-                                    ? 'Thay đổi ảnh sản phẩm'
-                                    : 'Thêm ảnh sản phẩm',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: AppColors.slate400,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // ── Tên sản phẩm ─────────────
-                        const Text('Tên sản phẩm',
-                            style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.slate700)),
-                        const SizedBox(height: 8),
-                        _buildInput(
-                          controller: _nameCtrl,
-                          hint: 'VD: Phở bò, Trà sữa...',
-                          icon: Icons.restaurant_menu_rounded,
-                        ),
-                        const SizedBox(height: 20),
-
-                        // ── Giá bán + Đơn vị ─────────
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Giá bán',
-                                      style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.slate700)),
-                                  const SizedBox(height: 8),
-                                  _buildInput(
-                                    controller: _priceCtrl,
-                                    hint: '0 đ',
-                                    icon: Icons
-                                        .monetization_on_outlined,
-                                    keyboardType:
-                                        TextInputType.number,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter
-                                          .digitsOnly,
-                                      _ThousandSeparatorFormatter(),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Đơn vị',
-                                      style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.slate700)),
-                                  const SizedBox(height: 8),
-                                  _buildInput(
-                                    controller: _unitCtrl,
-                                    hint: 'VD: Phần, Ly, Tô',
-                                    icon: Icons.straighten_outlined,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-
-                        // ── Danh mục ─────────────────
-                        const Text('Danh mục',
-                            style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.slate700)),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: AppColors.slate50,
-                            borderRadius: BorderRadius.circular(12),
-                            border:
-                                Border.all(color: AppColors.slate200),
-                          ),
-                          child: DropdownButton<String>(
-                            value: _selectedCategory.isNotEmpty
-                                ? _selectedCategory
-                                : null,
-                            hint: Row(
-                              children: [
-                                Icon(Icons.sell_outlined,
-                                    color: AppColors.slate400,
-                                    size: 20),
-                                const SizedBox(width: 10),
-                                Text('Chọn danh mục',
-                                    style: TextStyle(
-                                        fontSize: 14,
-                                        color: AppColors.slate400)),
-                              ],
-                            ),
-                            isExpanded: true,
-                            underline: const SizedBox(),
-                            icon: const Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                                color: AppColors.slate400),
-                            items: [
-                              const DropdownMenuItem(
-                                  value: '',
-                                  child: Text('Không có')),
-                              ...categories.map((c) =>
-                                  DropdownMenuItem(
-                                      value: c.id,
-                                      child: Text(c.name))),
-                            ],
-                            onChanged: (v) => setState(
-                                () => _selectedCategory = v ?? ''),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // ── Mô tả (tùy chọn) ────────
-                        const Text('Mô tả (tùy chọn)',
-                            style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.slate700)),
-                        const SizedBox(height: 8),
-                        _buildInput(
-                          controller: _descCtrl,
-                          hint: 'Mô tả ngắn về sản phẩm',
-                          icon: Icons.description_outlined,
-                          maxLines: 2,
-                        ),
-                        const SizedBox(height: 20),
-
-                        // ── Toggle: Còn hàng ─────────
-                        _buildToggleRow(
-                          icon: Icons.inventory_2_outlined,
-                          iconColor: _isOutOfStock
-                              ? AppColors.red500
-                              : AppColors.emerald500,
-                          label: 'Tình trạng kho',
-                          subtitle: _isOutOfStock
-                              ? 'Hết hàng'
-                              : 'Còn hàng',
-                          value: !_isOutOfStock,
-                          activeColor: AppColors.emerald500,
-                          onChanged: (v) =>
-                              setState(() => _isOutOfStock = !v),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // ── Toggle: Bán chạy ─────────
-                        _buildToggleRow(
-                          icon: Icons.local_fire_department_rounded,
-                          iconColor: _isHot
-                              ? AppColors.orange500
-                              : AppColors.slate400,
-                          label: 'Sản phẩm bán chạy',
-                          subtitle: _isHot
-                              ? 'Đang là sản phẩm bán chạy'
-                              : 'Không phải sản phẩm bán chạy',
-                          value: _isHot,
-                          activeColor: AppColors.orange500,
-                          onChanged: (v) =>
-                              setState(() => _isHot = v),
-                        ),
-                        const SizedBox(height: 32),
-
-                        // ── Action Buttons ────────────
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: widget.onBack,
-                                icon: const Icon(Icons.close,
-                                    size: 18),
-                                label: const Text('Hủy bỏ'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppColors.red500,
-                                  side: const BorderSide(
-                                      color: AppColors.red500,
-                                      width: 1.5),
-                                  minimumSize: const Size(0, 52),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(14)),
-                                  textStyle: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 15),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: _saveProduct,
-                                icon: Icon(
-                                    _isEditMode
-                                        ? Icons.save_outlined
-                                        : Icons.add_circle_outline,
-                                    size: 18),
-                                label: Text(_isEditMode
-                                    ? 'Cập nhật'
-                                    : 'Thêm sản phẩm'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      AppColors.emerald500,
-                                  foregroundColor: Colors.white,
-                                  minimumSize: const Size(0, 52),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(14)),
-                                  textStyle: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 15),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
+            ),
           ),
-        ),
-
-        // ── Image picker overlay with blur ────────
-        if (_showImagePicker) _buildImagePickerOverlay(),
-      ],
+        ],
+      ),
     );
   }
 
-  // ── Image picker centered panel with blur ─────
-  Widget _buildImagePickerOverlay() {
-    return Stack(
-      children: [
-        // Blurred background
-        Positioned.fill(
-          child: GestureDetector(
-            onTap: () => setState(() => _showImagePicker = false),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.3),
+  // ── Panel Header with gradient ──────────────────
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.emerald50, Colors.white],
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.add_shopping_cart_rounded,
+              color: AppColors.emerald600, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _isEditMode ? 'Sửa sản phẩm' : 'Thêm sản phẩm',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.slate800,
               ),
             ),
           ),
-        ),
-        // Centered panel
-        Center(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 32),
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 30,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Title
-                const Text('Chọn ảnh sản phẩm',
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.slate800)),
-                const SizedBox(height: 20),
-                // Two options
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _doPickImage(ImageSource.camera),
-                        child: Container(
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 24),
-                          decoration: BoxDecoration(
-                            color: AppColors.blue50,
-                            borderRadius: BorderRadius.circular(16),
-                            border:
-                                Border.all(color: AppColors.blue200),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(Icons.camera_alt_rounded,
-                                  color: Color(0xFF3B82F6), size: 40),
-                              const SizedBox(height: 8),
-                              Text('Máy ảnh',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 15,
-                                      color: Color(0xFF3B82F6))),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () =>
-                            _doPickImage(ImageSource.gallery),
-                        child: Container(
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 24),
-                          decoration: BoxDecoration(
-                            color: AppColors.emerald50,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                                color: AppColors.emerald200),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(Icons.photo_library_rounded,
-                                  color: AppColors.emerald500,
-                                  size: 40),
-                              const SizedBox(height: 8),
-                              Text('Thư viện',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 15,
-                                      color: AppColors.emerald500)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // Cancel button
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: () =>
-                        setState(() => _showImagePicker = false),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.slate500,
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    child: const Text('Hủy',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15)),
-                  ),
-                ),
-              ],
+          GestureDetector(
+            onTap: _closeWithAnimation,
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: AppColors.slate100,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child:
+                  const Icon(Icons.close, size: 18, color: AppColors.slate500),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  // ── Image Section ───────────────────────────────
+  Widget _buildImageSection() {
+    return Center(
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: _showImagePickerDialog,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: AppColors.slate100,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.slate200, width: 2),
+              ),
+              child: _buildImagePreview(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _isEditMode ? 'Thay đổi ảnh sản phẩm' : 'Thêm ảnh sản phẩm',
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.slate400,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildImagePreview() {
-    // Show picked image
     if (_pickedImage != null) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(19),
+        borderRadius: BorderRadius.circular(15),
         child: Image.network(
           _pickedImage!.path,
           fit: BoxFit.cover,
@@ -569,10 +355,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
         ),
       );
     }
-    // Show existing image URL (edit mode)
     if (_imageUrl.isNotEmpty) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(19),
+        borderRadius: BorderRadius.circular(15),
         child: Image.network(
           _imageUrl,
           fit: BoxFit.cover,
@@ -590,63 +375,31 @@ class _AddProductScreenState extends State<AddProductScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(Icons.add_photo_alternate_outlined,
-            size: 36, color: AppColors.slate300),
+            size: 36, color: AppColors.slate400),
       ],
     );
   }
 
-  Widget _buildToggleRow({
-    required IconData icon,
-    required Color iconColor,
-    required String label,
-    required String subtitle,
-    required bool value,
-    required Color activeColor,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.slate50,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.slate200),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: iconColor, size: 22),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label,
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.slate700)),
-                Text(subtitle,
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.slate400)),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: activeColor,
-          ),
-        ],
+  // ── Label ───────────────────────────────────────
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: AppColors.slate600,
       ),
     );
   }
 
-  Widget _buildInput({
+  // ── Text Field ──────────────────────────────────
+  Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
     required IconData icon,
     TextInputType? keyboardType,
-    int maxLines = 1,
     List<TextInputFormatter>? inputFormatters,
+    int maxLines = 1,
   }) {
     return TextField(
       controller: controller,
@@ -655,11 +408,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
       inputFormatters: inputFormatters,
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle:
-            const TextStyle(color: AppColors.slate400, fontSize: 14),
-        prefixIcon: Icon(icon, color: AppColors.slate400, size: 20),
+        hintStyle: const TextStyle(color: AppColors.slate400, fontSize: 14),
+        prefixIcon: Icon(icon, color: AppColors.slate400, size: 18),
         filled: true,
-        fillColor: AppColors.slate50,
+        fillColor: Colors.white,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
@@ -678,9 +430,204 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  Future<void> _doPickImage(ImageSource source) async {
-    setState(() => _showImagePicker = false);
+  // ── Category Dropdown ───────────────────────────
+  Widget _buildCategoryDropdown(List categories) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.slate200),
+      ),
+      child: DropdownButton<String>(
+        value: _selectedCategory.isNotEmpty ? _selectedCategory : null,
+        hint: Row(
+          children: [
+            Icon(Icons.sell_outlined, color: AppColors.slate400, size: 18),
+            const SizedBox(width: 10),
+            Text('Chọn danh mục',
+                style: TextStyle(fontSize: 14, color: AppColors.slate400)),
+          ],
+        ),
+        isExpanded: true,
+        underline: const SizedBox(),
+        icon: const Icon(Icons.keyboard_arrow_down_rounded,
+            color: AppColors.slate400),
+        items: [
+          const DropdownMenuItem(value: '', child: Text('Không có')),
+          ...categories
+              .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
+        ],
+        onChanged: (v) => setState(() => _selectedCategory = v ?? ''),
+      ),
+    );
+  }
 
+  // ── Action Buttons ──────────────────────────────
+  Widget _buildButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: _closeWithAnimation,
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.red500, width: 1),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.close, size: 20, color: AppColors.red500),
+                  SizedBox(width: 8),
+                  Text(
+                    'Hủy bỏ',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.red500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: GestureDetector(
+            onTap: _saveProduct,
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.emerald500,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(_isEditMode ? Icons.save : Icons.add_circle,
+                      size: 20, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(
+                    _isEditMode ? 'Lưu thay đổi' : 'Thêm sản phẩm',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Image Picker Dialog ─────────────────────────
+  void _showImagePickerDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Chọn ảnh sản phẩm',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.slate800)),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _doPickImage(ImageSource.camera);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      decoration: BoxDecoration(
+                        color: AppColors.blue50,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.blue200),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.camera_alt_rounded,
+                              color: Color(0xFF3B82F6), size: 40),
+                          const SizedBox(height: 8),
+                          Text('Máy ảnh',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                  color: Color(0xFF3B82F6))),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _doPickImage(ImageSource.gallery);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      decoration: BoxDecoration(
+                        color: AppColors.emerald50,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.emerald200),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.photo_library_rounded,
+                              color: AppColors.emerald500, size: 40),
+                          const SizedBox(height: 8),
+                          Text('Thư viện',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                  color: AppColors.emerald500)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.slate500,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text('Hủy',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _doPickImage(ImageSource source) async {
     try {
       final picked = await _picker.pickImage(
         source: source,
@@ -696,12 +643,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
       }
     } catch (e) {
       if (mounted) {
-        context.read<AppStore>().showToast(
-            'Không thể chọn ảnh. Vui lòng thử lại.', 'error');
+        context
+            .read<AppStore>()
+            .showToast('Không thể chọn ảnh. Vui lòng thử lại.', 'error');
       }
     }
   }
 
+  // ── Save Product ────────────────────────────────
   void _saveProduct() {
     final store = context.read<AppStore>();
     final name = _nameCtrl.text.trim();
@@ -740,6 +689,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
       ));
       store.showToast('Đã thêm sản phẩm "$name"!');
     }
-    widget.onBack?.call();
+    _closeWithAnimation();
   }
 }

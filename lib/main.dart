@@ -93,11 +93,7 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> {
                         ),
                       if (hasConfirm)
                         ConfirmModal(
-                          message: store.confirmDialog!.message,
-                          onConfirm: () {
-                            store.confirmDialog!.onConfirm();
-                            store.closeConfirm();
-                          },
+                          data: store.confirmDialog!,
                           onCancel: () => store.closeConfirm(),
                         ),
                     ],
