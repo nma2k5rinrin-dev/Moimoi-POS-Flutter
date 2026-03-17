@@ -13,6 +13,7 @@ Future<String?> showSquareCropDialog(
   BuildContext context, {
   required Uint8List imageBytes,
   double borderRadius = 24,
+  String title = 'Cắt ảnh sản phẩm',
 }) {
   return showGeneralDialog<String?>(
     context: context,
@@ -24,6 +25,7 @@ Future<String?> showSquareCropDialog(
       return _SquareCropDialog(
         imageBytes: imageBytes,
         borderRadius: borderRadius,
+        title: title,
       );
     },
     transitionBuilder: (ctx, anim1, anim2, child) {
@@ -41,9 +43,11 @@ Future<String?> showSquareCropDialog(
 class _SquareCropDialog extends StatefulWidget {
   final Uint8List imageBytes;
   final double borderRadius;
+  final String title;
   const _SquareCropDialog({
     required this.imageBytes,
     required this.borderRadius,
+    required this.title,
   });
 
   @override
@@ -124,13 +128,13 @@ class _SquareCropDialogState extends State<_SquareCropDialog> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Row(
+                    Row(
                       children: [
                         Icon(Icons.crop_rounded,
                             size: 20, color: AppColors.emerald600),
                         SizedBox(width: 8),
                         Text(
-                          'Cắt ảnh cửa hàng',
+                          widget.title,
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 18,

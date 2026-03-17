@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../store/app_store.dart';
 import '../../models/product_model.dart';
 import '../../utils/constants.dart';
+import '../../widgets/square_crop_dialog.dart';
 
 /// Formats number with thousand separators (e.g. 15000 → 15.000)
 class _ThousandSeparatorFormatter extends TextInputFormatter {
@@ -61,7 +63,6 @@ class _AddProductPanelState extends State<AddProductPanel>
 
   // Image
   final ImagePicker _picker = ImagePicker();
-  XFile? _pickedImage;
   String _imageUrl = '';
 
   late final AnimationController _animCtrl;
@@ -119,7 +120,9 @@ class _AddProductPanelState extends State<AddProductPanel>
     final store = context.watch<AppStore>();
     final categories = store.currentCategories;
 
-    return FadeTransition(
+    return Material(
+      type: MaterialType.transparency,
+      child: FadeTransition(
       opacity: _fadeAnim,
       child: Stack(
         children: [
@@ -263,6 +266,7 @@ class _AddProductPanelState extends State<AddProductPanel>
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -343,11 +347,14 @@ class _AddProductPanelState extends State<AddProductPanel>
   }
 
   Widget _buildImagePreview() {
-    if (_pickedImage != null) {
+    // Base64 data URI (from crop dialog)
+    if (_imageUrl.startsWith('data:')) {
+      final base64Part = _imageUrl.split(',').last;
+      final bytes = base64Decode(base64Part);
       return ClipRRect(
         borderRadius: BorderRadius.circular(15),
-        child: Image.network(
-          _pickedImage!.path,
+        child: Image.memory(
+          bytes,
           fit: BoxFit.cover,
           width: 120,
           height: 120,
@@ -432,33 +439,97 @@ class _AddProductPanelState extends State<AddProductPanel>
 
   // ── Category Dropdown ───────────────────────────
   Widget _buildCategoryDropdown(List categories) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.slate200),
-      ),
-      child: DropdownButton<String>(
-        value: _selectedCategory.isNotEmpty ? _selectedCategory : null,
-        hint: Row(
+    final catFieldKey = GlobalKey();
+    final selectedName = categories
+        .where((c) => c.id == _selectedCategory)
+        .map((c) => c.name)
+        .firstOrNull ?? '';
+    final hasValue = _selectedCategory.isNotEmpty && selectedName.isNotEmpty;
+
+    return GestureDetector(
+      key: catFieldKey,
+      onTap: () {
+        final renderBox = catFieldKey.currentContext?.findRenderObject() as RenderBox?;
+        if (renderBox == null) return;
+        final position = renderBox.localToGlobal(Offset.zero);
+        final fieldSize = renderBox.size;
+        final screenHeight = MediaQuery.of(catFieldKey.currentContext!).size.height;
+
+        final items = <PopupMenuEntry<String>>[
+          const PopupMenuItem<String>(
+            value: '',
+            height: 48,
+            child: Text('Không có', style: TextStyle(fontSize: 14, color: AppColors.slate500)),
+          ),
+          ...categories.map((c) => PopupMenuItem<String>(
+            value: c.id,
+            height: 48,
+            child: Row(
+              children: [
+                Icon(Icons.sell_outlined, size: 16,
+                    color: c.id == _selectedCategory ? AppColors.emerald600 : AppColors.slate400),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(c.name, style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: c.id == _selectedCategory ? FontWeight.w700 : FontWeight.w500,
+                    color: c.id == _selectedCategory ? AppColors.emerald600 : AppColors.slate800,
+                  )),
+                ),
+                if (c.id == _selectedCategory)
+                  const Icon(Icons.check_circle, size: 18, color: AppColors.emerald600),
+              ],
+            ),
+          )),
+        ];
+
+        final totalMenuHeight = items.length * 48.0 + 16;
+        final spaceBelow = screenHeight - position.dy - fieldSize.height;
+        final dropUp = spaceBelow < totalMenuHeight && position.dy > totalMenuHeight;
+        final menuTop = dropUp
+            ? position.dy - totalMenuHeight
+            : position.dy + fieldSize.height;
+
+        showMenu<String>(
+          context: catFieldKey.currentContext!,
+          position: RelativeRect.fromLTRB(
+            position.dx,
+            menuTop,
+            position.dx + fieldSize.width,
+            menuTop + totalMenuHeight,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          elevation: 8,
+          constraints: BoxConstraints(
+            minWidth: fieldSize.width,
+            maxWidth: fieldSize.width,
+          ),
+          items: items,
+        ).then((v) {
+          if (v != null) setState(() => _selectedCategory = v);
+        });
+      },
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.slate200),
+        ),
+        child: Row(
           children: [
             Icon(Icons.sell_outlined, color: AppColors.slate400, size: 18),
             const SizedBox(width: 10),
-            Text('Chọn danh mục',
-                style: TextStyle(fontSize: 14, color: AppColors.slate400)),
+            Expanded(
+              child: Text(
+                hasValue ? selectedName : 'Chọn danh mục',
+                style: TextStyle(fontSize: 14, color: hasValue ? AppColors.slate800 : AppColors.slate400),
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.slate400),
           ],
         ),
-        isExpanded: true,
-        underline: const SizedBox(),
-        icon: const Icon(Icons.keyboard_arrow_down_rounded,
-            color: AppColors.slate400),
-        items: [
-          const DropdownMenuItem(value: '', child: Text('Không có')),
-          ...categories
-              .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
-        ],
-        onChanged: (v) => setState(() => _selectedCategory = v ?? ''),
       ),
     );
   }
@@ -530,99 +601,129 @@ class _AddProductPanelState extends State<AddProductPanel>
 
   // ── Image Picker Dialog ─────────────────────────
   void _showImagePickerDialog() {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Chọn ảnh sản phẩm',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.slate800)),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _doPickImage(ImageSource.camera);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      decoration: BoxDecoration(
-                        color: AppColors.blue50,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.blue200),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(Icons.camera_alt_rounded,
-                              color: Color(0xFF3B82F6), size: 40),
-                          const SizedBox(height: 8),
-                          Text('Máy ảnh',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
-                                  color: Color(0xFF3B82F6))),
-                        ],
-                      ),
-                    ),
-                  ),
+      barrierColor: Colors.transparent,
+      builder: (ctx) => Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(ctx),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.3),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _doPickImage(ImageSource.gallery);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      decoration: BoxDecoration(
-                        color: AppColors.emerald50,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.emerald200),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(Icons.photo_library_rounded,
-                              color: AppColors.emerald500, size: 40),
-                          const SizedBox(height: 8),
-                          Text('Thư viện',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
-                                  color: AppColors.emerald500)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.slate500,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text('Hủy',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
               ),
             ),
-          ],
-        ),
+          ),
+          Center(
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 32),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 30,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Chọn ảnh sản phẩm',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.slate800)),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _doPickImage(ImageSource.camera);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 24),
+                              decoration: BoxDecoration(
+                                color: AppColors.blue50,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppColors.blue200),
+                              ),
+                              child: const Column(
+                                children: [
+                                  Icon(Icons.camera_alt_rounded,
+                                      color: Color(0xFF3B82F6), size: 40),
+                                  SizedBox(height: 8),
+                                  Text('Máy ảnh',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 15,
+                                          color: Color(0xFF3B82F6))),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _doPickImage(ImageSource.gallery);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 24),
+                              decoration: BoxDecoration(
+                                color: AppColors.emerald50,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppColors.emerald200),
+                              ),
+                              child: const Column(
+                                children: [
+                                  Icon(Icons.photo_library_rounded,
+                                      color: AppColors.emerald500, size: 40),
+                                  SizedBox(height: 8),
+                                  Text('Thư viện',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 15,
+                                          color: AppColors.emerald500)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.slate500,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text('Hủy',
+                            style:
+                                TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -635,10 +736,23 @@ class _AddProductPanelState extends State<AddProductPanel>
         maxHeight: 800,
         imageQuality: 85,
       );
-      if (picked != null) {
+      if (picked == null) return;
+
+      // Read bytes for crop dialog
+      final bytes = await picked.readAsBytes();
+      if (!mounted) return;
+
+      // Show square crop dialog
+      final result = await showSquareCropDialog(
+        context,
+        imageBytes: bytes,
+        borderRadius: 16,
+        title: 'Cắt ảnh sản phẩm',
+      );
+
+      if (result != null && mounted) {
         setState(() {
-          _pickedImage = picked;
-          _imageUrl = picked.path;
+          _imageUrl = result;
         });
       }
     } catch (e) {

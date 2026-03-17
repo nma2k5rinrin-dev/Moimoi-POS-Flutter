@@ -11,7 +11,10 @@ import 'menu_management.dart';
 import 'change_pin_dialog.dart';
 import '../../utils/avatar_picker.dart';
 import '../../widgets/square_crop_dialog.dart';
+import '../../widgets/circle_crop_dialog.dart';
+import '../../models/store_info_model.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 Uint8List _decodeAvatar(String dataUri) {
   final base64Part = dataUri.split(',').last;
@@ -55,8 +58,8 @@ class _SettingsPageState extends State<SettingsPage> {
     ),
     _SettingMenu(
       id: 'users',
-      name: 'Quản Lý Nhân Viên',
-      desc: 'Tạo tài khoản, thống kê doanh số',
+      name: 'Quản Lý Nhân Sự',
+      desc: 'Quản lý nhân viên, phân quyền vai trò',
       icon: Icons.people_outline,
       adminOnly: true,
     ),
@@ -869,9 +872,15 @@ class _AccountSectionState extends State<_AccountSection> {
   String _getRoleName(String? role) {
     switch (role) {
       case 'sadmin':
-        return 'Quản lý';
+        return 'Super Admin';
       case 'admin':
-        return 'Quản lý';
+        return 'Admin';
+      case 'manager':
+        return 'Quản lý chi nhánh';
+      case 'cashier':
+        return 'Thu ngân';
+      case 'kitchen':
+        return 'Bếp / Bar';
       case 'staff':
         return 'Nhân viên';
       default:
@@ -1139,18 +1148,7 @@ class _AccountSectionState extends State<_AccountSection> {
                           child: GestureDetector(
                             onTap: () async {
                               Navigator.pop(ctx);
-                              final picker = ImagePicker();
-                              final picked = await picker.pickImage(
-                                source: ImageSource.camera,
-                                maxWidth: 800, maxHeight: 800,
-                                imageQuality: 85,
-                              );
-                              if (picked != null && user != null) {
-                                final bytes = await picked.readAsBytes();
-                                final b64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
-                                store.updateUser(user.username, {'avatar': b64});
-                                setState(() {});
-                              }
+                              await _pickAndCropAvatar(ImageSource.camera, store, user);
                             },
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 24),
@@ -1179,18 +1177,7 @@ class _AccountSectionState extends State<_AccountSection> {
                           child: GestureDetector(
                             onTap: () async {
                               Navigator.pop(ctx);
-                              final picker = ImagePicker();
-                              final picked = await picker.pickImage(
-                                source: ImageSource.gallery,
-                                maxWidth: 800, maxHeight: 800,
-                                imageQuality: 85,
-                              );
-                              if (picked != null && user != null) {
-                                final bytes = await picked.readAsBytes();
-                                final b64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
-                                store.updateUser(user.username, {'avatar': b64});
-                                setState(() {});
-                              }
+                              await _pickAndCropAvatar(ImageSource.gallery, store, user);
                             },
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 24),
@@ -1238,6 +1225,30 @@ class _AccountSectionState extends State<_AccountSection> {
         ],
       ),
     );
+  }
+
+  Future<void> _pickAndCropAvatar(ImageSource source, AppStore store, dynamic user) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 800, maxHeight: 800,
+        imageQuality: 85,
+      );
+      if (picked == null || user == null) return;
+
+      final bytes = await picked.readAsBytes();
+      if (!mounted) return;
+
+      // Show circle crop dialog
+      final result = await showCircleCropDialog(context, imageBytes: bytes);
+      if (result != null && mounted) {
+        store.updateUser(user.username, {'avatar': result});
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('[AvatarPicker] error: $e');
+    }
   }
 }
 
@@ -1889,22 +1900,31 @@ class _TablesSectionState extends State<_TablesSection> {
                                     children: [
                                       // Group Header
                                       GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
                                         onTap: () => setState(() {
                                           isCollapsed ? _collapsedAreas.remove(areaName) : _collapsedAreas.add(areaName);
                                         }),
                                         child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Icon(Icons.location_on_rounded, size: 16, color: AppColors.emerald600),
-                                                const SizedBox(width: 6),
-                                                Text(areaName,
-                                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate800)),
-
-                                              ],
+                                            const Icon(Icons.location_on_rounded, size: 16, color: AppColors.emerald600),
+                                            const SizedBox(width: 6),
+                                            Expanded(
+                                              child: Text(areaName,
+                                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate800)),
                                             ),
+                                            if (areaName != 'Mặc định')
+                                              GestureDetector(
+                                                onTap: () => _showRenameAreaDialog(areaName),
+                                                child: Container(
+                                                  width: 28, height: 28,
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.slate100,
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                  child: const Icon(Icons.edit, size: 14, color: AppColors.emerald500),
+                                                ),
+                                              ),
+                                            const SizedBox(width: 8),
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                               decoration: BoxDecoration(
@@ -1914,6 +1934,9 @@ class _TablesSectionState extends State<_TablesSection> {
                                               child: Text('${areaTables.length} bàn',
                                                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.emerald600)),
                                             ),
+                                            const SizedBox(width: 8),
+                                            Icon(isCollapsed ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up,
+                                                size: 18, color: AppColors.slate400),
                                           ],
                                         ),
                                       ),
@@ -2039,15 +2062,60 @@ class _TablesSectionState extends State<_TablesSection> {
         ],
     );
 
-    return Stack(
-      children: [
-        mainContent,
-        if (_showPanel) _buildTableFormPanel(context.read<AppStore>()),
-      ],
-    );
+    return mainContent;
   }
 
   // ── Open Add Panel ──────────────────────────────────
+  // ── Rename Area Dialog ──────────────────────────────
+  void _showRenameAreaDialog(String oldAreaName) {
+    final controller = TextEditingController(text: oldAreaName);
+    final store = context.read<AppStore>();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Sửa khu vực', style: TextStyle(fontWeight: FontWeight.w700)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: 'Nhập tên khu vực mới...',
+            filled: true,
+            fillColor: AppColors.slate50,
+            prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.emerald500, size: 18),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.slate200)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.slate200)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.emerald400)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy', style: TextStyle(color: AppColors.slate500)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newName = controller.text.trim();
+              if (newName.isEmpty || newName == oldAreaName) {
+                Navigator.pop(ctx);
+                return;
+              }
+              store.renameArea(oldAreaName, newName);
+              store.showToast('Đã đổi tên khu vực thành "$newName"');
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.emerald500,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _openAddPanel() {
     _editingTable = null;
     _tableNameCtrl.clear();
@@ -2055,6 +2123,7 @@ class _TablesSectionState extends State<_TablesSection> {
     _newAreaCtrl.clear();
     _newAreaName = '';
     setState(() => _showPanel = true);
+    _showTablePanelDialog();
   }
 
   // ── Open Edit Panel ─────────────────────────────────
@@ -2065,10 +2134,25 @@ class _TablesSectionState extends State<_TablesSection> {
     _newAreaCtrl.clear();
     _newAreaName = '';
     setState(() => _showPanel = true);
+    _showTablePanelDialog();
+  }
+
+  void _showTablePanelDialog() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      useRootNavigator: true,
+      transitionDuration: Duration.zero,
+      pageBuilder: (ctx, _, __) {
+        return _buildTableFormPanel(context.read<AppStore>());
+      },
+    );
   }
 
   // ── Close Panel ─────────────────────────────────────
   void _closePanel() {
+    Navigator.of(context, rootNavigator: true).pop();
     setState(() {
       _showPanel = false;
       _editingTable = null;
@@ -2078,12 +2162,16 @@ class _TablesSectionState extends State<_TablesSection> {
   // ── Table Form Overlay Panel ────────────────────────
   Widget _buildTableFormPanel(AppStore store) {
     final isEditing = _editingTable != null;
-    return Positioned.fill(
+    return Material(
+      type: MaterialType.transparency,
+      child: SizedBox.expand(
       child: GestureDetector(
         onTap: _closePanel,
         child: Container(
           color: Colors.black.withValues(alpha: 0.4),
-          child: GestureDetector(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+            child: GestureDetector(
             onTap: () {}, // prevent close on panel tap
             child: Center(
               child: Container(
@@ -2150,64 +2238,106 @@ class _TablesSectionState extends State<_TablesSection> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Dropdown for existing areas
-                          Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.slate200),
-                            ),
-                            child: DropdownButtonFormField<String>(
-                              value: areaList.contains(currentAreaText) ? currentAreaText : (isNewArea ? '__new__' : null),
-                              decoration: InputDecoration(
-                                prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.slate400, size: 18),
-                                filled: true,
-                                fillColor: Colors.white,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                              ),
-                              hint: const Text('Chọn khu vực hoặc thêm mới', style: TextStyle(color: AppColors.slate400, fontSize: 14)),
-                              isExpanded: true,
-                              icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.slate400),
-                              items: [
-                                // No area option
-                                const DropdownMenuItem(
-                                  value: '',
-                                  child: Text('Mặc định (không có khu vực)', style: TextStyle(fontSize: 14, color: AppColors.slate500)),
-                                ),
-                                // Existing areas
-                                ...areaList.map((a) => DropdownMenuItem(
-                                  value: a,
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.location_on, size: 14, color: AppColors.emerald500),
-                                      const SizedBox(width: 8),
-                                      Text(a, style: const TextStyle(fontSize: 14)),
-                                    ],
+                          Builder(builder: (ctx) {
+                            final areaFieldKey = GlobalKey();
+                            final displayText = areaList.contains(currentAreaText)
+                                ? currentAreaText
+                                : (isNewArea ? 'Thêm khu vực mới...' : 'Chọn khu vực hoặc thêm mới');
+                            final hasValue = areaList.contains(currentAreaText) || isNewArea;
+                            return GestureDetector(
+                              key: areaFieldKey,
+                              onTap: () {
+                                final renderBox = areaFieldKey.currentContext?.findRenderObject() as RenderBox?;
+                                if (renderBox == null) return;
+                                final position = renderBox.localToGlobal(Offset.zero);
+                                final fieldSize = renderBox.size;
+                                final screenHeight = MediaQuery.of(areaFieldKey.currentContext!).size.height;
+                                final items = <PopupMenuEntry<String>>[
+                                  PopupMenuItem<String>(
+                                    value: '',
+                                    height: 48,
+                                    child: const Text('Mặc định (không có khu vực)', style: TextStyle(fontSize: 14, color: AppColors.slate500)),
                                   ),
-                                )),
-                                // Add new area option
-                                const DropdownMenuItem(
-                                  value: '__new__',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.add_circle_outline, size: 14, color: AppColors.emerald600),
-                                      SizedBox(width: 8),
-                                      Text('Thêm khu vực mới...', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.emerald600)),
-                                    ],
+                                  ...areaList.map((a) => PopupMenuItem<String>(
+                                    value: a,
+                                    height: 48,
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.location_on, size: 14, color: AppColors.emerald500),
+                                        const SizedBox(width: 8),
+                                        Text(a, style: const TextStyle(fontSize: 14)),
+                                      ],
+                                    ),
+                                  )),
+                                  PopupMenuItem<String>(
+                                    value: '__new__',
+                                    height: 48,
+                                    child: const Row(
+                                      children: [
+                                        Icon(Icons.add_circle_outline, size: 14, color: AppColors.emerald600),
+                                        SizedBox(width: 8),
+                                        Text('Thêm khu vực mới...', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.emerald600)),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
-                              onChanged: (val) {
-                                setState(() {
-                                  if (val == '__new__') {
-                                    _areaCtrl.text = '__new__';
-                                  } else {
-                                    _areaCtrl.text = val ?? '';
+                                ];
+                                final totalMenuHeight = items.length * 48.0 + 16;
+                                final spaceBelow = screenHeight - position.dy - fieldSize.height;
+                                final dropUp = spaceBelow < totalMenuHeight && position.dy > totalMenuHeight;
+                                final menuTop = dropUp
+                                    ? position.dy - totalMenuHeight
+                                    : position.dy + fieldSize.height;
+                                showMenu<String>(
+                                  context: areaFieldKey.currentContext!,
+                                  position: RelativeRect.fromLTRB(
+                                    position.dx,
+                                    menuTop,
+                                    position.dx + fieldSize.width,
+                                    menuTop + totalMenuHeight,
+                                  ),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  elevation: 8,
+                                  constraints: BoxConstraints(
+                                    minWidth: fieldSize.width,
+                                    maxWidth: fieldSize.width,
+                                  ),
+                                  items: items,
+                                ).then((val) {
+                                  if (val != null) {
+                                    setState(() {
+                                      if (val == '__new__') {
+                                        _areaCtrl.text = '__new__';
+                                      } else {
+                                        _areaCtrl.text = val;
+                                      }
+                                    });
                                   }
                                 });
                               },
-                            ),
-                          ),
+                              child: Container(
+                                height: 48,
+                                padding: const EdgeInsets.symmetric(horizontal: 14),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.slate200),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.location_on_outlined, color: AppColors.slate400, size: 18),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        displayText,
+                                        style: TextStyle(fontSize: 14, color: hasValue ? AppColors.slate800 : AppColors.slate400),
+                                      ),
+                                    ),
+                                    const Icon(Icons.keyboard_arrow_down, size: 20, color: AppColors.slate400),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
                           // New area text field (shown when "Thêm khu vực mới" selected)
                           if (_areaCtrl.text == '__new__') ...[
                             const SizedBox(height: 8),
@@ -2310,9 +2440,11 @@ class _TablesSectionState extends State<_TablesSection> {
                 ),
               ),
             ),
+            ),
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -2367,6 +2499,8 @@ class _UsersSectionState extends State<_UsersSection> {
   String _selectedRole = 'staff';
   String _selectedStore = '';
   bool _obscurePassword = true;
+  final _storeNameCtrl = TextEditingController();
+  final _addressCtrl = TextEditingController();
 
   @override
   void dispose() {
@@ -2374,6 +2508,8 @@ class _UsersSectionState extends State<_UsersSection> {
     _usernameCtrl.dispose();
     _phoneCtrl.dispose();
     _passwordCtrl.dispose();
+    _storeNameCtrl.dispose();
+    _addressCtrl.dispose();
     super.dispose();
   }
 
@@ -2389,8 +2525,9 @@ class _UsersSectionState extends State<_UsersSection> {
     } else {
       displayUsers = allUsers
           .where((u) =>
-              u.username == currentUser?.username ||
-              u.createdBy == currentUser?.username)
+              u.role != 'sadmin' &&
+              (u.username == currentUser?.username ||
+              u.createdBy == currentUser?.username))
           .toList();
     }
 
@@ -2443,32 +2580,95 @@ class _UsersSectionState extends State<_UsersSection> {
                 children: [
                   const SizedBox(height: 12),
                   // ── Store Selector
-                  GestureDetector(
-                    onTap: () {
-                      _showStoreFilterMenu(context, storeOptions);
-                    },
-                    child: Container(
-                      height: 48,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: AppColors.emerald50,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.emerald200),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.storefront, size: 20, color: AppColors.emerald600),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              storeOptions[_selectedStoreFilter] ?? 'Tất cả cửa hàng',
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.emerald700),
+                  Builder(
+                    builder: (ctx) {
+                      final selectorKey = GlobalKey();
+                      return GestureDetector(
+                        key: selectorKey,
+                        onTap: () {
+                          final renderBox = selectorKey.currentContext?.findRenderObject() as RenderBox?;
+                          if (renderBox == null) return;
+                          final position = renderBox.localToGlobal(Offset.zero);
+                          final fieldSize = renderBox.size;
+                          final screenHeight = MediaQuery.of(context).size.height;
+                          final itemCount = storeOptions.length;
+                          final totalMenuHeight = itemCount * 48.0 + 16;
+                          final spaceBelow = screenHeight - position.dy - fieldSize.height;
+                          final dropUp = spaceBelow < totalMenuHeight && position.dy > totalMenuHeight;
+                          final menuTop = dropUp
+                              ? position.dy - totalMenuHeight
+                              : position.dy + fieldSize.height;
+
+                          showMenu<String>(
+                            context: context,
+                            position: RelativeRect.fromLTRB(
+                              position.dx,
+                              menuTop,
+                              position.dx + fieldSize.width,
+                              menuTop + totalMenuHeight,
                             ),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 8,
+                            constraints: BoxConstraints(
+                              minWidth: fieldSize.width,
+                              maxWidth: fieldSize.width,
+                            ),
+                            items: storeOptions.entries.map((e) {
+                              final isSelected = _selectedStoreFilter == e.key;
+                              return PopupMenuItem<String>(
+                                value: e.key,
+                                height: 48,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      e.key == 'all' ? Icons.store : Icons.storefront,
+                                      size: 18,
+                                      color: isSelected ? AppColors.emerald600 : AppColors.slate400,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(e.value, style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                        color: isSelected ? AppColors.emerald600 : AppColors.slate800,
+                                      )),
+                                    ),
+                                    if (isSelected)
+                                      const Icon(Icons.check_circle, size: 18, color: AppColors.emerald600),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ).then((selected) {
+                            if (selected != null) {
+                              setState(() => _selectedStoreFilter = selected);
+                            }
+                          });
+                        },
+                        child: Container(
+                          height: 48,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: AppColors.emerald50,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.emerald200),
                           ),
-                          const Icon(Icons.keyboard_arrow_down, size: 20, color: AppColors.emerald600),
-                        ],
-                      ),
-                    ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.storefront, size: 20, color: AppColors.emerald600),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  storeOptions[_selectedStoreFilter] ?? 'Tất cả cửa hàng',
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.emerald700),
+                                ),
+                              ),
+                              const Icon(Icons.keyboard_arrow_down, size: 20, color: AppColors.emerald600),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
                   // ── Search Bar
@@ -2530,20 +2730,17 @@ class _UsersSectionState extends State<_UsersSection> {
                                     children: [
                                       // Group Header
                                       GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
                                         onTap: () => setState(() {
                                           isCollapsed ? _collapsedStores.remove(storeId) : _collapsedStores.add(storeId);
                                         }),
                                         child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Icon(Icons.storefront, size: 16, color: AppColors.emerald600),
-                                                const SizedBox(width: 6),
-                                                Text(storeName,
-                                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate800)),
-                                              ],
+                                            const Icon(Icons.storefront, size: 16, color: AppColors.emerald600),
+                                            const SizedBox(width: 6),
+                                            Expanded(
+                                              child: Text(storeName,
+                                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate800)),
                                             ),
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -2554,6 +2751,9 @@ class _UsersSectionState extends State<_UsersSection> {
                                               child: Text('${users.length} nhân viên',
                                                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.emerald600)),
                                             ),
+                                            const SizedBox(width: 8),
+                                            Icon(isCollapsed ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up,
+                                                size: 18, color: AppColors.slate400),
                                           ],
                                         ),
                                       ),
@@ -2608,52 +2808,7 @@ class _UsersSectionState extends State<_UsersSection> {
         ],
     );
 
-    // Wrap in Stack for overlay panel
-    return Stack(
-      children: [
-        mainContent,
-        if (_showPanel) _buildEmployeeFormPanel(context.read<AppStore>()),
-      ],
-    );
-  }
-
-  void _showStoreFilterMenu(BuildContext context, Map<String, String> options) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('Chọn cửa hàng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            ),
-            ...options.entries.map((e) => ListTile(
-              leading: Icon(
-                e.key == 'all' ? Icons.store : Icons.storefront,
-                color: _selectedStoreFilter == e.key ? AppColors.emerald600 : AppColors.slate400,
-              ),
-              title: Text(e.value,
-                  style: TextStyle(
-                    fontWeight: _selectedStoreFilter == e.key ? FontWeight.w700 : FontWeight.normal,
-                    color: _selectedStoreFilter == e.key ? AppColors.emerald600 : AppColors.slate800,
-                  )),
-              trailing: _selectedStoreFilter == e.key
-                  ? const Icon(Icons.check_circle, color: AppColors.emerald600)
-                  : null,
-              onTap: () {
-                setState(() => _selectedStoreFilter = e.key);
-                Navigator.pop(ctx);
-              },
-            )),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
+    return mainContent;
   }
 
   Widget _buildEmployeeCard(AppStore store, UserModel user, UserModel? currentUser, String storeName) {
@@ -2665,15 +2820,31 @@ class _UsersSectionState extends State<_UsersSection> {
     String roleLabel;
     Color roleBg, roleFg;
 
-    if (user.role == 'sadmin') {
-      avatarBg = AppColors.violet100; avatarFg = AppColors.violet600;
-      roleLabel = 'SuperAdmin'; roleBg = AppColors.violet100; roleFg = AppColors.violet600;
-    } else if (user.role == 'admin') {
-      avatarBg = AppColors.emerald100; avatarFg = AppColors.emerald600;
-      roleLabel = 'Admin'; roleBg = AppColors.emerald50; roleFg = AppColors.emerald600;
-    } else {
-      avatarBg = const Color(0xFFDBEAFE); avatarFg = const Color(0xFF2563EB);
-      roleLabel = 'Nhân viên'; roleBg = const Color(0xFFDBEAFE); roleFg = const Color(0xFF2563EB);
+    switch (user.role) {
+      case 'sadmin':
+        avatarBg = AppColors.violet100; avatarFg = AppColors.violet600;
+        roleLabel = 'Super Admin'; roleBg = AppColors.violet100; roleFg = AppColors.violet600;
+        break;
+      case 'admin':
+        avatarBg = AppColors.emerald100; avatarFg = AppColors.emerald600;
+        roleLabel = 'Admin'; roleBg = AppColors.emerald50; roleFg = AppColors.emerald600;
+        break;
+      case 'manager':
+        avatarBg = const Color(0xFFFEF3C7); avatarFg = const Color(0xFFD97706);
+        roleLabel = 'QL Chi nhánh'; roleBg = const Color(0xFFFEF3C7); roleFg = const Color(0xFFD97706);
+        break;
+      case 'cashier':
+        avatarBg = const Color(0xFFDBEAFE); avatarFg = const Color(0xFF2563EB);
+        roleLabel = 'Thu ngân'; roleBg = const Color(0xFFDBEAFE); roleFg = const Color(0xFF2563EB);
+        break;
+      case 'kitchen':
+        avatarBg = const Color(0xFFFEE2E2); avatarFg = const Color(0xFFDC2626);
+        roleLabel = 'Bếp / Bar'; roleBg = const Color(0xFFFEE2E2); roleFg = const Color(0xFFDC2626);
+        break;
+      default: // staff
+        avatarBg = const Color(0xFFE0E7FF); avatarFg = const Color(0xFF4F46E5);
+        roleLabel = 'Nhân viên'; roleBg = const Color(0xFFE0E7FF); roleFg = const Color(0xFF4F46E5);
+        break;
     }
 
     return Padding(
@@ -2758,8 +2929,11 @@ class _UsersSectionState extends State<_UsersSection> {
     _passwordCtrl.clear();
     _selectedRole = 'staff';
     _selectedStore = store.currentUser?.username ?? '';
+    _storeNameCtrl.clear();
+    _addressCtrl.clear();
     _obscurePassword = true;
     setState(() => _showPanel = true);
+    _showEmployeePanelDialog();
   }
 
   void _openEditPanel(AppStore store, UserModel user) {
@@ -2772,15 +2946,42 @@ class _UsersSectionState extends State<_UsersSection> {
     _selectedStore = user.createdBy ?? store.currentUser?.username ?? '';
     _obscurePassword = true;
     setState(() => _showPanel = true);
+    _showEmployeePanelDialog();
+  }
+
+  void _showEmployeePanelDialog() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      useRootNavigator: true,
+      transitionDuration: Duration.zero,
+      pageBuilder: (ctx, _, __) {
+        return StatefulBuilder(
+          builder: (dialogCtx, dialogSetState) {
+            return _buildEmployeeFormPanel(
+              dialogCtx.read<AppStore>(),
+              dialogSetState: dialogSetState,
+            );
+          },
+        );
+      },
+    );
   }
 
   void _closePanel() {
+    Navigator.of(context, rootNavigator: true).pop();
     setState(() => _showPanel = false);
   }
 
-  Widget _buildEmployeeFormPanel(AppStore store) {
+  Widget _buildEmployeeFormPanel(AppStore store, {required StateSetter dialogSetState}) {
     final isEditing = _editingUser != null;
     final currentUser = store.currentUser;
+    // Helper to update both parent and dialog state
+    void updateState(VoidCallback fn) {
+      fn();
+      dialogSetState(() {});
+    }
     // Build store list for dropdown
     final storeList = <MapEntry<String, String>>[];
     if (currentUser?.role == 'sadmin') {
@@ -2792,7 +2993,9 @@ class _UsersSectionState extends State<_UsersSection> {
       storeList.add(MapEntry(currentUser?.username ?? '', _getStoreName(store, currentUser?.username ?? '')));
     }
 
-    return GestureDetector(
+    return Material(
+      type: MaterialType.transparency,
+      child: GestureDetector(
       onTap: _closePanel,
       child: Container(
         color: Colors.black.withValues(alpha: 0.4),
@@ -2831,10 +3034,15 @@ class _UsersSectionState extends State<_UsersSection> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(isEditing ? Icons.edit : Icons.person_add, size: 22, color: AppColors.emerald600),
+                              Icon(
+                                isEditing ? Icons.edit
+                                    : _selectedRole == 'admin' ? Icons.storefront : Icons.person_add,
+                                size: 22, color: AppColors.emerald600),
                               const SizedBox(width: 10),
-                              Text(isEditing ? 'Sửa nhân viên' : 'Thêm nhân viên',
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.slate800)),
+                              Text(
+                                isEditing ? 'Sửa nhân viên'
+                                    : _selectedRole == 'admin' ? 'Thêm cửa hàng / chi nhánh' : 'Thêm nhân viên',
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.slate800)),
                             ],
                           ),
                           GestureDetector(
@@ -2856,19 +3064,60 @@ class _UsersSectionState extends State<_UsersSection> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            _buildDropdownField('Vai trò', Icons.shield, _selectedRole,
+                                currentUser?.role == 'sadmin'
+                                    ? [
+                                        const MapEntry('admin', 'Admin (Tạo cửa hàng mới)'),
+                                        const MapEntry('manager', 'Quản lý chi nhánh (Store Manager)'),
+                                        const MapEntry('cashier', 'Thu ngân (Cashier)'),
+                                        const MapEntry('staff', 'Nhân viên (Waitstaff / Server)'),
+                                        const MapEntry('kitchen', 'Bếp / Bar (Kitchen / KDS)'),
+                                      ]
+                                    : [
+                                        const MapEntry('manager', 'Quản lý chi nhánh (Store Manager)'),
+                                        const MapEntry('cashier', 'Thu ngân (Cashier)'),
+                                        const MapEntry('staff', 'Nhân viên (Waitstaff / Server)'),
+                                        const MapEntry('kitchen', 'Bếp / Bar (Kitchen / KDS)'),
+                                      ],
+                                (v) => updateState(() => _selectedRole = v)),
+                            const SizedBox(height: 14),
                             _buildFormField('Họ và tên', Icons.person, _fullnameCtrl, 'Nhập họ tên nhân viên'),
                             const SizedBox(height: 14),
                             _buildFormField('Tên đăng nhập', Icons.badge, _usernameCtrl, 'Nhập tên đăng nhập', enabled: !isEditing),
                             const SizedBox(height: 14),
                             _buildFormField('Số điện thoại', Icons.call, _phoneCtrl, 'Nhập số điện thoại', keyboardType: TextInputType.phone),
                             const SizedBox(height: 14),
-                            _buildDropdownField('Cửa hàng', Icons.storefront, _selectedStore,
-                                storeList.map((e) => MapEntry(e.key, e.value)).toList(),
-                                (v) => setState(() => _selectedStore = v)),
-                            const SizedBox(height: 14),
-                            _buildDropdownField('Vai trò', Icons.shield, _selectedRole,
-                                [const MapEntry('staff', 'Nhân viên'), const MapEntry('admin', 'Admin')],
-                                (v) => setState(() => _selectedRole = v)),
+                            // Store assignment (hidden for admin role - admin IS a new store)
+                            if (_selectedRole == 'admin') ...[
+                              Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: AppColors.emerald50,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: AppColors.emerald200),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.info_outline, size: 18, color: AppColors.emerald600),
+                                    SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'Tạo Admin sẽ tự động tạo cửa hàng mới. Cửa hàng mới sẽ hoạt động độc lập.',
+                                        style: TextStyle(fontSize: 12, color: AppColors.emerald700, fontWeight: FontWeight.w500),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              _buildFormField('Tên cửa hàng', Icons.store, _storeNameCtrl, 'Nhập tên cửa hàng / chi nhánh'),
+                              const SizedBox(height: 14),
+                              _buildFormField('Địa chỉ', Icons.location_on, _addressCtrl, 'Nhập địa chỉ cửa hàng (tùy chọn)'),
+                            ] else ...[
+                              _buildDropdownField('Cửa hàng', Icons.storefront, _selectedStore,
+                                  storeList.map((e) => MapEntry(e.key, e.value)).toList(),
+                                  (v) => updateState(() => _selectedStore = v)),
+                            ],
                             const SizedBox(height: 14),
                             // Password field with toggle
                             Column(
@@ -2903,7 +3152,7 @@ class _UsersSectionState extends State<_UsersSection> {
                                         ),
                                       ),
                                       GestureDetector(
-                                        onTap: () => setState(() => _obscurePassword = !_obscurePassword),
+                                        onTap: () => updateState(() => _obscurePassword = !_obscurePassword),
                                         child: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility,
                                             size: 20, color: AppColors.slate400),
                                       ),
@@ -2977,6 +3226,7 @@ class _UsersSectionState extends State<_UsersSection> {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -3023,38 +3273,67 @@ class _UsersSectionState extends State<_UsersSection> {
 
   Widget _buildDropdownField(String label, IconData icon, String value,
       List<MapEntry<String, String>> options, ValueChanged<String> onChanged) {
+    final fieldKey = GlobalKey();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.slate600)),
         const SizedBox(height: 6),
         GestureDetector(
+          key: fieldKey,
           onTap: () {
-            showModalBottomSheet(
-              context: context,
-              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-              builder: (ctx) => SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                    ),
-                    ...options.map((e) => ListTile(
-                      leading: Icon(icon, color: value == e.key ? AppColors.emerald600 : AppColors.slate400),
-                      title: Text(e.value, style: TextStyle(
-                        fontWeight: value == e.key ? FontWeight.w700 : FontWeight.normal,
-                        color: value == e.key ? AppColors.emerald600 : AppColors.slate800,
-                      )),
-                      trailing: value == e.key ? const Icon(Icons.check_circle, color: AppColors.emerald600) : null,
-                      onTap: () { onChanged(e.key); Navigator.pop(ctx); },
-                    )),
-                    const SizedBox(height: 8),
-                  ],
-                ),
+            final renderBox = fieldKey.currentContext?.findRenderObject() as RenderBox?;
+            if (renderBox == null) return;
+            final position = renderBox.localToGlobal(Offset.zero);
+            final fieldSize = renderBox.size;
+            final screenHeight = MediaQuery.of(context).size.height;
+            final spaceBelow = screenHeight - position.dy - fieldSize.height;
+            final totalMenuHeight = options.length * 48.0 + 16;
+            final dropUp = spaceBelow < totalMenuHeight && position.dy > totalMenuHeight;
+
+            final menuTop = dropUp
+                ? position.dy - totalMenuHeight
+                : position.dy + fieldSize.height;
+
+            showMenu<String>(
+              context: fieldKey.currentContext!,
+              position: RelativeRect.fromLTRB(
+                position.dx,
+                menuTop,
+                position.dx + fieldSize.width,
+                menuTop + totalMenuHeight,
               ),
-            );
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              elevation: 8,
+              constraints: BoxConstraints(
+                minWidth: fieldSize.width,
+                maxWidth: fieldSize.width,
+              ),
+              items: options.map((e) {
+                final isSelected = value == e.key;
+                return PopupMenuItem<String>(
+                  value: e.key,
+                  height: 48,
+                  child: Row(
+                    children: [
+                      Icon(icon, size: 18, color: isSelected ? AppColors.emerald600 : AppColors.slate400),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(e.value, style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected ? AppColors.emerald600 : AppColors.slate800,
+                        )),
+                      ),
+                      if (isSelected)
+                        const Icon(Icons.check_circle, size: 18, color: AppColors.emerald600),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ).then((selected) {
+              if (selected != null) onChanged(selected);
+            });
           },
           child: Container(
             height: 48,
@@ -3083,7 +3362,7 @@ class _UsersSectionState extends State<_UsersSection> {
     );
   }
 
-  void _saveEmployee(AppStore store) {
+  Future<void> _saveEmployee(AppStore store) async {
     if (_usernameCtrl.text.trim().isEmpty) {
       store.showToast('Vui lòng nhập tên đăng nhập', 'error');
       return;
@@ -3109,12 +3388,40 @@ class _UsersSectionState extends State<_UsersSection> {
       store.updateUser(_editingUser!.username, updatedData);
     } else {
       // Add new employee
-      store.addStaff(
+      await store.addStaff(
         username: _usernameCtrl.text.trim().toLowerCase().replaceAll(' ', ''),
         password: _passwordCtrl.text,
         fullname: _fullnameCtrl.text.trim(),
         phone: _phoneCtrl.text.trim(),
+        role: _selectedRole,
+        createdBy: _selectedRole == 'admin'
+            ? store.currentUser?.username
+            : _selectedStore,
       );
+      // If admin, update store info with store name and address
+      if (_selectedRole == 'admin') {
+        final newUsername = _usernameCtrl.text.trim().toLowerCase().replaceAll(' ', '');
+        final storeName = _storeNameCtrl.text.trim();
+        final address = _addressCtrl.text.trim();
+        if (storeName.isNotEmpty || address.isNotEmpty) {
+          final storeData = <String, dynamic>{
+            'store_id': newUsername,
+          };
+          if (storeName.isNotEmpty) storeData['name'] = storeName;
+          if (address.isNotEmpty) storeData['address'] = address;
+          try {
+            await Supabase.instance.client.from('store_infos').upsert(storeData);
+            store.storeInfos[newUsername] = StoreInfoModel(
+              name: storeName.isNotEmpty ? storeName : _fullnameCtrl.text.trim(),
+              phone: _phoneCtrl.text.trim(),
+              address: address,
+            );
+            store.notifyListeners();
+          } catch (e) {
+            debugPrint('[updateStoreInfo] $e');
+          }
+        }
+      }
     }
     _closePanel();
   }

@@ -1,9 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../store/app_store.dart';
 import '../../models/category_model.dart';
 import '../../utils/constants.dart';
+import '../../widgets/icon_picker_dialog.dart';
 
 class AddCategoryPanel extends StatefulWidget {
   final VoidCallback onClose;
@@ -24,7 +26,7 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
   final _nameCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   int _selectedColorIndex = 0;
-  int _selectedIconIndex = 0;
+  PhosphorIconData _selectedIcon = PhosphorIconsDuotone.coffee;
 
   late final AnimationController _animCtrl;
   late final Animation<double> _fadeAnim;
@@ -40,21 +42,6 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
     Color(0xFF8B5CF6), // violet
     Color(0xFFF97316), // orange
     Color(0xFFEC4899), // pink
-  ];
-
-  static const _iconOptions = [
-    Icons.local_cafe,
-    Icons.restaurant,
-    Icons.cake,
-    Icons.ramen_dining,
-    Icons.local_pizza,
-    Icons.icecream,
-    Icons.coffee,
-    Icons.local_bar,
-    Icons.lunch_dining,
-    Icons.fastfood,
-    Icons.breakfast_dining,
-    Icons.bakery_dining,
   ];
 
   @override
@@ -92,7 +79,9 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
+    return Material(
+      type: MaterialType.transparency,
+      child: FadeTransition(
       opacity: _fadeAnim,
       child: Stack(
         children: [
@@ -193,6 +182,7 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -245,7 +235,16 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
       child: Column(
         children: [
           GestureDetector(
-            onTap: _showIconPicker,
+            onTap: () async {
+              final result = await showIconPickerDialog(
+                context,
+                currentIcon: _selectedIcon,
+                accentColor: _colorPalette[_selectedColorIndex],
+              );
+              if (result != null) {
+                setState(() => _selectedIcon = result);
+              }
+            },
             child: Container(
               width: 80,
               height: 80,
@@ -257,8 +256,8 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
                   width: 2,
                 ),
               ),
-              child: Icon(
-                _iconOptions[_selectedIconIndex],
+              child: PhosphorIcon(
+                _selectedIcon,
                 size: 36,
                 color: _colorPalette[_selectedColorIndex],
               ),
@@ -425,71 +424,6 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
           ),
         ),
       ],
-    );
-  }
-
-  // ── Icon Picker Bottom Sheet ────────────────────
-  void _showIconPicker() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Chọn icon',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.slate800)),
-            const SizedBox(height: 16),
-            GridView.builder(
-              shrinkWrap: true,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 6,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-              ),
-              itemCount: _iconOptions.length,
-              itemBuilder: (_, i) {
-                final isSelected = i == _selectedIconIndex;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() => _selectedIconIndex = i);
-                    Navigator.pop(ctx);
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? _colorPalette[_selectedColorIndex]
-                              .withValues(alpha: 0.15)
-                          : AppColors.slate50,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: isSelected
-                            ? _colorPalette[_selectedColorIndex]
-                            : AppColors.slate200,
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: Icon(
-                      _iconOptions[i],
-                      color: isSelected
-                          ? _colorPalette[_selectedColorIndex]
-                          : AppColors.slate500,
-                      size: 24,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
     );
   }
 

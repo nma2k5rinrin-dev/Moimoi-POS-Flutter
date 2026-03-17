@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../../store/app_store.dart';
 import '../../models/product_model.dart';
@@ -45,6 +46,19 @@ class _MenuManagementSectionState extends State<MenuManagementSection>
     });
   }
 
+  void _showPanelDialog(Widget panel) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      useRootNavigator: true,
+      transitionDuration: Duration.zero,
+      pageBuilder: (ctx, _, __) {
+        return panel;
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
 
@@ -53,218 +67,212 @@ class _MenuManagementSectionState extends State<MenuManagementSection>
     final isProductsTab = _tabController.index == 0;
 
 
-    return Stack(
+    final mainContent = Column(
       children: [
-        // ── Main Content ──────────────────────────
-        Container(
-          color: AppColors.slate50,
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: Column(
-            children: [
-              const SizedBox(height: 16),
 
-              // ── Panel 1: Pill Tab Bar ───────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.slate200),
-                  ),
-                  child: TabBar(
-                    controller: _tabController,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: AppColors.slate500,
-                    labelStyle: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 14),
-                    unselectedLabelStyle: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14),
-                    indicator: BoxDecoration(
-                      color: AppColors.emerald500,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    dividerColor: Colors.transparent,
-                    padding: const EdgeInsets.all(4),
-                    tabs: const [
-                      Tab(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.restaurant_menu_rounded, size: 18),
-                            SizedBox(width: 6),
-                            Text('Sản Phẩm'),
-                          ],
-                        ),
-                      ),
-                      Tab(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.sell_outlined, size: 18),
-                            SizedBox(width: 6),
-                            Text('Danh Mục'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
+          // ── Content Area ────────────────────────────
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: Column(
+                children: [
+                  const SizedBox(height: 12),
 
-              // ── Panel 2: Search Bar ────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.slate200),
-                  ),
-                  child: TextField(
-                    onChanged: (q) => setState(() => _searchQuery = q),
-                    decoration: InputDecoration(
-                      hintText: isProductsTab
-                          ? 'Tìm kiếm sản phẩm...'
-                          : 'Tìm kiếm danh mục...',
-                      hintStyle: const TextStyle(
-                          color: AppColors.slate400,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500),
-                      prefixIcon: const Icon(Icons.search,
-                          color: AppColors.slate400, size: 20),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // ── Panel 3: List Content ──────────────────
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.slate200),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _ProductsTab(
-                          searchQuery: _searchQuery,
-                          onEditProduct: (product) {
-                            setState(() {
-                              _editingProduct = product;
-                              _subScreen = 'addProduct';
-                            });
-                          },
-                        ),
-                        _CategoriesTab(
-                          searchQuery: _searchQuery,
-                          onEditCategory: (cat) {
-                            setState(() {
-                              _editingCategory = cat;
-                              _subScreen = 'addCategory';
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // ── Bottom Add Button ──────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
-                child: GestureDetector(
-                  onTap: () {
-                    if (isProductsTab) {
-                      setState(() => _subScreen = 'addProduct');
-                    } else {
-                      setState(() => _subScreen = 'addCategory');
-                    }
-                  },
-                  child: Container(
-                    height: 52,
+                  // ── Panel 1: Pill Tab Bar ───────────────────
+                  Container(
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [AppColors.emerald500, AppColors.emerald600],
-                      ),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.emerald500.withValues(alpha: 0.25),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
+                      border: Border.all(color: AppColors.slate200),
+                    ),
+                    child: TabBar(
+                      controller: _tabController,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: AppColors.slate500,
+                      labelStyle: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 14),
+                      unselectedLabelStyle: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 14),
+                      indicator: BoxDecoration(
+                        color: AppColors.emerald500,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      dividerColor: Colors.transparent,
+                      padding: const EdgeInsets.all(4),
+                      tabs: const [
+                        Tab(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.restaurant_menu_rounded, size: 18),
+                              SizedBox(width: 6),
+                              Text('Sản Phẩm'),
+                            ],
+                          ),
+                        ),
+                        Tab(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.sell_outlined, size: 18),
+                              SizedBox(width: 6),
+                              Text('Danh Mục'),
+                            ],
+                          ),
                         ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // ── Panel 2: Search Bar ────────────────────
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.slate200),
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.add_circle_outline, size: 20, color: Colors.white),
-                        const SizedBox(width: 8),
-                        Text(isProductsTab
-                            ? 'Thêm sản phẩm mới'
-                            : 'Thêm danh mục mới',
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                        const Icon(Icons.search, size: 20, color: AppColors.slate400),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            onChanged: (q) => setState(() => _searchQuery = q),
+                            decoration: InputDecoration(
+                              hintText: isProductsTab
+                                  ? 'Tìm kiếm sản phẩm...'
+                                  : 'Tìm kiếm danh mục...',
+                              hintStyle: const TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.slate400),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ),
-              ),
-            ],
-          ),
-          ),
-        ),
+                  const SizedBox(height: 12),
 
-        // ── Overlay Panels ─────────────────────────
-        if (_subScreen == 'addCategory')
-          AddCategoryPanel(
-            existingCategory: _editingCategory,
-            onClose: _closePanel,
+                  // ── Panel 3: List Content ──────────────────
+                  Expanded(
+                    child: Container(
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: AppColors.slate200),
+                      ),
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _ProductsTab(
+                            searchQuery: _searchQuery,
+                            onEditProduct: (product) {
+                              setState(() {
+                                _editingProduct = product;
+                                _subScreen = 'addProduct';
+                              });
+                              _showPanelDialog(AddProductPanel(
+                                existingProduct: product,
+                                onClose: () {
+                                  Navigator.of(context, rootNavigator: true).pop();
+                                  _closePanel();
+                                },
+                              ));
+                            },
+                          ),
+                          _CategoriesTab(
+                            searchQuery: _searchQuery,
+                            onEditCategory: (cat) {
+                              setState(() {
+                                _editingCategory = cat;
+                                _subScreen = 'addCategory';
+                              });
+                              _showPanelDialog(AddCategoryPanel(
+                                existingCategory: cat,
+                                onClose: () {
+                                  Navigator.of(context, rootNavigator: true).pop();
+                                  _closePanel();
+                                },
+                              ));
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // ── Bottom Add Button ──────────────────────
+                  GestureDetector(
+                    onTap: () {
+                      if (isProductsTab) {
+                        setState(() => _subScreen = 'addProduct');
+                        _showPanelDialog(AddProductPanel(
+                          onClose: () {
+                            Navigator.of(context, rootNavigator: true).pop();
+                            _closePanel();
+                          },
+                        ));
+                      } else {
+                        setState(() => _subScreen = 'addCategory');
+                        _showPanelDialog(AddCategoryPanel(
+                          onClose: () {
+                            Navigator.of(context, rootNavigator: true).pop();
+                            _closePanel();
+                          },
+                        ));
+                      }
+                    },
+                    child: Container(
+                      height: 52,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [AppColors.emerald500, AppColors.emerald600],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.emerald500.withValues(alpha: 0.25),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(isProductsTab ? Icons.restaurant_menu : Icons.sell_outlined, size: 20, color: Colors.white),
+                          const SizedBox(width: 8),
+                          Text(isProductsTab
+                              ? 'Thêm sản phẩm mới'
+                              : 'Thêm danh mục mới',
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+              ),
+            ),
           ),
-        if (_subScreen == 'addProduct')
-          AddProductPanel(
-            existingProduct: _editingProduct,
-            onClose: _closePanel,
-          ),
-      ],
+        ],
     );
+
+    return mainContent;
   }
 
   // ── Product Dialog ───────────────────────────────
@@ -749,13 +757,13 @@ class _CategoriesTab extends StatelessWidget {
   final void Function(CategoryModel) onEditCategory;
   const _CategoriesTab({required this.searchQuery, required this.onEditCategory});
 
-  static const _catColors = [
-    (AppColors.emerald50, AppColors.emerald500, Icons.local_cafe),
-    (AppColors.blue50, Color(0xFF3B82F6), Icons.restaurant),
-    (Color(0xFFFFF7ED), Color(0xFFF59E0B), Icons.cake),
-    (Color(0xFFFFF7ED), Color(0xFFF97316), Icons.ramen_dining),
-    (Color(0xFFFEF2F2), Color(0xFFEF4444), Icons.local_pizza),
-    (Color(0xFFF5F3FF), Color(0xFF8B5CF6), Icons.icecream),
+  static final _catColors = [
+    (AppColors.emerald50, AppColors.emerald500, PhosphorIconsDuotone.coffee),
+    (AppColors.blue50, const Color(0xFF3B82F6), PhosphorIconsDuotone.forkKnife),
+    (const Color(0xFFFFF7ED), const Color(0xFFF59E0B), PhosphorIconsDuotone.cake),
+    (const Color(0xFFFFF7ED), const Color(0xFFF97316), PhosphorIconsDuotone.bowlSteam),
+    (const Color(0xFFFEF2F2), const Color(0xFFEF4444), PhosphorIconsDuotone.pizza),
+    (const Color(0xFFF5F3FF), const Color(0xFF8B5CF6), PhosphorIconsDuotone.iceCream),
   ];
 
   @override
@@ -816,7 +824,7 @@ class _CategoriesTab extends StatelessWidget {
                   color: colorSet.$1,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(colorSet.$3, color: colorSet.$2, size: 22),
+                child: PhosphorIcon(colorSet.$3, color: colorSet.$2, size: 22),
               ),
               const SizedBox(width: 14),
               Expanded(
