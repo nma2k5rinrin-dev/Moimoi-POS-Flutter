@@ -9,8 +9,7 @@ import 'add_category_screen.dart';
 import 'add_product_screen.dart';
 
 class MenuManagementSection extends StatefulWidget {
-  final VoidCallback? onBack;
-  const MenuManagementSection({super.key, this.onBack});
+  const MenuManagementSection({super.key});
 
   @override
   State<MenuManagementSection> createState() => _MenuManagementSectionState();
@@ -59,57 +58,16 @@ class _MenuManagementSectionState extends State<MenuManagementSection>
         // ── Main Content ──────────────────────────
         Container(
           color: AppColors.slate50,
-          child: Column(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Column(
             children: [
-              // ── Header ──────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Row(
-                  children: [
-                    if (widget.onBack != null)
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded, size: 22),
-                        onPressed: widget.onBack,
-                      ),
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: AppColors.emerald50,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(Icons.restaurant_menu_rounded,
-                          color: AppColors.emerald600),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Quản Lý Danh Mục & Thực Đơn',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.slate800,
-                            ),
-                          ),
-                          Text(
-                            'Thêm/sửa món ăn, danh mục',
-                            style:
-                                TextStyle(fontSize: 13, color: AppColors.slate500),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               const SizedBox(height: 16),
 
               // ── Panel 1: Pill Tab Bar ───────────────────
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -160,7 +118,7 @@ class _MenuManagementSectionState extends State<MenuManagementSection>
 
               // ── Panel 2: Search Bar ────────────────────
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -204,7 +162,7 @@ class _MenuManagementSectionState extends State<MenuManagementSection>
               // ── Panel 3: List Content ──────────────────
               Expanded(
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
@@ -249,34 +207,48 @@ class _MenuManagementSectionState extends State<MenuManagementSection>
 
               // ── Bottom Add Button ──────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      if (isProductsTab) {
-                        setState(() => _subScreen = 'addProduct');
-                      } else {
-                        setState(() => _subScreen = 'addCategory');
-                      }
-                    },
-                    icon: const Icon(Icons.add_circle_outline, size: 20),
-                    label: Text(isProductsTab
-                        ? 'Thêm sản phẩm mới'
-                        : 'Thêm danh mục mới'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.emerald500,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(double.infinity, 52),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                      textStyle: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 15),
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
+                child: GestureDetector(
+                  onTap: () {
+                    if (isProductsTab) {
+                      setState(() => _subScreen = 'addProduct');
+                    } else {
+                      setState(() => _subScreen = 'addCategory');
+                    }
+                  },
+                  child: Container(
+                    height: 52,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [AppColors.emerald500, AppColors.emerald600],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.emerald500.withValues(alpha: 0.25),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.add_circle_outline, size: 20, color: Colors.white),
+                        const SizedBox(width: 8),
+                        Text(isProductsTab
+                            ? 'Thêm sản phẩm mới'
+                            : 'Thêm danh mục mới',
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ],
                     ),
                   ),
                 ),
               ),
             ],
+          ),
           ),
         ),
 

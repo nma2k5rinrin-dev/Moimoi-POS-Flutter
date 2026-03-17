@@ -131,21 +131,73 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildSection(String id, {VoidCallback? onBack}) {
+    final menu = _menus.firstWhere((m) => m.id == id, orElse: () => _menus.first);
+    final sectionWidget = _buildSectionContent(id);
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            children: [
+              if (onBack != null) ...[
+                GestureDetector(
+                  onTap: onBack,
+                  child: Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.slate50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.arrow_back_rounded, size: 20, color: AppColors.slate600),
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.emerald50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(menu.icon, size: 22, color: AppColors.emerald600),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(menu.name,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.slate800)),
+                    const SizedBox(height: 2),
+                    Text(menu.desc,
+                        style: const TextStyle(fontSize: 12, color: AppColors.slate500)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(child: sectionWidget),
+      ],
+    );
+  }
+
+  Widget _buildSectionContent(String id) {
     switch (id) {
       case 'account':
-        return _AccountSection(onBack: onBack);
+        return const _AccountSection();
       case 'general':
-        return _StoreInfoSection(onBack: onBack);
+        return const _StoreInfoSection();
       case 'menu':
-        return MenuManagementSection(onBack: onBack);
+        return const MenuManagementSection();
       case 'tables':
-        return _TablesSection(onBack: onBack);
+        return const _TablesSection();
       case 'users':
-        return _UsersSection(onBack: onBack);
+        return const _UsersSection();
       case 'printer':
-        return _PrinterSection(onBack: onBack);
+        return const _PrinterSection();
       case 'backup':
-        return _BackupSection(onBack: onBack);
+        return const _BackupSection();
       default:
         return const Center(child: Text('Coming soon'));
     }
@@ -287,8 +339,7 @@ class _SettingsMenuList extends StatelessWidget {
 
 // ─── Account Section ─────────────────────────────────
 class _AccountSection extends StatefulWidget {
-  final VoidCallback? onBack;
-  const _AccountSection({this.onBack});
+  const _AccountSection();
 
   @override
   State<_AccountSection> createState() => _AccountSectionState();
@@ -316,25 +367,19 @@ class _AccountSectionState extends State<_AccountSection> {
     final user = store.currentUser;
     final hasPIN = user?.pin != null && user!.pin!.isNotEmpty;
 
-    return Container(
-      color: AppColors.slate50,
-      child: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
               child: Column(
-                children: [
-                  const SizedBox(height: 12),
+              children: [
+                const SizedBox(height: 12),
 
-                  _SectionCard(
-                    title: 'Tài Khoản & Bảo Mật',
-                    subtitle: 'Thông tin cá nhân, đổi mật khẩu',
-                    icon: Icons.person_outline_rounded,
-                    iconColor: AppColors.emerald600,
-                    iconBg: AppColors.emerald50,
-                    onBack: widget.onBack,
-                    child: Column(
+                _SectionCard(
+                  child: Column(
                       children: [
                         // Avatar section
                         Column(
@@ -815,9 +860,9 @@ class _AccountSectionState extends State<_AccountSection> {
                 ],
               ),
             ),
+            ),
           ),
         ],
-      ),
     );
   }
 
@@ -1318,8 +1363,7 @@ class _DialogPasswordFieldState
 
 // ─── Store Info Section ─────────────────────────────
 class _StoreInfoSection extends StatefulWidget {
-  final VoidCallback? onBack;
-  const _StoreInfoSection({this.onBack});
+  const _StoreInfoSection();
 
   @override
   State<_StoreInfoSection> createState() => _StoreInfoSectionState();
@@ -1368,26 +1412,18 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
     final store = context.read<AppStore>();
     final info = store.currentStoreInfo;
 
-    return Container(
-      color: AppColors.slate50,
-      child: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 600),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 12),
-                    _SectionCard(
-                      title: 'Thông Tin Cửa Hàng',
-                      subtitle: 'Tên quán, địa chỉ, số điện thoại',
-                      onBack: widget.onBack,
-                      icon: Icons.storefront_outlined,
-                      iconColor: AppColors.emerald600,
-                      iconBg: AppColors.emerald50,
-                      child: Column(
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  _SectionCard(
+                    child: Column(
                         children: [
                           // ── Store avatar (rounded square) ────────
                           Center(
@@ -1658,7 +1694,6 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
             ),
           ),
         ],
-      ),
     );
   }
 
@@ -1705,8 +1740,7 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
 
 // ─── Tables Section ─────────────────────────────────
 class _TablesSection extends StatefulWidget {
-  final VoidCallback? onBack;
-  const _TablesSection({this.onBack});
+  const _TablesSection();
 
   @override
   State<_TablesSection> createState() => _TablesSectionState();
@@ -1774,63 +1808,16 @@ class _TablesSectionState extends State<_TablesSection> {
       areaGroups[area]!.add(t);
     }
 
-    final mainContent = Container(
-      color: AppColors.slate50,
-      child: Column(
-        children: [
-          // ── Header ──────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Row(
-              children: [
-                if (widget.onBack != null) ...[
-                  GestureDetector(
-                    onTap: widget.onBack,
-                    child: Container(
-                      width: 36, height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.slate100,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Center(
-                        child: Icon(Icons.arrow_back_rounded, size: 20, color: AppColors.slate800),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                ],
-                Container(
-                  width: 48, height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.emerald50,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.grid_view_rounded, size: 24, color: AppColors.emerald600),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                const Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Quản Lý Bàn & Khu Vực',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.slate800)),
-                      SizedBox(height: 2),
-                      Text('Thiết lập danh sách bàn Order',
-                          style: TextStyle(fontSize: 13, color: AppColors.slate500)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+    final mainContent = Column(
+      children: [
 
           // ── Content Area ────────────────────────────
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: Column(
                 children: [
                   const SizedBox(height: 12),
 
@@ -2043,12 +2030,13 @@ class _TablesSectionState extends State<_TablesSection> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
                 ],
+              ),
               ),
             ),
           ),
         ],
-      ),
     );
 
     return Stack(
@@ -2358,8 +2346,7 @@ class _TablesSectionState extends State<_TablesSection> {
 
 // ─── Users Section ──────────────────────────────────
 class _UsersSection extends StatefulWidget {
-  final VoidCallback? onBack;
-  const _UsersSection({this.onBack});
+  const _UsersSection();
 
   @override
   State<_UsersSection> createState() => _UsersSectionState();
@@ -2443,63 +2430,16 @@ class _UsersSectionState extends State<_UsersSection> {
       storeOptions[sid] = _getStoreName(store, sid);
     }
 
-    final mainContent = Container(
-      color: AppColors.slate50,
-      child: Column(
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Row(
-              children: [
-                if (widget.onBack != null) ...[
-                  GestureDetector(
-                    onTap: widget.onBack,
-                    child: Container(
-                      width: 36, height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.slate100,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Center(
-                        child: Icon(Icons.arrow_back_rounded, size: 20, color: AppColors.slate800),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                ],
-                Container(
-                  width: 48, height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.emerald50,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.groups_rounded, size: 24, color: AppColors.emerald600),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                const Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Quản Lý Nhân Viên',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.slate800)),
-                      SizedBox(height: 2),
-                      Text('Tạo tài khoản • Toàn hệ thống',
-                          style: TextStyle(fontSize: 13, color: AppColors.slate500)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+    final mainContent = Column(
+      children: [
 
           // Content area
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: Column(
                 children: [
                   const SizedBox(height: 12),
                   // ── Store Selector
@@ -2659,12 +2599,13 @@ class _UsersSectionState extends State<_UsersSection> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
                 ],
+              ),
               ),
             ),
           ),
         ],
-      ),
     );
 
     // Wrap in Stack for overlay panel
@@ -3180,92 +3121,29 @@ class _UsersSectionState extends State<_UsersSection> {
 }
 // ─── Shared Widgets ─────────────────────────────────
 class _SectionCard extends StatelessWidget {
-  final String title;
-  final String? subtitle;
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBg;
-  final VoidCallback? onBack;
   final Widget child;
 
   const _SectionCard({
-    required this.title,
-    this.subtitle,
-    required this.icon,
-    required this.iconColor,
-    required this.iconBg,
-    this.onBack,
     required this.child,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header outside the card
-        Row(
-          children: [
-            if (onBack != null)
-              IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, size: 22),
-                onPressed: onBack,
-              ),
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: iconBg,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: iconColor),
-            ),
-            const SizedBox(width: 12),
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.slate800,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (subtitle != null)
-                    Text(
-                      subtitle!,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.slate500,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        // Card body
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.slate200),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.slate200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-          child: child,
-        ),
-      ],
+        ],
+      ),
+      child: child,
     );
   }
 }
@@ -3388,247 +3266,132 @@ class _DialogField extends StatelessWidget {
   }
 }
 
-// ─── Printer Section ────────────────────────────────
+// ─── Printer Section ────────────────────────────────────────
 class _PrinterSection extends StatelessWidget {
-  final VoidCallback? onBack;
-  const _PrinterSection({this.onBack});
+  const _PrinterSection();
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              if (onBack != null)
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: onBack,
-                ),
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.blue100,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(Icons.print, color: AppColors.blue600),
-              ),
-              const SizedBox(width: 12),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Máy In & Hoá Đơn',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.slate800,
-                    ),
-                  ),
-                  Text(
-                    'Kết nối máy in bill, in bếp',
-                    style: TextStyle(fontSize: 13, color: AppColors.slate500),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.slate200),
-            ),
-            child: Column(
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: Column(
               children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: AppColors.blue50,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(Icons.print_outlined,
-                      size: 36, color: AppColors.blue400),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Tính năng đang phát triển',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.slate800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Kết nối máy in nhiệt, tuỳ chỉnh hoá đơn sẽ sớm có mặt trong bản cập nhật tiếp theo.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.slate500,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.amber50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.amber200),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
+                const SizedBox(height: 12),
+                _SectionCard(
+                  child: Column(
                     children: [
-                      Icon(Icons.info_outline,
-                          color: AppColors.amber600, size: 18),
-                      SizedBox(width: 8),
-                      Text(
-                        'Coming Soon',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.amber600,
+                      Container(
+                        width: 72, height: 72,
+                        decoration: BoxDecoration(
+                          color: AppColors.blue50,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(Icons.print_outlined, size: 36, color: AppColors.blue400),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Tính năng đang phát triển',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                      const SizedBox(height: 8),
+                      const Text('Kết nối máy in nhiệt, tuỳ chỉnh hoá đơn sẽ sớm có mặt trong bản cập nhật tiếp theo.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14, color: AppColors.slate500, height: 1.5)),
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.amber50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.amber200),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.info_outline, color: AppColors.amber600, size: 18),
+                            SizedBox(width: 8),
+                            Text('Coming Soon', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.amber600)),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(height: 32),
               ],
             ),
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-// ─── Backup Section ─────────────────────────────────
+// ─── Backup Section ─────────────────────────────────────────
 class _BackupSection extends StatelessWidget {
-  final VoidCallback? onBack;
-  const _BackupSection({this.onBack});
+  const _BackupSection();
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              if (onBack != null)
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: onBack,
-                ),
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.emerald100,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child:
-                    const Icon(Icons.cloud, color: AppColors.emerald600),
-              ),
-              const SizedBox(width: 12),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Lưu Trữ & Phục Hồi',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.slate800,
-                    ),
-                  ),
-                  Text(
-                    'Sao lưu dữ liệu đám mây',
-                    style: TextStyle(fontSize: 13, color: AppColors.slate500),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.slate200),
-            ),
-            child: Column(
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: Column(
               children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: AppColors.emerald50,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(Icons.cloud_done_outlined,
-                      size: 36, color: AppColors.emerald400),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Dữ liệu tự động đồng bộ',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.slate800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Dữ liệu của bạn được tự động lưu trữ trên đám mây thông qua Supabase. Tính năng xuất/nhập dữ liệu thủ công sẽ sớm được bổ sung.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.slate500,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.emerald50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.emerald200),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
+                const SizedBox(height: 12),
+                _SectionCard(
+                  child: Column(
                     children: [
-                      Icon(Icons.check_circle_outline,
-                          color: AppColors.emerald600, size: 18),
-                      SizedBox(width: 8),
-                      Text(
-                        'Đang hoạt động',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.emerald600,
+                      Container(
+                        width: 72, height: 72,
+                        decoration: BoxDecoration(
+                          color: AppColors.emerald50,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(Icons.cloud_done_outlined, size: 36, color: AppColors.emerald400),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Dữ liệu tự động đồng bộ',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                      const SizedBox(height: 8),
+                      const Text('Dữ liệu của bạn được tự động lưu trữ trên đám mây thông qua Supabase. Tính năng xuất/nhập dữ liệu thủ công sẽ sớm được bổ sung.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14, color: AppColors.slate500, height: 1.5)),
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.emerald50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.emerald200),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle_outline, color: AppColors.emerald600, size: 18),
+                            SizedBox(width: 8),
+                            Text('Đang hoạt động', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.emerald600)),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(height: 32),
               ],
             ),
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

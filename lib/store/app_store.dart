@@ -581,6 +581,28 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> renameArea(String oldArea, String newArea) async {
+    if (oldArea.isEmpty || newArea.isEmpty || oldArea == newArea) return;
+    final storeId = getStoreId();
+    final tablesList = storeTables[storeId] ?? [];
+    final prefix = '$oldArea::';
+    for (int i = 0; i < tablesList.length; i++) {
+      if (tablesList[i].startsWith(prefix)) {
+        final tablePart = tablesList[i].substring(prefix.length);
+        final oldFullName = tablesList[i];
+        final newFullName = '$newArea::$tablePart';
+        await _supabase
+            .from('store_tables')
+            .update({'table_name': newFullName})
+            .eq('store_id', storeId)
+            .eq('table_name', oldFullName);
+        tablesList[i] = newFullName;
+        if (selectedTable == oldFullName) selectedTable = newFullName;
+      }
+    }
+    notifyListeners();
+  }
+
   // ── Categories ──────────────────────────────────────────
   Future<void> addCategory(String categoryName) async {
     // Quota check for Basic tier

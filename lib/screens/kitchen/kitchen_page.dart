@@ -181,11 +181,57 @@ class _KitchenPageState extends State<KitchenPage>
           Expanded(
             child: filteredOrders.isEmpty
                 ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                    itemCount: filteredOrders.length,
-                    itemBuilder: (ctx, i) {
-                      return _OrderCard(order: filteredOrders[i]);
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final width = constraints.maxWidth;
+                      int crossAxisCount;
+                      if (width >= 1200) {
+                        crossAxisCount = 5;
+                      } else if (width >= 768) {
+                        crossAxisCount = 3;
+                      } else {
+                        crossAxisCount = 1;
+                      }
+
+                      if (crossAxisCount == 1) {
+                        return ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                          itemCount: filteredOrders.length,
+                          itemBuilder: (ctx, i) {
+                            return _OrderCard(order: filteredOrders[i]);
+                          },
+                        );
+                      }
+
+                      // Multi-column layout: distribute orders into columns
+                      final columns = List.generate(crossAxisCount, (_) => <OrderModel>[]);
+                      for (int i = 0; i < filteredOrders.length; i++) {
+                        columns[i % crossAxisCount].add(filteredOrders[i]);
+                      }
+
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: columns.asMap().entries.map((entry) {
+                            final colIndex = entry.key;
+                            final colOrders = entry.value;
+                            return Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.only(
+                                  left: colIndex == 0 ? 0 : 6,
+                                  right: colIndex == crossAxisCount - 1 ? 0 : 6,
+                                ),
+                                child: Column(
+                                  children: colOrders
+                                      .map((order) => _OrderCard(order: order))
+                                      .toList(),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      );
                     },
                   ),
           ),
@@ -471,16 +517,16 @@ class _OrderCardState extends State<_OrderCard> {
                         // Time with elapsed minutes
                         Row(
                           children: [
-                            Text(_formatTime(order.time),
+                            Flexible(
+                              child: Text(
+                                '${_formatTime(order.time)}${_elapsedBadge(order.time)}',
                                 style: const TextStyle(
                                     fontSize: 12,
                                     color: AppColors.slate400,
-                                    fontWeight: FontWeight.w500)),
-                            Text(_elapsedBadge(order.time),
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.slate400,
-                                    fontWeight: FontWeight.w500)),
+                                    fontWeight: FontWeight.w500),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ],
                         ),
                         // Orderer (fullname)
@@ -491,11 +537,14 @@ class _OrderCardState extends State<_OrderCard> {
                               const Icon(Icons.person_rounded,
                                   size: 13, color: AppColors.slate400),
                               const SizedBox(width: 4),
-                              Text(order.createdBy,
-                                  style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColors.slate400)),
+                              Flexible(
+                                child: Text(order.createdBy,
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppColors.slate400),
+                                    overflow: TextOverflow.ellipsis),
+                              ),
                             ]),
                           ),
                       ],
@@ -506,12 +555,15 @@ class _OrderCardState extends State<_OrderCard> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Price — bigger and bolder
-                      Text(formatCurrency(order.totalAmount),
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 20,
-                              color: AppColors.emerald600)),
+                      // Price
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(formatCurrency(order.totalAmount),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 18,
+                                color: AppColors.emerald600)),
+                      ),
                       const SizedBox(height: 2),
                       Row(
                         mainAxisSize: MainAxisSize.min,

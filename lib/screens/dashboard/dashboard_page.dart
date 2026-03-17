@@ -559,7 +559,7 @@ class _RevenueChart extends StatelessWidget {
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 600),
                           curve: Curves.easeOutCubic,
-                          height: (180 * fraction).clamp(4.0, 180.0),
+                          height: (130 * fraction).clamp(4.0, 130.0),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               begin: Alignment.topCenter,

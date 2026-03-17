@@ -1485,10 +1485,11 @@
                   "id": "HkkCb",
                   "name": "Phở Bò",
                   "width": "fill_container",
+                  "height": 218,
                   "fill": "#FFFFFF",
                   "cornerRadius": 16,
                   "stroke": {
-                    "align": "inside",
+                    "align": "outside",
                     "thickness": 2,
                     "fill": "$emerald-500"
                   },
@@ -1559,7 +1560,8 @@
                           "type": "frame",
                           "id": "NbFX4",
                           "name": "c1Bot",
-                          "width": "fill_container",
+                          "width": 155,
+                          "height": 53,
                           "layout": "vertical",
                           "gap": 8,
                           "alignItems": "center",
@@ -1580,12 +1582,12 @@
                               "name": "c1Add",
                               "width": "fill_container",
                               "height": 34,
-                              "fill": "$emerald-50",
+                              "fill": "$slate-50",
                               "cornerRadius": 10,
                               "stroke": {
                                 "align": "inside",
                                 "thickness": 1,
-                                "fill": "$emerald-200"
+                                "fill": "$slate-200"
                               },
                               "justifyContent": "space_between",
                               "alignItems": "center",
@@ -1594,10 +1596,15 @@
                                   "type": "frame",
                                   "id": "WwN8T",
                                   "name": "minusBtn",
-                                  "width": 32,
-                                  "height": 32,
-                                  "fill": "$emerald-500",
-                                  "cornerRadius": 10,
+                                  "width": 36,
+                                  "height": 34,
+                                  "fill": "$slate-100",
+                                  "cornerRadius": [
+                                    10,
+                                    0,
+                                    0,
+                                    10
+                                  ],
                                   "justifyContent": "center",
                                   "alignItems": "center",
                                   "children": [
@@ -1609,29 +1616,54 @@
                                       "height": 16,
                                       "iconFontName": "remove",
                                       "iconFontFamily": "Material Symbols Rounded",
-                                      "fill": "#FFFFFF"
+                                      "fill": "$slate-500"
                                     }
                                   ]
                                 },
                                 {
-                                  "type": "text",
-                                  "id": "8igtm",
-                                  "name": "qtyNum",
-                                  "fill": "$emerald-700",
-                                  "content": "1",
-                                  "textAlign": "center",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 14,
-                                  "fontWeight": "700"
+                                  "type": "frame",
+                                  "id": "rQ9xR",
+                                  "name": "numWrap",
+                                  "width": "fill_container",
+                                  "height": 34,
+                                  "fill": "#00000000",
+                                  "stroke": {
+                                    "align": "inside",
+                                    "thickness": {
+                                      "right": 1,
+                                      "left": 1
+                                    },
+                                    "fill": "$slate-200"
+                                  },
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "HtHhX",
+                                      "name": "numT",
+                                      "fill": "$text-primary",
+                                      "content": "1",
+                                      "textAlign": "center",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 14,
+                                      "fontWeight": "700"
+                                    }
+                                  ]
                                 },
                                 {
                                   "type": "frame",
                                   "id": "gJR2k",
                                   "name": "plusBtn",
-                                  "width": 32,
-                                  "height": 32,
-                                  "fill": "$emerald-500",
-                                  "cornerRadius": 10,
+                                  "width": 36,
+                                  "height": 34,
+                                  "fill": "$slate-100",
+                                  "cornerRadius": [
+                                    0,
+                                    10,
+                                    10,
+                                    0
+                                  ],
                                   "justifyContent": "center",
                                   "alignItems": "center",
                                   "children": [
@@ -1643,7 +1675,7 @@
                                       "height": 16,
                                       "iconFontName": "add",
                                       "iconFontFamily": "Material Symbols Rounded",
-                                      "fill": "#FFFFFF"
+                                      "fill": "$slate-500"
                                     }
                                   ]
                                 }
