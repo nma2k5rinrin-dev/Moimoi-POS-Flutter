@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../utils/constants.dart';
+import 'animated_dialogs.dart';
 
 /// An entry in the icon picker: the Phosphor duotone icon + search keywords.
 class _IconEntry {
@@ -114,7 +115,7 @@ Future<PhosphorIconData?> showIconPickerDialog(
   PhosphorIconData? currentIcon,
   required Color accentColor,
 }) {
-  return showDialog<PhosphorIconData?>(
+  return showAnimatedDialog<PhosphorIconData?>(
     context: context,
     barrierColor: Colors.transparent,
     builder: (ctx) => _IconPickerDialog(

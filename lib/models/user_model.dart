@@ -8,7 +8,6 @@ class UserModel {
   final bool isPremium;
   final String? expiresAt;
   final String? createdBy;
-  final String? pin;
   final bool showVipExpired;
   final bool showVipCongrat;
 
@@ -22,7 +21,6 @@ class UserModel {
     this.isPremium = false,
     this.expiresAt,
     this.createdBy,
-    this.pin,
     this.showVipExpired = false,
     this.showVipCongrat = false,
   });
@@ -38,7 +36,6 @@ class UserModel {
       isPremium: map['is_premium'] ?? false,
       expiresAt: map['expires_at'],
       createdBy: map['created_by'],
-      pin: map['pin'],
       showVipExpired: map['show_vip_expired'] ?? false,
       showVipCongrat: map['show_vip_congrat'] ?? false,
     );
@@ -54,7 +51,6 @@ class UserModel {
     bool? isPremium,
     String? expiresAt,
     String? createdBy,
-    String? pin,
     bool? showVipExpired,
     bool? showVipCongrat,
   }) {
@@ -68,7 +64,6 @@ class UserModel {
       isPremium: isPremium ?? this.isPremium,
       expiresAt: expiresAt ?? this.expiresAt,
       createdBy: createdBy ?? this.createdBy,
-      pin: pin ?? this.pin,
       showVipExpired: showVipExpired ?? this.showVipExpired,
       showVipCongrat: showVipCongrat ?? this.showVipCongrat,
     );

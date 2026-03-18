@@ -506,6 +506,7 @@ class _ProductCard extends StatelessWidget {
                             child: Image.network(
                               product.image,
                               fit: BoxFit.cover,
+                              cacheWidth: 200,
                               errorBuilder: (_, __, ___) => _buildPlaceholder(),
                             ),
                           )
@@ -1134,6 +1135,7 @@ class _CartItemCard extends StatelessWidget {
               color: AppColors.slate100,
               child: item.image != null && item.image!.isNotEmpty
                   ? Image.network(item.image!, fit: BoxFit.cover,
+                      cacheWidth: 112,
                       errorBuilder: (_, __, ___) => const Icon(
                             Icons.restaurant_rounded,
                             color: AppColors.slate300,

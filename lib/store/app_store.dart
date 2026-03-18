@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -67,6 +68,26 @@ class AppStore extends ChangeNotifier {
   RealtimeChannel? _productsChannel;
   RealtimeChannel? _notiChannel;
   RealtimeChannel? _upgradeChannel;
+
+  // ── Cache invalidation ──────────────────────────────────
+  bool _cachesDirty = true;
+  List<OrderModel>? _cachedVisibleOrders;
+  List<OrderModel>? _cachedStoreOrders;
+  List<String>? _cachedStoreUsernames;
+  Timer? _searchDebounce;
+
+  void _invalidateCaches() {
+    _cachesDirty = true;
+    _cachedVisibleOrders = null;
+    _cachedStoreOrders = null;
+    _cachedStoreUsernames = null;
+  }
+
+  @override
+  void notifyListeners() {
+    _invalidateCaches();
+    super.notifyListeners();
+  }
 
   // ── Derived: getStoreId ─────────────────────────────────
   String getStoreId() {
@@ -272,56 +293,6 @@ class AppStore extends ChangeNotifier {
     return login(creds['username']!, creds['password']!);
   }
 
-  // ── Login with PIN ────────────────────────────────────────
-  /// Requires both username and PIN for secure authentication.
-  Future<String> loginWithPin(String username, String pin) async {
-    final cleanUsername = username.toLowerCase().replaceAll(RegExp(r'\s'), '');
-    try {
-      final response = await _supabase
-          .from('users')
-          .select()
-          .ilike('username', cleanUsername);
-
-      if (response.isEmpty) return 'user_not_found';
-
-      final rawUser = (response as List).cast<Map<String, dynamic>>().first;
-      final userPin = rawUser['pin'];
-
-      // Check if user has set up a PIN
-      if (userPin == null || userPin.toString().isEmpty) {
-        return 'no_pin';
-      }
-
-      // Compare PIN
-      if (userPin.toString() != pin) {
-        return 'wrong_pin';
-      }
-
-      var user = UserModel.fromMap(rawUser);
-
-      // Check VIP expiration
-      if (user.role == 'admin' && user.expiresAt != null) {
-        final isExpired =
-            DateTime.now().isAfter(DateTime.parse(user.expiresAt!));
-        if (isExpired && user.isPremium) {
-          user = user.copyWith(isPremium: false, showVipExpired: true);
-          await _supabase
-              .from('users')
-              .update({'is_premium': false, 'show_vip_expired': true})
-              .eq('username', user.username);
-        }
-      }
-
-      currentUser = user;
-      authNotifier.notify();
-      notifyListeners();
-      await loadInitialData(user);
-      return 'success';
-    } catch (e) {
-      debugPrint('[loginWithPin] $e');
-      return 'invalid';
-    }
-  }
 
   // ── Register ────────────────────────────────────────────
   Future<String> register({
@@ -404,7 +375,10 @@ class AppStore extends ChangeNotifier {
     if (updatedData.containsKey('showVipExpired')) dbData['show_vip_expired'] = updatedData['showVipExpired'];
     if (updatedData.containsKey('showVipCongrat')) dbData['show_vip_congrat'] = updatedData['showVipCongrat'];
     if (updatedData.containsKey('avatar')) dbData['avatar'] = updatedData['avatar'];
-    if (updatedData.containsKey('pin')) dbData['pin'] = updatedData['pin'];
+    if (updatedData.containsKey('role')) dbData['role'] = updatedData['role'];
+    if (updatedData.containsKey('createdBy') && updatedData['createdBy'] != null && (updatedData['createdBy'] as String).isNotEmpty) {
+      dbData['created_by'] = updatedData['createdBy'];
+    }
 
     try {
       await _supabase.from('users').update(dbData).eq('username', username);
@@ -416,14 +390,13 @@ class AppStore extends ChangeNotifier {
           return UserModel(
             username: u.username,
             pass: updatedData['pass'] ?? u.pass,
-            role: u.role,
+            role: updatedData['role'] ?? u.role,
             fullname: updatedData['fullname'] ?? u.fullname,
             phone: updatedData['phone'] ?? u.phone,
             avatar: updatedData['avatar'] ?? u.avatar,
             isPremium: updatedData['isPremium'] ?? u.isPremium,
             expiresAt: updatedData['expiresAt'] ?? u.expiresAt,
-            createdBy: u.createdBy,
-            pin: updatedData['pin'] ?? u.pin,
+            createdBy: updatedData['createdBy'] ?? u.createdBy,
             showVipExpired: updatedData['showVipExpired'] ?? u.showVipExpired,
             showVipCongrat: updatedData['showVipCongrat'] ?? u.showVipCongrat,
           );
@@ -436,7 +409,8 @@ class AppStore extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      debugPrint('[updateUser] $e');
+      debugPrint('[updateUser] Error: $e');
+      debugPrint('[updateUser] dbData: $dbData');
       showToast('Có lỗi kết nối CSDL', 'error');
     }
   }
@@ -774,8 +748,14 @@ class AppStore extends ChangeNotifier {
   }
 
   Future<void> cancelOrder(String orderId) async {
-    await _supabase.from('orders').delete().eq('id', orderId);
-    orders.removeWhere((o) => o.id == orderId);
+    await _supabase
+        .from('orders')
+        .update({'status': 'cancelled'})
+        .eq('id', orderId);
+    final idx = orders.indexWhere((o) => o.id == orderId);
+    if (idx != -1) {
+      orders[idx] = orders[idx].copyWith(status: 'cancelled');
+    }
     notifyListeners();
   }
 
@@ -886,7 +866,10 @@ class AppStore extends ChangeNotifier {
 
   void setSearchQuery(String query) {
     searchQuery = query;
-    notifyListeners();
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+      notifyListeners();
+    });
   }
 
   void setSadminViewStoreId(String storeId) {
@@ -902,7 +885,8 @@ class AppStore extends ChangeNotifier {
     Future.delayed(const Duration(milliseconds: 1800), () {
       if (toastMessage == message) {
         toastMessage = null;
-        notifyListeners();
+        // Avoid broad rebuild for toast clear — only update if visible
+        super.notifyListeners();
       }
     });
   }
@@ -1186,28 +1170,41 @@ class AppStore extends ChangeNotifier {
     _upgradeChannel = null;
   }
 
-  // ── Kitchen Badges ──────────────────────────────────────
+  // ── Kitchen Badges (cached) ─────────────────────────────
   List<String> get storeUsernames {
-    if (currentUser == null) return [];
+    if (_cachedStoreUsernames != null) return _cachedStoreUsernames!;
+    if (currentUser == null) return const [];
     final sid = getStoreId();
+    List<String> result;
     if (currentUser!.role == 'sadmin') {
-      if (sid == 'sadmin') return users.map((u) => u.username).toList();
-      return users
-          .where((u) => u.username == sid || u.createdBy == sid)
+      if (sid == 'sadmin') {
+        result = users.map((u) => u.username).toList();
+      } else {
+        result = users
+            .where((u) => u.username == sid || u.createdBy == sid)
+            .map((u) => u.username)
+            .toList();
+      }
+    } else {
+      final owner = currentUser!.role == 'staff'
+          ? (currentUser!.createdBy ?? currentUser!.username)
+          : currentUser!.username;
+      result = users
+          .where((u) => u.username == owner || u.createdBy == owner)
           .map((u) => u.username)
           .toList();
     }
-    final owner = currentUser!.role == 'staff'
-        ? (currentUser!.createdBy ?? currentUser!.username)
-        : currentUser!.username;
-    return users
-        .where((u) => u.username == owner || u.createdBy == owner)
-        .map((u) => u.username)
-        .toList();
+    _cachedStoreUsernames = result;
+    return result;
   }
 
-  List<OrderModel> get storeOrders =>
-      orders.where((o) => storeUsernames.contains(o.createdBy)).toList();
+  List<OrderModel> get storeOrders {
+    if (_cachedStoreOrders != null) return _cachedStoreOrders!;
+    final usernames = storeUsernames;
+    final usernameSet = usernames.toSet();
+    _cachedStoreOrders = orders.where((o) => usernameSet.contains(o.createdBy)).toList();
+    return _cachedStoreOrders!;
+  }
 
   int get pendingKitchen =>
       visibleOrders.where((o) => o.status == 'pending').length;
@@ -1218,8 +1215,9 @@ class AppStore extends ChangeNotifier {
   int get unpaidTables =>
       storeOrders.where((o) => o.status == 'cooking').length;
 
-  // ── Visible Orders ──────────────────────────────────────
+  // ── Visible Orders (cached) ─────────────────────────────
   List<OrderModel> get visibleOrders {
+    if (_cachedVisibleOrders != null) return _cachedVisibleOrders!;
     final sid = getStoreId();
     var list = orders.toList();
     if (currentUser?.role != 'sadmin') {
@@ -1234,6 +1232,7 @@ class AppStore extends ChangeNotifier {
       final todayStr = DateTime.now().toIso8601String().substring(0, 10);
       list = list.where((o) => o.time.startsWith(todayStr)).toList();
     }
+    _cachedVisibleOrders = list;
     return list;
   }
 }

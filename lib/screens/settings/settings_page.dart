@@ -8,7 +8,6 @@ import '../../models/user_model.dart';
 import '../../utils/constants.dart';
 import '../../utils/validators.dart';
 import 'menu_management.dart';
-import 'change_pin_dialog.dart';
 import '../../utils/avatar_picker.dart';
 import '../../widgets/square_crop_dialog.dart';
 import '../../widgets/circle_crop_dialog.dart';
@@ -368,7 +367,6 @@ class _AccountSectionState extends State<_AccountSection> {
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     final user = store.currentUser;
-    final hasPIN = user?.pin != null && user!.pin!.isNotEmpty;
 
     return Column(
       children: [
@@ -674,74 +672,6 @@ class _AccountSectionState extends State<_AccountSection> {
                                   'Tính năng đang phát triển', 'error');
                             },
                           ),
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Security Row: PIN
-                        Column(
-                          children: [
-                            _SecurityRow(
-                              icon: Icons.pin_outlined,
-                              label: 'Mã PIN 4 số',
-                              trailing: Switch(
-                                value: hasPIN,
-                                activeTrackColor: AppColors.emerald500,
-                                onChanged: (enabled) {
-                                  if (enabled) {
-                                    showChangePinDialog(context,
-                                            isFirstTimeSetup: true)
-                                        .then((_) => setState(() {}));
-                                  } else {
-                                    store.updateUser(
-                                        user!.username, {'pin': ''});
-                                    setState(() {});
-                                  }
-                                },
-                              ),
-                            ),
-                            if (hasPIN)
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(
-                                      top: 4, right: 4),
-                                  child: InkWell(
-                                    onTap: () {
-                                      showChangePinDialog(context)
-                                          .then((_) => setState(() {}));
-                                    },
-                                    borderRadius:
-                                        BorderRadius.circular(8),
-                                    child: Padding(
-                                      padding:
-                                          const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 3),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.edit,
-                                              size: 13,
-                                              color:
-                                                  AppColors.emerald500),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'Đổi mã PIN',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight:
-                                                  FontWeight.w600,
-                                              color:
-                                                  AppColors.emerald500,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
                         ),
 
                         const SizedBox(height: 24),
@@ -3384,6 +3314,13 @@ class _UsersSectionState extends State<_UsersSection> {
       };
       if (_passwordCtrl.text.isNotEmpty) {
         updatedData['pass'] = _passwordCtrl.text;
+      }
+      // Only send role + createdBy when role has actually changed
+      if (_selectedRole != _editingUser!.role) {
+        updatedData['role'] = _selectedRole;
+        updatedData['createdBy'] = _selectedRole == 'admin'
+            ? store.currentUser?.username
+            : _selectedStore;
       }
       store.updateUser(_editingUser!.username, updatedData);
     } else {

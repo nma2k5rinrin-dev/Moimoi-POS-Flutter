@@ -732,9 +732,9 @@ class _AddProductPanelState extends State<AddProductPanel>
     try {
       final picked = await _picker.pickImage(
         source: source,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 85,
+        maxWidth: 400,
+        maxHeight: 400,
+        imageQuality: 50,
       );
       if (picked == null) return;
 

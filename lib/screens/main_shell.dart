@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../store/app_store.dart';
 import '../utils/constants.dart';
@@ -19,8 +20,8 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   static const List<_NavItem> _allMenuItems = [
-    _NavItem(icon: Icons.restaurant, label: 'Order', path: '/'),
-    _NavItem(icon: Icons.soup_kitchen, label: 'Bếp', path: '/kitchen'),
+    _NavItem(icon: PhosphorIconsBold.storefront, label: 'Bán hàng', path: '/'),
+    _NavItem(icon: PhosphorIconsBold.clipboardText, label: 'Đơn hàng', path: '/kitchen'),
     _NavItem(icon: Icons.bar_chart, label: 'Báo Cáo', path: '/dashboard'),
     _NavItem(icon: Icons.settings, label: 'Cài Đặt', path: '/settings'),
   ];
@@ -280,11 +281,12 @@ class _DesktopSidebar extends StatelessWidget {
                                         : AppColors.slate500,
                                     size: isActive ? 26 : 24,
                                   ),
+                                  // Pending badge (red, top-left)
                                   if (item.path == '/kitchen' &&
                                       store.pendingKitchen > 0)
                                     Positioned(
                                       top: -6,
-                                      right: -8,
+                                      left: -8,
                                       child: Container(
                                         padding:
                                             const EdgeInsets.symmetric(
@@ -304,6 +306,40 @@ class _DesktopSidebar extends StatelessWidget {
                                                 minHeight: 18),
                                         child: Text(
                                           '${store.pendingKitchen > 99 ? '99+' : store.pendingKitchen}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ),
+                                  // Cooking badge (orange, top-right)
+                                  if (item.path == '/kitchen' &&
+                                      store.cookingKitchen > 0)
+                                    Positioned(
+                                      top: -6,
+                                      right: -8,
+                                      child: Container(
+                                        padding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 4,
+                                                vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.amber500,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          border: Border.all(
+                                              color: Colors.white,
+                                              width: 2),
+                                        ),
+                                        constraints:
+                                            const BoxConstraints(
+                                                minWidth: 18,
+                                                minHeight: 18),
+                                        child: Text(
+                                          '${store.cookingKitchen > 99 ? '99+' : store.cookingKitchen}',
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 9,

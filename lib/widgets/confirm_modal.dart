@@ -28,18 +28,44 @@ class ConfirmModal extends StatelessWidget {
         Positioned.fill(
           child: GestureDetector(
             onTap: onCancel,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.4),
-              ),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+              builder: (context, value, child) {
+                return BackdropFilter(
+                  filter: ImageFilter.blur(
+                    sigmaX: 4 * value,
+                    sigmaY: 4 * value,
+                  ),
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.4 * value),
+                  ),
+                );
+              },
             ),
           ),
         ),
 
-        // ── Centered Panel ──────────────────
+        // ── Centered Panel with scale+fade animation ──
         Center(
-          child: Container(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) {
+              return Transform.scale(
+                scale: 0.85 + (0.15 * value),
+                child: Transform.translate(
+                  offset: Offset(0, 20 * (1 - value)),
+                  child: Opacity(
+                    opacity: value,
+                    child: child,
+                  ),
+                ),
+              );
+            },
+            child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 21),
             padding: const EdgeInsets.all(28),
             constraints: const BoxConstraints(maxWidth: 360),
@@ -240,14 +266,15 @@ class ConfirmModal extends StatelessWidget {
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-      ),
-    );
+                  ],  // Row children (buttons)
+                ),  // Row
+              ],  // Column children
+            ),  // Column
+          ),  // Container
+          ),  // TweenAnimationBuilder
+        ),  // Center
+      ],  // Stack children
+      ),  // Stack
+    );  // DefaultTextStyle
   }
 }

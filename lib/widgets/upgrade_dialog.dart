@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
+import 'animated_dialogs.dart';
 
 /// Shows the upgrade prompt when a quota limit is hit.
 /// Returns true if user chose to view plans, false otherwise.
 Future<bool> showUpgradePrompt(BuildContext context, String limitMsg) async {
-  final result = await showDialog<bool>(
+  final result = await showAnimatedDialog<bool>(
     context: context,
     barrierDismissible: false,
     builder: (ctx) => Dialog(
@@ -101,7 +102,7 @@ Future<bool> showUpgradePrompt(BuildContext context, String limitMsg) async {
 
 /// Pricing plans dialog with monthly/yearly options.
 Future<void> showPricingDialog(BuildContext context) {
-  return showDialog(
+  return showAnimatedDialog(
     context: context,
     builder: (ctx) => const _PricingDialog(),
   );

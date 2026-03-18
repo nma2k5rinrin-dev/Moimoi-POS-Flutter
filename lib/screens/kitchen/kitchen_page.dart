@@ -21,12 +21,12 @@ class _KitchenPageState extends State<KitchenPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() {
           _statusFilter =
-              ['pending', 'cooking', 'completed'][_tabController.index];
+              ['pending', 'cooking', 'completed', 'cancelled'][_tabController.index];
         });
       }
     });
@@ -50,6 +50,8 @@ class _KitchenPageState extends State<KitchenPage>
         allOrders.where((o) => o.status == 'cooking').length;
     final completedCount =
         allOrders.where((o) => o.status == 'completed').length;
+    final cancelledCount =
+        allOrders.where((o) => o.status == 'cancelled').length;
 
     return Container(
       color: const Color(0xFFFAFBFC),
@@ -72,18 +74,18 @@ class _KitchenPageState extends State<KitchenPage>
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.orange50,
+                        color: const Color(0xFFDBEAFE),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.soup_kitchen_rounded,
-                          color: AppColors.orange500, size: 22),
+                      child: const Icon(Icons.receipt_long_rounded,
+                          color: Color(0xFF3B82F6), size: 22),
                     ),
                     const SizedBox(width: 12),
                     const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Quản Lý Bếp',
+                          'Quản Lý Đơn Hàng',
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
@@ -103,48 +105,44 @@ class _KitchenPageState extends State<KitchenPage>
                   ],
                 ),
                 const SizedBox(height: 16),
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.slate50,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.slate200),
-                  ),
-                  child: TabBar(
-                    controller: _tabController,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: AppColors.slate500,
-                    labelStyle: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 13),
-                    unselectedLabelStyle: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 13),
-                    indicator: BoxDecoration(
-                      color: AppColors.emerald500,
-                      borderRadius: BorderRadius.circular(12),
+                TabBar(
+                  controller: _tabController,
+                  labelColor: AppColors.slate800,
+                  unselectedLabelColor: AppColors.slate400,
+                  labelStyle: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 13),
+                  unselectedLabelStyle: const TextStyle(
+                      fontWeight: FontWeight.w500, fontSize: 13),
+                  indicatorColor: AppColors.emerald500,
+                  indicatorWeight: 3,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  dividerColor: AppColors.slate200,
+                  tabs: [
+                    _buildTab(
+                      'Chờ xử lý',
+                      Icons.schedule_rounded,
+                      pendingCount,
+                      AppColors.red500,
                     ),
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    dividerColor: Colors.transparent,
-                    padding: const EdgeInsets.all(4),
-                    tabs: [
-                      _buildTab(
-                        'Chờ xử lý',
-                        Icons.schedule_rounded,
-                        pendingCount,
-                        AppColors.red500,
-                      ),
-                      _buildTab(
-                        'Đang nấu',
-                        Icons.soup_kitchen_rounded,
-                        cookingCount,
-                        AppColors.amber500,
-                      ),
-                      _buildTab(
-                        'Hoàn tất',
-                        Icons.check_circle_rounded,
-                        completedCount,
-                        AppColors.emerald500,
-                      ),
-                    ],
-                  ),
+                    _buildTab(
+                      'Đang xử lý',
+                      Icons.soup_kitchen_rounded,
+                      cookingCount,
+                      AppColors.amber500,
+                    ),
+                    _buildTab(
+                      'Hoàn tất',
+                      Icons.check_circle_rounded,
+                      completedCount,
+                      AppColors.emerald500,
+                    ),
+                    _buildTab(
+                      'Đã hủy',
+                      Icons.cancel_rounded,
+                      cancelledCount,
+                      AppColors.slate400,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -160,7 +158,9 @@ class _KitchenPageState extends State<KitchenPage>
                       ? Icons.pending_actions_rounded
                       : _statusFilter == 'cooking'
                           ? Icons.local_fire_department_rounded
-                          : Icons.task_alt_rounded,
+                          : _statusFilter == 'cancelled'
+                              ? Icons.cancel_rounded
+                              : Icons.task_alt_rounded,
                   size: 16,
                   color: AppColors.slate400,
                 ),
@@ -185,10 +185,12 @@ class _KitchenPageState extends State<KitchenPage>
                     builder: (context, constraints) {
                       final width = constraints.maxWidth;
                       int crossAxisCount;
-                      if (width >= 1200) {
-                        crossAxisCount = 5;
-                      } else if (width >= 768) {
+                      if (width >= 1400) {
+                        crossAxisCount = 4;
+                      } else if (width >= 1000) {
                         crossAxisCount = 3;
+                      } else if (width >= 768) {
+                        crossAxisCount = 2;
                       } else {
                         crossAxisCount = 1;
                       }
@@ -203,31 +205,18 @@ class _KitchenPageState extends State<KitchenPage>
                         );
                       }
 
-                      // Multi-column layout: distribute orders into columns
-                      final columns = List.generate(crossAxisCount, (_) => <OrderModel>[]);
-                      for (int i = 0; i < filteredOrders.length; i++) {
-                        columns[i % crossAxisCount].add(filteredOrders[i]);
-                      }
+                      // Multi-column layout using Wrap
+                      final cardWidth = (width - 40 - (crossAxisCount - 1) * 12) / crossAxisCount;
 
                       return SingleChildScrollView(
                         padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: columns.asMap().entries.map((entry) {
-                            final colIndex = entry.key;
-                            final colOrders = entry.value;
-                            return Expanded(
-                              child: Padding(
-                                padding: EdgeInsets.only(
-                                  left: colIndex == 0 ? 0 : 6,
-                                  right: colIndex == crossAxisCount - 1 ? 0 : 6,
-                                ),
-                                child: Column(
-                                  children: colOrders
-                                      .map((order) => _OrderCard(order: order))
-                                      .toList(),
-                                ),
-                              ),
+                        child: Wrap(
+                          spacing: 12,
+                          runSpacing: 0,
+                          children: filteredOrders.map((order) {
+                            return SizedBox(
+                              width: cardWidth,
+                              child: _OrderCard(order: order),
                             );
                           }).toList(),
                         ),
@@ -243,32 +232,33 @@ class _KitchenPageState extends State<KitchenPage>
   Widget _buildTab(
       String label, IconData icon, int count, Color badgeColor) {
     return Tab(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14),
-          const SizedBox(width: 4),
-          Text(label),
-          if (count > 0) ...[
-            const SizedBox(width: 4),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              decoration: BoxDecoration(
-                color: badgeColor,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                '$count',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(label),
+            if (count > 0) ...[
+              const SizedBox(width: 4),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: badgeColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -300,8 +290,10 @@ class _KitchenPageState extends State<KitchenPage>
             _statusFilter == 'pending'
                 ? 'Không có đơn chờ xử lý'
                 : _statusFilter == 'cooking'
-                    ? 'Không có đơn đang nấu'
-                    : 'Chưa có đơn hoàn tất',
+                    ? 'Không có đơn đang xử lý'
+                    : _statusFilter == 'cancelled'
+                        ? 'Không có đơn đã hủy'
+                        : 'Chưa có đơn hoàn tất',
             style: const TextStyle(
               color: AppColors.slate500,
               fontWeight: FontWeight.w700,
@@ -440,7 +432,9 @@ class _OrderCardState extends State<_OrderCard> {
                     ? AppColors.red50
                     : order.status == 'cooking'
                         ? AppColors.orange50
-                        : AppColors.emerald50,
+                        : order.status == 'cancelled'
+                            ? AppColors.slate50
+                            : AppColors.emerald50,
                 borderRadius: _isExpanded
                     ? const BorderRadius.vertical(top: Radius.circular(20))
                     : BorderRadius.circular(20),
@@ -463,8 +457,8 @@ class _OrderCardState extends State<_OrderCard> {
                           runSpacing: 4,
                           children: [
                             Text(
-                              order.table.isNotEmpty
-                                  ? order.table
+                              order.table.isNotEmpty && order.table != 'Mang về'
+                                  ? order.table.replaceAll('::', ' · ')
                                   : '🛍️ Mang về',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
@@ -555,71 +549,74 @@ class _OrderCardState extends State<_OrderCard> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Price
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(formatCurrency(order.totalAmount),
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 18,
-                                color: AppColors.emerald600)),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: order.paymentStatus == 'paid'
-                                  ? AppColors.emerald50
-                                  : AppColors.orange50,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: order.paymentStatus == 'paid'
-                                    ? AppColors.emerald200
-                                    : const Color(0xFFFED7AA),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  order.paymentStatus == 'paid'
-                                      ? Icons.check_circle_rounded
-                                      : Icons.schedule_rounded,
-                                  size: 10,
+                        // Price
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(formatCurrency(order.totalAmount),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 18,
+                                  color: AppColors.emerald600)),
+                        ),
+                        const SizedBox(height: 2),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
                                   color: order.paymentStatus == 'paid'
-                                      ? AppColors.emerald600
-                                      : const Color(0xFFEA580C),
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  order.paymentStatus == 'paid'
-                                      ? 'Đã thanh toán'
-                                      : 'Chưa thanh toán',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
+                                      ? AppColors.emerald50
+                                      : AppColors.orange50,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
                                     color: order.paymentStatus == 'paid'
-                                        ? AppColors.emerald600
-                                        : const Color(0xFFEA580C),
+                                        ? AppColors.emerald200
+                                        : const Color(0xFFFED7AA),
                                   ),
                                 ),
-                              ],
-                            ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      order.paymentStatus == 'paid'
+                                          ? Icons.check_circle_rounded
+                                          : Icons.schedule_rounded,
+                                      size: 10,
+                                      color: order.paymentStatus == 'paid'
+                                          ? AppColors.emerald600
+                                          : const Color(0xFFEA580C),
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      order.paymentStatus == 'paid'
+                                          ? 'Đã thanh toán'
+                                          : 'Chưa thanh toán',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: order.paymentStatus == 'paid'
+                                            ? AppColors.emerald600
+                                            : const Color(0xFFEA580C),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                _isExpanded
+                                    ? Icons.keyboard_arrow_up_rounded
+                                    : Icons.keyboard_arrow_down_rounded,
+                                color: AppColors.slate400,
+                                size: 18,
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            _isExpanded
-                                ? Icons.keyboard_arrow_up_rounded
-                                : Icons.keyboard_arrow_down_rounded,
-                            color: AppColors.slate400,
-                            size: 18,
-                          ),
-                        ],
-                      ),
+                        ),
                     ],
                   ),
                 ],
@@ -901,35 +898,65 @@ class _OrderCardState extends State<_OrderCard> {
                 const SizedBox(width: 10),
               if (order.status == 'pending')
                 Expanded(
-                  child: _ActionButton(
-                    label: 'Bắt đầu nấu',
-                    icon: Icons.local_fire_department_rounded,
-                    color: AppColors.amber500,
-                    onTap: () =>
-                        store.updateOrderStatus(order.id, 'cooking'),
+                  child: GestureDetector(
+                    onTap: () => store.updateOrderStatus(order.id, 'cooking'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.amber500,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.local_fire_department_rounded,
+                              size: 14, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text('Bắt đầu nấu',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13)),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               if (order.status == 'cooking')
                 Expanded(
-                  child: _ActionButton(
-                    label: 'Hoàn tất',
-                    icon: Icons.check_circle_outline_rounded,
-                    color: AppColors.emerald500,
-                    onTap: () =>
-                        store.updateOrderStatus(order.id, 'completed'),
+                  child: GestureDetector(
+                    onTap: () {
+                      if (order.paymentStatus != 'paid') {
+                        _showPaymentQR(context, order, store);
+                      } else {
+                        store.updateOrderStatus(order.id, 'completed');
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.emerald500,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_circle_outline_rounded,
+                              size: 14, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text('Hoàn tất',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13)),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              if (order.status == 'completed')
-                Expanded(
-                  child: _ActionButton(
-                    label: 'Đơn đã xong / Bàn đã dọn',
-                    icon: Icons.check_circle_rounded,
-                    color: AppColors.emerald500,
-                    onTap: () => store.cancelOrder(order.id),
-                  ),
-                ),
+
             ]),
-            if (order.paymentStatus != 'paid') ...[
+            if (order.paymentStatus != 'paid' && order.status != 'cancelled') ...[
               const SizedBox(height: 10),
               GestureDetector(
                 onTap: () => _showPaymentQR(context, order, store),
@@ -1111,6 +1138,8 @@ class _OrderCardState extends State<_OrderCard> {
                               Navigator.pop(ctx);
                               store.updateOrderPaymentStatus(
                                   order.id, 'paid');
+                              store.updateOrderStatus(
+                                  order.id, 'completed');
                             },
                             child: Container(
                               width: double.infinity,

@@ -4,6 +4,7 @@ import '../../store/app_store.dart';
 import '../../utils/constants.dart';
 import '../../utils/format.dart';
 import '../../models/order_model.dart';
+import '../../widgets/date_range_picker_dialog.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -78,36 +79,96 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             const SizedBox(height: 20),
 
-            // Time Range Selector
+            // Time Range Tabs + Date Picker
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: AppColors.slate100,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+              child: Column(
                 children: [
-                  _TimeChip(
-                      label: 'Hôm nay',
-                      isActive: _timeRange == 'today',
-                      onTap: () =>
-                          setState(() => _timeRange = 'today')),
-                  _TimeChip(
-                      label: 'Tháng này',
-                      isActive: _timeRange == 'month',
-                      onTap: () =>
-                          setState(() => _timeRange = 'month')),
+                  // Tabs row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _TimeChip(
+                            label: 'Hôm nay',
+                            isActive: _timeRange == 'today',
+                            onTap: () =>
+                                setState(() => _timeRange = 'today')),
+                      ),
+                      Expanded(
+                        child: _TimeChip(
+                            label: 'Tháng này',
+                            isActive: _timeRange == 'month',
+                            onTap: () =>
+                                setState(() => _timeRange = 'month')),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // Date range picker row
+                  GestureDetector(
+                        onTap: () async {
+                          final picked = await showCompactDateRangePicker(
+                            context: context,
+                            initialStart: _dateFrom,
+                            initialEnd: _dateTo,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime.now(),
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              _dateFrom = picked.start;
+                              _dateTo = picked.end;
+                              _timeRange = 'range';
+                            });
+                          }
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.slate200),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.calendar_today_rounded,
+                                  size: 16, color: AppColors.emerald600),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${_dateFrom.day.toString().padLeft(2, '0')}/${_dateFrom.month.toString().padLeft(2, '0')}/${_dateFrom.year}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: AppColors.slate800,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.arrow_forward_rounded,
+                                  size: 14, color: AppColors.slate400),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${_dateTo.day.toString().padLeft(2, '0')}/${_dateTo.month.toString().padLeft(2, '0')}/${_dateTo.year}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: AppColors.slate800,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.keyboard_arrow_down_rounded,
+                                  size: 16, color: AppColors.slate400),
+                            ],
+                          ),
+                        ),
+                  ),
                 ],
               ),
-            ),
-
-            const SizedBox(height: 12),
-            _DateRangePicker(
-              dateFrom: _dateFrom,
-              dateTo: _dateTo,
-              onFromChanged: (d) => setState(() => _dateFrom = d),
-              onToChanged: (d) => setState(() => _dateTo = d),
             ),
 
             const SizedBox(height: 20),
@@ -286,6 +347,7 @@ class _TimeChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
+        alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         decoration: BoxDecoration(
           color: isActive ? Colors.white : Colors.transparent,
@@ -655,7 +717,7 @@ class _BestSellersCard extends StatelessWidget {
                   size: 20, color: AppColors.orange500),
               const SizedBox(width: 8),
               const Text(
-                'Bán Chạy Nhất',
+                'Món bán chạy',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -838,11 +900,11 @@ class _StaffRankingCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.emoji_events_rounded,
-                  size: 20, color: AppColors.amber500),
+              const Icon(Icons.military_tech_rounded,
+                  size: 20, color: Color(0xFF8B5CF6)),
               const SizedBox(width: 8),
               const Text(
-                'Bảng Xếp Hạng NV',
+                'BXH Nhân sự',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -868,37 +930,74 @@ class _StaffRankingCard extends StatelessWidget {
           else
             ...List.generate(topStaff.length, (i) {
               final entry = topStaff[i];
-              final medals = ['🥇', '🥈', '🥉'];
-              final colors = [
-                const Color(0xFFFFFBEB),
-                const Color(0xFFF0F9FF),
-                const Color(0xFFFFF1F2),
+              final rankBgColors = [
+                const Color(0xFFFEF3C7), // gold
+                const Color(0xFFF1F5F9), // slate
+                const Color(0xFFF1F5F9), // slate
               ];
+              final avatarBgColors = [
+                AppColors.emerald100,
+                const Color(0xFFE0E7FF), // indigo-100
+                const Color(0xFFFCE7F3), // pink-100
+              ];
+              final rankColor = i == 0 ? const Color(0xFFD97706) : AppColors.slate500;
+              final initial = entry.key.isNotEmpty ? entry.key[0].toUpperCase() : '?';
+              final isLast = i == topStaff.length - 1;
               return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: i < 3 ? colors[i] : AppColors.slate50,
-                  borderRadius: BorderRadius.circular(12),
+                  border: isLast
+                      ? null
+                      : const Border(
+                          bottom: BorderSide(color: AppColors.slate100)),
                 ),
                 child: Row(
                   children: [
-                    SizedBox(
+                    // Rank badge
+                    Container(
                       width: 28,
-                      child: i < 3
-                          ? Text(medals[i],
-                              style: const TextStyle(fontSize: 16))
-                          : Text(
-                              '#${i + 1}',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                                color: AppColors.slate400,
-                              ),
-                            ),
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: i < 3 ? rankBgColors[i] : AppColors.slate50,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '${i + 1}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                          color: rankColor,
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
+                    // Avatar
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: i < 3 ? avatarBgColors[i] : AppColors.slate100,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        initial,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                          color: i == 0
+                              ? AppColors.emerald600
+                              : i == 1
+                                  ? const Color(0xFF4F46E5)
+                                  : i == 2
+                                      ? const Color(0xFFDB2777)
+                                      : AppColors.slate500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Name
                     Expanded(
                       child: Text(
                         entry.key,
@@ -910,20 +1009,13 @@ class _StaffRankingCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.blue50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '${entry.value} đơn',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                          color: AppColors.blue500,
-                        ),
+                    // Orders count
+                    Text(
+                      '${entry.value} đơn',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.slate400,
                       ),
                     ),
                   ],

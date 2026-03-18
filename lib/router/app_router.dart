@@ -31,7 +31,20 @@ GoRouter createRouter(AppStore store) {
     routes: [
       GoRoute(
         path: '/login',
-        builder: (context, state) => const AuthPage(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const AuthPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              ),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 350),
+        ),
       ),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
@@ -39,30 +52,56 @@ GoRouter createRouter(AppStore store) {
         routes: [
           GoRoute(
             path: '/',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: OrderPage(),
+            pageBuilder: (context, state) => _fadeTransitionPage(
+              key: state.pageKey,
+              child: const OrderPage(),
             ),
           ),
           GoRoute(
             path: '/kitchen',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: KitchenPage(),
+            pageBuilder: (context, state) => _fadeTransitionPage(
+              key: state.pageKey,
+              child: const KitchenPage(),
             ),
           ),
           GoRoute(
             path: '/dashboard',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: DashboardPage(),
+            pageBuilder: (context, state) => _fadeTransitionPage(
+              key: state.pageKey,
+              child: const DashboardPage(),
             ),
           ),
           GoRoute(
             path: '/settings',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: SettingsPage(),
+            pageBuilder: (context, state) => _fadeTransitionPage(
+              key: state.pageKey,
+              child: const SettingsPage(),
             ),
           ),
         ],
       ),
     ],
+  );
+}
+
+/// Quick fade transition for in-app page switches (200ms).
+CustomTransitionPage _fadeTransitionPage({
+  required LocalKey key,
+  required Widget child,
+}) {
+  return CustomTransitionPage(
+    key: key,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 200),
+    reverseTransitionDuration: const Duration(milliseconds: 150),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOut,
+        ),
+        child: child,
+      );
+    },
   );
 }

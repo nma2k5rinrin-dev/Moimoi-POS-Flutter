@@ -17,7 +17,6 @@ class _AuthPageState extends State<AuthPage>
     with SingleTickerProviderStateMixin {
   bool isLogin = true;
   bool isLoading = false;
-  bool _isPinMode = false;
 
   // Login
   final _usernameController = TextEditingController();
@@ -35,13 +34,6 @@ class _AuthPageState extends State<AuthPage>
   bool _showRegPassword = false;
   bool _showRegConfirmPass = false;
 
-  // PIN Login
-  final _pinUsernameController = TextEditingController();
-  String _pinInput = '';
-  String? _pinError;
-  bool _pinLoading = false;
-  final _pinHiddenController = TextEditingController();
-  final _pinHiddenFocusNode = FocusNode();
 
   String? _errorMessage;
 
@@ -84,9 +76,6 @@ class _AuthPageState extends State<AuthPage>
     _regUsernameController.dispose();
     _regPasswordController.dispose();
     _regConfirmPassController.dispose();
-    _pinUsernameController.dispose();
-    _pinHiddenController.dispose();
-    _pinHiddenFocusNode.dispose();
     super.dispose();
   }
 
@@ -229,84 +218,6 @@ class _AuthPageState extends State<AuthPage>
     }
   }
 
-  // ── Switch to PIN mode ──
-  void _switchToPinMode() {
-    _animController.reset();
-    setState(() {
-      _isPinMode = true;
-      _errorMessage = null;
-      _pinError = null;
-      _pinInput = '';
-      _pinHiddenController.clear();
-    });
-    _animController.forward();
-  }
-
-  void _switchToPasswordMode() {
-    _animController.reset();
-    setState(() {
-      _isPinMode = false;
-      _errorMessage = null;
-      _pinError = null;
-    });
-    _animController.forward();
-  }
-
-  // ── PIN Login Submit ──
-  Future<void> _handlePinSubmit() async {
-    if (_pinInput.length != 4 || _pinLoading) return;
-    final username = _pinUsernameController.text.trim();
-    if (username.isEmpty) {
-      setState(() => _pinError = 'Vui lòng nhập tên đăng nhập');
-      return;
-    }
-    setState(() {
-      _pinLoading = true;
-      _pinError = null;
-    });
-    final store = context.read<AppStore>();
-    final result = await store.loginWithPin(username, _pinInput);
-    if (!mounted) return;
-    setState(() => _pinLoading = false);
-    if (result == 'success') {
-      context.go('/');
-    } else {
-      String errorMsg;
-      switch (result) {
-        case 'user_not_found':
-          errorMsg = 'Tài khoản không tồn tại';
-          break;
-        case 'no_pin':
-          errorMsg = 'Tài khoản chưa thiết lập mã PIN';
-          break;
-        case 'wrong_pin':
-          errorMsg = 'Mã PIN không đúng';
-          break;
-        default:
-          errorMsg = 'Đăng nhập thất bại';
-      }
-      setState(() {
-        _pinError = errorMsg;
-        _pinInput = '';
-      });
-      _pinHiddenController.clear();
-      _pinHiddenFocusNode.requestFocus();
-    }
-  }
-
-  void _onPinChanged(String value) {
-    final filtered = value.replaceAll(RegExp(r'[^0-9]'), '');
-    if (filtered.length > 4) return;
-    setState(() {
-      _pinInput = filtered;
-      _pinError = null;
-    });
-    if (filtered.length == 4) {
-      Future.delayed(const Duration(milliseconds: 200), () {
-        _handlePinSubmit();
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -359,9 +270,7 @@ class _AuthPageState extends State<AuthPage>
                             ),
                           ],
                         ),
-                        child: _isPinMode
-                            ? _buildPinLoginCard()
-                            : _buildPasswordCard(),
+                        child: _buildPasswordCard(),
                       ),
 
                       const SizedBox(height: 20),
@@ -455,15 +364,6 @@ class _AuthPageState extends State<AuthPage>
               const SizedBox(width: 10),
               Expanded(
                 child: _buildAuthMethodButton(
-                  icon: Icons.pin,
-                  label: 'Mã PIN',
-                  color: const Color(0xFFF59E0B),
-                  onTap: _switchToPinMode,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildAuthMethodButton(
                   icon: Icons.fingerprint,
                   label: 'Vân tay',
                   color: const Color(0xFF10B981),
@@ -520,308 +420,6 @@ class _AuthPageState extends State<AuthPage>
     );
   }
 
-  // ── PIN Login Card (inline, matches z1TO0 design) ──
-  Widget _buildPinLoginCard() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Title group
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: const Color(0xFFFEF3C7),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: const Icon(
-            Icons.pin_outlined,
-            size: 26,
-            color: Color(0xFFF59E0B),
-          ),
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'Đăng nhập bằng mã PIN',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            color: AppColors.slate800,
-            letterSpacing: -0.5,
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Nhập mã PIN 4 số để truy cập nhanh',
-          style: TextStyle(
-            fontSize: 14,
-            color: AppColors.slate500,
-            fontWeight: FontWeight.w400,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 24),
-
-        // Error
-        if (_pinError != null) ...[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: AppColors.red50,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.red200),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.error_outline,
-                    size: 16, color: AppColors.red500),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _pinError!,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.red600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-
-        // Username field
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Tên đăng nhập',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.slate700,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _pinUsernameController,
-          style: const TextStyle(
-            fontWeight: FontWeight.w500,
-            color: AppColors.slate800,
-            fontSize: 15,
-          ),
-          decoration: InputDecoration(
-            prefixIcon: const Padding(
-              padding: EdgeInsets.only(left: 14, right: 10),
-              child: Icon(Icons.person_outline_rounded,
-                  color: AppColors.slate400, size: 20),
-            ),
-            prefixIconConstraints: const BoxConstraints(minWidth: 0),
-            hintText: 'Nhập tên đăng nhập',
-            hintStyle: TextStyle(
-              color: AppColors.slate400.withValues(alpha: 0.7),
-              fontWeight: FontWeight.w400,
-              fontSize: 14,
-            ),
-            filled: true,
-            fillColor: AppColors.slate50,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                  color: AppColors.slate200.withValues(alpha: 0.7)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide:
-                  const BorderSide(color: Color(0xFF10B981), width: 1.5),
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // PIN Label
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Mã PIN',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.slate700,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // PIN boxes
-        GestureDetector(
-          onTap: () => _pinHiddenFocusNode.requestFocus(),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(4, (index) {
-              final hasValue = index < _pinInput.length;
-              final isActive = index == _pinInput.length && index < 4;
-              final hasError = _pinError != null;
-
-              return Expanded(
-                child: Container(
-                  height: 56,
-                  margin: EdgeInsets.only(left: index > 0 ? 12 : 0),
-                  decoration: BoxDecoration(
-                    color: hasError
-                        ? AppColors.red50
-                        : isActive
-                            ? Colors.white
-                            : hasValue
-                                ? Colors.white
-                                : AppColors.slate50,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: hasError
-                          ? AppColors.red400
-                          : isActive
-                              ? const Color(0xFF10B981)
-                              : hasValue
-                                  ? const Color(0xFF10B981)
-                                  : AppColors.slate200,
-                      width: hasError || isActive || hasValue ? 2 : 1.5,
-                    ),
-                  ),
-                  child: Center(
-                    child: hasValue
-                        ? Text(
-                            '•',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
-                              color: hasError
-                                  ? AppColors.red500
-                                  : AppColors.slate800,
-                            ),
-                          )
-                        : null,
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
-
-        // Hidden text field
-        SizedBox(
-          height: 0,
-          child: Opacity(
-            opacity: 0,
-            child: TextField(
-              focusNode: _pinHiddenFocusNode,
-              controller: _pinHiddenController,
-              keyboardType: TextInputType.number,
-              onChanged: _onPinChanged,
-            ),
-          ),
-        ),
-
-        // Loading
-        if (_pinLoading) ...[
-          const SizedBox(height: 16),
-          const Center(
-            child: SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: Color(0xFF10B981),
-              ),
-            ),
-          ),
-        ],
-
-        const SizedBox(height: 20),
-
-        // ── "hoặc đăng nhập bằng" divider + buttons ──
-        Row(
-          children: [
-            const Expanded(child: Divider(color: AppColors.slate200)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'hoặc đăng nhập bằng',
-                style: TextStyle(
-                  color: AppColors.slate400,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            const Expanded(child: Divider(color: AppColors.slate200)),
-          ],
-        ),
-        const SizedBox(height: 16),
-
-        Row(
-          children: [
-            Expanded(
-              child: _buildAuthMethodButton(
-                icon: Icons.face,
-                label: 'FaceID',
-                color: const Color(0xFF3B82F6),
-                onTap: _handleBiometric,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildAuthMethodButton(
-                icon: Icons.pin,
-                label: 'Mã PIN',
-                color: const Color(0xFFF59E0B),
-                onTap: () => _pinHiddenFocusNode.requestFocus(),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildAuthMethodButton(
-                icon: Icons.fingerprint,
-                label: 'Vân tay',
-                color: const Color(0xFF10B981),
-                onTap: _handleBiometric,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-
-        // Switch to password login
-        SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: OutlinedButton(
-            onPressed: _switchToPasswordMode,
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.slate200, width: 1.5),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
-            ),
-            child: const Text(
-              'Đăng nhập bằng mật khẩu',
-              style: TextStyle(
-                color: AppColors.slate700,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildBrandHeader() {
     return Column(
