@@ -1007,103 +1007,279 @@ class _TableSelectorBtn extends StatelessWidget {
       areaGroups[groupName]!.add(t);
     }
 
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      isScrollControlled: true,
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.6,
-      ),
-      builder: (_) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text(
-                  'Chọn bàn',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+    final isWide = MediaQuery.of(context).size.width >= 768;
+
+    if (isWide) {
+      // ── Positioned dropdown for tablet / PC ──
+      final renderBox = context.findRenderObject() as RenderBox?;
+      if (renderBox == null) return;
+      final buttonPos = renderBox.localToGlobal(Offset.zero);
+      final buttonSize = renderBox.size;
+      final screenHeight = MediaQuery.of(context).size.height;
+
+      // Estimate dropdown height (capped)
+      const double dropdownMaxH = 360;
+      final double spaceBelow =
+          screenHeight - buttonPos.dy - buttonSize.height - 8;
+      final double spaceAbove = buttonPos.dy - 8;
+      final bool dropDown = spaceBelow >= 200 || spaceBelow >= spaceAbove;
+
+      showDialog(
+        context: context,
+        barrierColor: Colors.transparent,
+        builder: (ctx) => Stack(
+          children: [
+            // Transparent tap-to-dismiss
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () => Navigator.pop(ctx),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                  child: Container(
+                      color: Colors.black.withValues(alpha: 0.08)),
                 ),
               ),
-              const Divider(height: 1),
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.shopping_bag_outlined,
-                          color: AppColors.orange500),
-                      title: const Text('Mang về',
-                          style: TextStyle(fontWeight: FontWeight.w600)),
-                      trailing: store.selectedTable == 'Mang về'
-                          ? const Icon(Icons.check_circle,
-                              color: AppColors.emerald500)
-                          : null,
-                      onTap: () {
-                        store.setSelectedTable('Mang về');
-                        Navigator.pop(context);
-                      },
-                    ),
-                    ...areaGroups.entries.map((entry) {
-                      final areaName = entry.key;
-                      final areaTables = entry.value;
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            // Dropdown panel
+            Positioned(
+              left: buttonPos.dx,
+              right: MediaQuery.of(context).size.width -
+                  buttonPos.dx -
+                  buttonSize.width,
+              top: dropDown ? buttonPos.dy + buttonSize.height + 6 : null,
+              bottom: dropDown
+                  ? null
+                  : screenHeight - buttonPos.dy + 6,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxHeight: dropDown
+                        ? spaceBelow.clamp(0, dropdownMaxH)
+                        : spaceAbove.clamp(0, dropdownMaxH),
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 24,
+                        offset: Offset(0, dropDown ? 8 : -8),
+                      ),
+                    ],
+                    border: Border.all(color: AppColors.slate100),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                            child: Text(
-                              areaName.toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.slate400,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
+                          const Padding(
+                            padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+                            child: Text('Chọn bàn',
+                                style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.slate800)),
                           ),
-                          ...areaTables.map((t) {
-                            final tableName = _nameOf(t);
-                            final area = _areaOf(t);
-                            return ListTile(
-                              leading: const Icon(
-                                  Icons.table_restaurant_outlined,
-                                  color: AppColors.emerald500),
-                              title: Text(tableName,
+                          // Mang về
+                          _tableOption(
+                            ctx,
+                            icon: Icons.shopping_bag_outlined,
+                            iconColor: AppColors.orange500,
+                            label: 'Mang về',
+                            isSelected: store.selectedTable == 'Mang về',
+                            onTap: () {
+                              store.setSelectedTable('Mang về');
+                              Navigator.pop(ctx);
+                            },
+                          ),
+                          // Groups
+                          ...areaGroups.entries.expand((entry) {
+                            final areaName = entry.key;
+                            final areaTables = entry.value;
+                            return [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                    16, 10, 16, 2),
+                                child: Text(
+                                  areaName.toUpperCase(),
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.w600)),
-                              subtitle: area.isNotEmpty
-                                  ? Text(area,
-                                      style: const TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.slate400))
-                                  : null,
-                              trailing: store.selectedTable == t
-                                  ? const Icon(Icons.check_circle,
-                                      color: AppColors.emerald500)
-                                  : null,
-                              onTap: () {
-                                store.setSelectedTable(t);
-                                Navigator.pop(context);
-                              },
-                            );
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.slate400,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                              ...areaTables.map((t) {
+                                final tableName = _nameOf(t);
+                                return _tableOption(
+                                  ctx,
+                                  icon: Icons.table_restaurant_outlined,
+                                  iconColor: AppColors.emerald500,
+                                  label: tableName,
+                                  isSelected: store.selectedTable == t,
+                                  onTap: () {
+                                    store.setSelectedTable(t);
+                                    Navigator.pop(ctx);
+                                  },
+                                );
+                              }),
+                            ];
                           }),
                         ],
-                      );
-                    }),
-                    const SizedBox(height: 16),
-                  ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ],
-          ),
-        );
-      },
+            ),
+          ],
+        ),
+      );
+    } else {
+      // ── Bottom sheet for mobile ──
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        isScrollControlled: true,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.6,
+        ),
+        builder: (_) {
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    'Chọn bàn',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  ),
+                ),
+                const Divider(height: 1),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.shopping_bag_outlined,
+                            color: AppColors.orange500),
+                        title: const Text('Mang về',
+                            style: TextStyle(fontWeight: FontWeight.w600)),
+                        trailing: store.selectedTable == 'Mang về'
+                            ? const Icon(Icons.check_circle,
+                                color: AppColors.emerald500)
+                            : null,
+                        onTap: () {
+                          store.setSelectedTable('Mang về');
+                          Navigator.pop(context);
+                        },
+                      ),
+                      ...areaGroups.entries.map((entry) {
+                        final areaName = entry.key;
+                        final areaTables = entry.value;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                              child: Text(
+                                areaName.toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.slate400,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            ...areaTables.map((t) {
+                              final tableName = _nameOf(t);
+                              final area = _areaOf(t);
+                              return ListTile(
+                                leading: const Icon(
+                                    Icons.table_restaurant_outlined,
+                                    color: AppColors.emerald500),
+                                title: Text(tableName,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600)),
+                                subtitle: area.isNotEmpty
+                                    ? Text(area,
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.slate400))
+                                    : null,
+                                trailing: store.selectedTable == t
+                                    ? const Icon(Icons.check_circle,
+                                        color: AppColors.emerald500)
+                                    : null,
+                                onTap: () {
+                                  store.setSelectedTable(t);
+                                  Navigator.pop(context);
+                                },
+                              );
+                            }),
+                          ],
+                        );
+                      }),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+  }
+
+  static Widget _tableOption(
+    BuildContext context, {
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        color: isSelected ? AppColors.emerald50 : Colors.transparent,
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: iconColor),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected
+                        ? AppColors.emerald600
+                        : AppColors.slate700,
+                  )),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle_rounded,
+                  size: 18, color: AppColors.emerald500),
+          ],
+        ),
+      ),
     );
   }
+
 }
 
 // ─── Cart Item Card (redesigned with thumbnail + note) ──

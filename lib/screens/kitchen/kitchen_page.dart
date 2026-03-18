@@ -5,6 +5,7 @@ import '../../store/app_store.dart';
 import '../../utils/constants.dart';
 import '../../utils/format.dart';
 import '../../models/order_model.dart';
+import '../../models/product_model.dart';
 
 class KitchenPage extends StatefulWidget {
   const KitchenPage({super.key});
@@ -956,6 +957,35 @@ class _OrderCardState extends State<_OrderCard> {
                 ),
 
             ]),
+            // ── Thêm món button ──
+            if (order.status == 'pending' || order.status == 'cooking') ...[
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: () => _showAddItemsDialog(context, order, store),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.emerald200),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_circle_outline_rounded,
+                          size: 16, color: AppColors.emerald600),
+                      SizedBox(width: 6),
+                      Text('Thêm món',
+                          style: TextStyle(
+                              color: AppColors.emerald600,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             if (order.paymentStatus != 'paid' && order.status != 'cancelled') ...[
               const SizedBox(height: 10),
               GestureDetector(
@@ -1211,6 +1241,501 @@ class _OrderCardState extends State<_OrderCard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Add Items Dialog ────────────────────────────────
+  void _showAddItemsDialog(
+      BuildContext context, OrderModel order, AppStore store) {
+    final allProducts = store.currentProducts
+        .where((p) => !p.isOutOfStock)
+        .toList();
+    final allCategories = store.currentCategories;
+    // Temp cart for new items
+    final Map<String, int> tempCart = {};
+    final Map<String, String> tempNotes = {};
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'add-items',
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 250),
+      pageBuilder: (ctx, a1, a2) {
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () => Navigator.pop(ctx),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                  child: Container(color: const Color(0x66000000)),
+                ),
+              ),
+            ),
+            Center(
+              child: Material(
+                color: Colors.transparent,
+                child: StatefulBuilder(
+                  builder: (ctx2, setState2) {
+                    String selectedCat = 'all';
+                    // Filter products by category
+                    final filtered = selectedCat == 'all'
+                        ? allProducts
+                        : allProducts
+                            .where((p) => p.category == selectedCat)
+                            .toList();
+                    // Calculate temp cart total
+                    double addedTotal = 0;
+                    int addedCount = 0;
+                    tempCart.forEach((id, qty) {
+                      final p = allProducts.where((x) => x.id == id).firstOrNull;
+                      if (p != null) {
+                        addedTotal += p.price * qty;
+                        addedCount += qty;
+                      }
+                    });
+
+                    return Container(
+                      width: MediaQuery.of(context).size.width > 600 ? 420 : MediaQuery.of(context).size.width - 32,
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.75,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x33000000),
+                            blurRadius: 32,
+                            offset: Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Header
+                          Container(
+                            padding: const EdgeInsets.fromLTRB(20, 18, 12, 14),
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Color(0xFFF0FDF4), Colors.white],
+                              ),
+                              borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(20)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.add_shopping_cart_rounded,
+                                    color: AppColors.emerald600, size: 22),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Thêm món vào đơn',
+                                        style: TextStyle(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppColors.slate800,
+                                        ),
+                                      ),
+                                      Text(
+                                        order.table.isNotEmpty
+                                            ? order.table
+                                                .replaceAll('::', ' · ')
+                                            : 'Mang về',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.slate400,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () => Navigator.pop(ctx),
+                                  child: Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.slate100,
+                                      borderRadius:
+                                          BorderRadius.circular(16),
+                                    ),
+                                    child: const Icon(Icons.close,
+                                        size: 18,
+                                        color: AppColors.slate500),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(height: 1, color: AppColors.slate100),
+
+                          // Product list
+                          Flexible(
+                            child: allProducts.isEmpty
+                                ? const Padding(
+                                    padding: EdgeInsets.all(40),
+                                    child: Center(
+                                      child: Text('Chưa có sản phẩm',
+                                          style: TextStyle(
+                                              color: AppColors.slate400)),
+                                    ),
+                                  )
+                                : ListView.separated(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 12),
+                                    shrinkWrap: true,
+                                    itemCount: allProducts.length,
+                                    separatorBuilder: (_, __) =>
+                                        const SizedBox(height: 8),
+                                    itemBuilder: (_, i) {
+                                      final p = allProducts[i];
+                                      final qty = tempCart[p.id] ?? 0;
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: qty > 0
+                                              ? const Color(0xFFF0FDF4)
+                                              : AppColors.slate50,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: qty > 0
+                                                ? AppColors.emerald200
+                                                : AppColors.slate200,
+                                          ),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Row(
+                                              children: [
+                                                // Product image
+                                                Container(
+                                                  width: 44,
+                                                  height: 44,
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.slate100,
+                                                    borderRadius:
+                                                        BorderRadius.circular(10),
+                                                    image: p.image.isNotEmpty
+                                                        ? DecorationImage(
+                                                            image: NetworkImage(
+                                                                p.image),
+                                                            fit: BoxFit.cover,
+                                                          )
+                                                        : null,
+                                                  ),
+                                                  child: p.image.isEmpty
+                                                      ? const Icon(
+                                                          Icons
+                                                              .restaurant_rounded,
+                                                          size: 20,
+                                                          color:
+                                                              AppColors.slate300)
+                                                      : null,
+                                                ),
+                                                const SizedBox(width: 10),
+                                                // Name + price
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(p.name,
+                                                          style: const TextStyle(
+                                                            fontSize: 14,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            color: AppColors
+                                                                .slate800,
+                                                          ),
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis),
+                                                      Text(
+                                                          formatCurrency(p.price),
+                                                          style: const TextStyle(
+                                                            fontSize: 13,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            color: AppColors
+                                                                .emerald500,
+                                                          )),
+                                                    ],
+                                                  ),
+                                                ),
+                                                // Qty controls
+                                                if (qty > 0)
+                                                  Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      _miniBtn(
+                                                        icon: qty == 1
+                                                            ? Icons
+                                                                .delete_outline_rounded
+                                                            : Icons
+                                                                .remove_rounded,
+                                                        color: qty == 1
+                                                            ? AppColors.red400
+                                                            : AppColors.slate600,
+                                                        onTap: () {
+                                                          setState2(() {
+                                                            if (qty <= 1) {
+                                                              tempCart
+                                                                  .remove(p.id);
+                                                              tempNotes
+                                                                  .remove(p.id);
+                                                            } else {
+                                                              tempCart[p.id] =
+                                                                  qty - 1;
+                                                            }
+                                                          });
+                                                        },
+                                                      ),
+                                                      Container(
+                                                        width: 32,
+                                                        alignment: Alignment.center,
+                                                        child: Text('$qty',
+                                                            style: const TextStyle(
+                                                              fontWeight:
+                                                                  FontWeight.w700,
+                                                              fontSize: 14,
+                                                              color: AppColors
+                                                                  .slate800,
+                                                            )),
+                                                      ),
+                                                      _miniBtn(
+                                                        icon: Icons.add_rounded,
+                                                        color:
+                                                            AppColors.emerald600,
+                                                        onTap: () {
+                                                          setState2(() {
+                                                            tempCart[p.id] =
+                                                                qty + 1;
+                                                          });
+                                                        },
+                                                      ),
+                                                    ],
+                                                  )
+                                                else
+                                                  GestureDetector(
+                                                    onTap: () {
+                                                      setState2(() {
+                                                        tempCart[p.id] = 1;
+                                                      });
+                                                    },
+                                                    child: Container(
+                                                      width: 34,
+                                                      height: 34,
+                                                      decoration: BoxDecoration(
+                                                        color:
+                                                            AppColors.emerald500,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                                10),
+                                                      ),
+                                                      child: const Icon(
+                                                          Icons.add_rounded,
+                                                          color: Colors.white,
+                                                          size: 18),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                            // Note input (visible when qty > 0)
+                                            if (qty > 0) ...[
+                                              const SizedBox(height: 8),
+                                              Container(
+                                                height: 36,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                      color: AppColors.slate200),
+                                                ),
+                                                child: TextField(
+                                                  controller:
+                                                      TextEditingController(
+                                                          text: tempNotes[p.id] ?? ''),
+                                                  onChanged: (v) {
+                                                    tempNotes[p.id] = v;
+                                                  },
+                                                  style: const TextStyle(
+                                                      fontSize: 13,
+                                                      color: AppColors.slate600),
+                                                  decoration: InputDecoration(
+                                                    hintText:
+                                                        'Ghi chú (VD: ít đường)...',
+                                                    hintStyle: TextStyle(
+                                                      color: AppColors.slate400
+                                                          .withValues(
+                                                              alpha: 0.6),
+                                                      fontSize: 13,
+                                                    ),
+                                                    prefixIcon: const Padding(
+                                                      padding: EdgeInsets.only(
+                                                          left: 8, right: 4),
+                                                      child: Icon(
+                                                          Icons.edit_note_rounded,
+                                                          size: 18,
+                                                          color: AppColors
+                                                              .slate400),
+                                                    ),
+                                                    prefixIconConstraints:
+                                                        const BoxConstraints(
+                                                            minWidth: 0),
+                                                    border: InputBorder.none,
+                                                    isDense: true,
+                                                    contentPadding:
+                                                        const EdgeInsets
+                                                            .symmetric(
+                                                            horizontal: 10,
+                                                            vertical: 8),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                          ),
+
+                          // Footer - confirm
+                          if (addedCount > 0) ...[
+                            Container(height: 1, color: AppColors.slate100),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                              child: GestureDetector(
+                                onTap: () {
+                                  // Merge new items into existing order
+                                  final newItems =
+                                      List<OrderItemModel>.from(order.items);
+                                  tempCart.forEach((productId, qty) {
+                                    final product = allProducts
+                                        .where((p) => p.id == productId)
+                                        .firstOrNull;
+                                    if (product == null) return;
+                                    final existingIdx = newItems
+                                        .indexWhere((i) => i.id == productId);
+                                    if (existingIdx >= 0) {
+                                      newItems[existingIdx] =
+                                          newItems[existingIdx].copyWith(
+                                        quantity:
+                                            newItems[existingIdx].quantity +
+                                                qty,
+                                      );
+                                    } else {
+                                      newItems.add(OrderItemModel(
+                                        id: productId,
+                                        name: product.name,
+                                        price: product.price,
+                                        quantity: qty,
+                                        image: product.image,
+                                        note: tempNotes[productId] ?? '',
+                                      ));
+                                    }
+                                  });
+                                  final newTotal = newItems.fold<double>(
+                                      0,
+                                      (sum, i) =>
+                                          sum + (i.price * i.quantity));
+                                  store.updateOrderItems(
+                                      order.id, newItems, newTotal);
+                                  Navigator.pop(ctx);
+                                  store.showToast(
+                                      'Đã thêm $addedCount món vào đơn!');
+                                },
+                                child: Container(
+                                  width: double.infinity,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF10B981),
+                                        Color(0xFF059669)
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF10B981)
+                                            .withValues(alpha: 0.3),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                          Icons.add_circle_outline_rounded,
+                                          color: Colors.white,
+                                          size: 18),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Thêm $addedCount món · ${formatCurrency(addedTotal)}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      transitionBuilder: (ctx, a1, a2, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(
+              parent: a1, curve: Curves.easeOutCubic),
+          child: FadeTransition(opacity: a1, child: child),
+        );
+      },
+    );
+  }
+
+  Widget _miniBtn(
+      {required IconData icon,
+      required Color color,
+      required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(
+          color: AppColors.slate100,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, size: 16, color: color),
       ),
     );
   }

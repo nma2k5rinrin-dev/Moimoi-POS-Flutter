@@ -620,7 +620,9 @@ class _AddProductPanelState extends State<AddProductPanel>
           Center(
             child: Material(
               color: Colors.transparent,
-              child: Container(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 340),
+                child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 32),
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -720,6 +722,7 @@ class _AddProductPanelState extends State<AddProductPanel>
                     ),
                   ],
                 ),
+              ),
               ),
             ),
           ),

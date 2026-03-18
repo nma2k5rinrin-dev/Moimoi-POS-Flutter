@@ -14,7 +14,7 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  String _timeRange = 'today';
+  String _timeRange = 'range';
   DateTime _dateFrom = DateTime.now();
   DateTime _dateTo = DateTime.now();
 
@@ -31,7 +31,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final totalOrders = filteredOrders.length;
     final avgOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
     final bestSellers = _getBestSellers(filteredOrders);
-    final weekData = _getWeekData(paidOrders);
+    final hourlyData = _getHourlyData(filteredOrders);
 
     return Container(
       color: const Color(0xFFFAFBFC),
@@ -79,95 +79,64 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             const SizedBox(height: 20),
 
-            // Time Range Tabs + Date Picker
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: AppColors.slate100,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                children: [
-                  // Tabs row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _TimeChip(
-                            label: 'Hôm nay',
-                            isActive: _timeRange == 'today',
-                            onTap: () =>
-                                setState(() => _timeRange = 'today')),
+            // Date Range Picker only
+            GestureDetector(
+              onTap: () async {
+                final picked = await showCompactDateRangePicker(
+                  context: context,
+                  initialStart: _dateFrom,
+                  initialEnd: _dateTo,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now(),
+                );
+                if (picked != null) {
+                  setState(() {
+                    _dateFrom = picked.start;
+                    _dateTo = picked.end;
+                    _timeRange = 'range';
+                  });
+                }
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.slate200),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.calendar_today_rounded,
+                        size: 16, color: AppColors.emerald600),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${_dateFrom.day.toString().padLeft(2, '0')}/${_dateFrom.month.toString().padLeft(2, '0')}/${_dateFrom.year}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: AppColors.slate800,
                       ),
-                      Expanded(
-                        child: _TimeChip(
-                            label: 'Tháng này',
-                            isActive: _timeRange == 'month',
-                            onTap: () =>
-                                setState(() => _timeRange = 'month')),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_forward_rounded,
+                        size: 14, color: AppColors.slate400),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${_dateTo.day.toString().padLeft(2, '0')}/${_dateTo.month.toString().padLeft(2, '0')}/${_dateTo.year}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: AppColors.slate800,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  // Date range picker row
-                  GestureDetector(
-                        onTap: () async {
-                          final picked = await showCompactDateRangePicker(
-                            context: context,
-                            initialStart: _dateFrom,
-                            initialEnd: _dateTo,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime.now(),
-                          );
-                          if (picked != null) {
-                            setState(() {
-                              _dateFrom = picked.start;
-                              _dateTo = picked.end;
-                              _timeRange = 'range';
-                            });
-                          }
-                        },
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 10),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.slate200),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.calendar_today_rounded,
-                                  size: 16, color: AppColors.emerald600),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${_dateFrom.day.toString().padLeft(2, '0')}/${_dateFrom.month.toString().padLeft(2, '0')}/${_dateFrom.year}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                  color: AppColors.slate800,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.arrow_forward_rounded,
-                                  size: 14, color: AppColors.slate400),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${_dateTo.day.toString().padLeft(2, '0')}/${_dateTo.month.toString().padLeft(2, '0')}/${_dateTo.year}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                  color: AppColors.slate800,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.keyboard_arrow_down_rounded,
-                                  size: 16, color: AppColors.slate400),
-                            ],
-                          ),
-                        ),
-                  ),
-                ],
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.keyboard_arrow_down_rounded,
+                        size: 16, color: AppColors.slate400),
+                  ],
+                ),
               ),
             ),
 
@@ -218,7 +187,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     children: [
                       Expanded(
                         flex: 2,
-                        child: _RevenueChart(weekData: weekData),
+                        child: _HourlyRevenueChart(hourlyData: hourlyData),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -236,7 +205,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 }
                 return Column(
                   children: [
-                    _RevenueChart(weekData: weekData),
+                    _HourlyRevenueChart(hourlyData: hourlyData),
                     const SizedBox(height: 14),
                     _BestSellersCard(items: bestSellers),
                     const SizedBox(height: 14),
@@ -252,29 +221,15 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   List<OrderModel> _filterByTime(List<OrderModel> orders) {
-    final now = DateTime.now();
     return orders.where((o) {
       final dt = DateTime.tryParse(o.time);
       if (dt == null) return false;
-      switch (_timeRange) {
-        case 'today':
-          return dt.day == now.day &&
-              dt.month == now.month &&
-              dt.year == now.year;
-        case 'month':
-          return dt.month == now.month && dt.year == now.year;
-        case 'year':
-          return dt.year == now.year;
-        case 'range':
-          final from =
-              DateTime(_dateFrom.year, _dateFrom.month, _dateFrom.day);
-          final to = DateTime(
-              _dateTo.year, _dateTo.month, _dateTo.day, 23, 59, 59);
-          return dt.isAfter(from.subtract(const Duration(seconds: 1))) &&
-              dt.isBefore(to.add(const Duration(seconds: 1)));
-        default:
-          return false;
-      }
+      final from =
+          DateTime(_dateFrom.year, _dateFrom.month, _dateFrom.day);
+      final to = DateTime(
+          _dateTo.year, _dateTo.month, _dateTo.day, 23, 59, 59);
+      return dt.isAfter(from.subtract(const Duration(seconds: 1))) &&
+          dt.isBefore(to.add(const Duration(seconds: 1)));
     }).toList();
   }
 
@@ -302,25 +257,48 @@ class _DashboardPageState extends State<DashboardPage> {
     return list.take(5).toList();
   }
 
-  List<_WeekDay> _getWeekData(List<OrderModel> orders) {
-    final days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-    final totals = List.filled(7, 0.0);
+  List<_HourSlot> _getHourlyData(List<OrderModel> orders) {
+    // Group revenue by 2-hour time slots
+    final slots = <_HourSlot>[
+      _HourSlot(label: '6-8h', total: 0),
+      _HourSlot(label: '8-10h', total: 0),
+      _HourSlot(label: '10-12h', total: 0),
+      _HourSlot(label: '12-14h', total: 0),
+      _HourSlot(label: '14-16h', total: 0),
+      _HourSlot(label: '16-18h', total: 0),
+      _HourSlot(label: '18-20h', total: 0),
+      _HourSlot(label: '20-22h', total: 0),
+      _HourSlot(label: '22-0h', total: 0),
+    ];
     for (final o in orders) {
       final dt = DateTime.tryParse(o.time);
       if (dt == null) continue;
-      if (DateTime.now().difference(dt).inDays < 7) {
-        totals[dt.weekday % 7] += o.totalAmount;
+      final h = dt.hour;
+      int idx;
+      if (h < 6) {
+        continue; // skip very early hours
+      } else if (h < 8) {
+        idx = 0;
+      } else if (h < 10) {
+        idx = 1;
+      } else if (h < 12) {
+        idx = 2;
+      } else if (h < 14) {
+        idx = 3;
+      } else if (h < 16) {
+        idx = 4;
+      } else if (h < 18) {
+        idx = 5;
+      } else if (h < 20) {
+        idx = 6;
+      } else if (h < 22) {
+        idx = 7;
+      } else {
+        idx = 8;
       }
+      slots[idx] = _HourSlot(label: slots[idx].label, total: slots[idx].total + o.totalAmount);
     }
-    return [
-      _WeekDay(name: days[1], total: totals[1]),
-      _WeekDay(name: days[2], total: totals[2]),
-      _WeekDay(name: days[3], total: totals[3]),
-      _WeekDay(name: days[4], total: totals[4]),
-      _WeekDay(name: days[5], total: totals[5]),
-      _WeekDay(name: days[6], total: totals[6]),
-      _WeekDay(name: days[0], total: totals[0]),
-    ];
+    return slots;
   }
 
   String _formatShortCurrency(double amount) {
@@ -542,18 +520,20 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// ─── Revenue Chart ──────────────────────────────────
-class _RevenueChart extends StatelessWidget {
-  final List<_WeekDay> weekData;
-  const _RevenueChart({required this.weekData});
+// ─── Hourly Revenue Chart ────────────────────────────
+class _HourlyRevenueChart extends StatelessWidget {
+  final List<_HourSlot> hourlyData;
+  const _HourlyRevenueChart({required this.hourlyData});
 
   @override
   Widget build(BuildContext context) {
     final maxVal =
-        weekData.fold(0.0, (max, d) => d.total > max ? d.total : max);
-    // Map weekday to our display index (Mon=0...Sun=6)
-    final todayDisplayIdx =
-        DateTime.now().weekday == 7 ? 6 : DateTime.now().weekday - 1;
+        hourlyData.fold(0.0, (max, d) => d.total > max ? d.total : max);
+    // Find peak hour slot
+    int peakIdx = 0;
+    for (int i = 1; i < hourlyData.length; i++) {
+      if (hourlyData[i].total > hourlyData[peakIdx].total) peakIdx = i;
+    }
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -574,11 +554,11 @@ class _RevenueChart extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.bar_chart_rounded,
+              const Icon(Icons.schedule_rounded,
                   size: 20, color: AppColors.emerald500),
               const SizedBox(width: 8),
               const Text(
-                'Doanh thu 7 ngày gần nhất',
+                'Doanh thu theo khung giờ',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -592,13 +572,13 @@ class _RevenueChart extends StatelessWidget {
             height: 200,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
-              children: List.generate(weekData.length, (i) {
-                final d = weekData[i];
+              children: List.generate(hourlyData.length, (i) {
+                final d = hourlyData[i];
                 final fraction = maxVal > 0 ? d.total / maxVal : 0.0;
-                final isToday = i == todayDisplayIdx;
+                final isPeak = i == peakIdx && d.total > 0;
                 return Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -610,14 +590,14 @@ class _RevenueChart extends StatelessWidget {
                                     ? '${(d.total / 1000).toStringAsFixed(0)}K'
                                     : '${d.total.toStringAsFixed(0)}',
                             style: TextStyle(
-                              fontSize: 10,
-                              color: isToday
+                              fontSize: 9,
+                              color: isPeak
                                   ? AppColors.emerald600
                                   : AppColors.slate400,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 600),
                           curve: Curves.easeOutCubic,
@@ -626,20 +606,25 @@ class _RevenueChart extends StatelessWidget {
                             gradient: LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors: isToday
+                              colors: isPeak
                                   ? [
                                       AppColors.emerald400,
                                       AppColors.emerald600
                                     ]
-                                  : [
-                                      AppColors.slate200,
-                                      AppColors.slate300
-                                    ],
+                                  : fraction > 0
+                                      ? [
+                                          const Color(0xFF93C5FD),
+                                          const Color(0xFF3B82F6)
+                                        ]
+                                      : [
+                                          AppColors.slate200,
+                                          AppColors.slate300
+                                        ],
                             ),
                             borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(8),
+                              top: Radius.circular(6),
                             ),
-                            boxShadow: isToday
+                            boxShadow: isPeak
                                 ? [
                                     BoxShadow(
                                       color: AppColors.emerald500
@@ -651,24 +636,24 @@ class _RevenueChart extends StatelessWidget {
                                 : null,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                              horizontal: 4, vertical: 3),
                           decoration: BoxDecoration(
-                            color: isToday
+                            color: isPeak
                                 ? AppColors.emerald50
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            d.name,
+                            d.label,
                             style: TextStyle(
-                              fontSize: 12,
-                              color: isToday
+                              fontSize: 10,
+                              color: isPeak
                                   ? AppColors.emerald600
                                   : AppColors.slate500,
-                              fontWeight: isToday
+                              fontWeight: isPeak
                                   ? FontWeight.w700
                                   : FontWeight.w500,
                             ),
@@ -858,10 +843,10 @@ class _BestSellerItem {
       {required this.name, required this.sold, required this.revenue});
 }
 
-class _WeekDay {
-  final String name;
+class _HourSlot {
+  final String label;
   final double total;
-  const _WeekDay({required this.name, required this.total});
+  const _HourSlot({required this.label, required this.total});
 }
 
 // ─── Staff Ranking ──────────────────────────────────
