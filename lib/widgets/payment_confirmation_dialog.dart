@@ -39,6 +39,7 @@ void showPaymentConfirmation(
           Center(
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 12),
+              constraints: const BoxConstraints(maxWidth: 380),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),

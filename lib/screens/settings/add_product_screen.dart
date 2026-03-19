@@ -55,8 +55,10 @@ class _AddProductPanelState extends State<AddProductPanel>
     with SingleTickerProviderStateMixin {
   final _nameCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
+  final _costPriceCtrl = TextEditingController();
   final _unitCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
+  final _qtyCtrl = TextEditingController();
   String _selectedCategory = '';
   bool _isOutOfStock = false;
   bool _isHot = false;
@@ -86,6 +88,12 @@ class _AddProductPanelState extends State<AddProductPanel>
       if (p.description.isNotEmpty) {
         _descCtrl.text = p.description;
       }
+      if (p.quantity > 0) {
+        _qtyCtrl.text = p.quantity.toString();
+      }
+      if (p.costPrice > 0) {
+        _costPriceCtrl.text = _ThousandSeparatorFormatter._formatNumber(p.costPrice.toInt());
+      }
     }
 
     _animCtrl = AnimationController(
@@ -104,8 +112,10 @@ class _AddProductPanelState extends State<AddProductPanel>
   void dispose() {
     _nameCtrl.dispose();
     _priceCtrl.dispose();
+    _costPriceCtrl.dispose();
     _unitCtrl.dispose();
     _descCtrl.dispose();
+    _qtyCtrl.dispose();
     _animCtrl.dispose();
     super.dispose();
   }
@@ -141,15 +151,18 @@ class _AddProductPanelState extends State<AddProductPanel>
 
           // ── Panel ───────────────────────────
           Positioned(
-            left: 16,
-            right: 16,
-            top: MediaQuery.of(context).padding.top + 80,
+            left: 0,
+            right: 0,
+            top: MediaQuery.of(context).padding.top + 40,
+            child: Center(
             child: SlideTransition(
               position: _slideAnim,
               child: Container(
                 constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.78,
+                  maxWidth: 480,
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
                 ),
+                margin: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
@@ -202,7 +215,7 @@ class _AddProductPanelState extends State<AddProductPanel>
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      _buildLabel('Giá'),
+                                      _buildLabel('Giá bán'),
                                       const SizedBox(height: 6),
                                       _buildTextField(
                                         controller: _priceCtrl,
@@ -235,6 +248,21 @@ class _AddProductPanelState extends State<AddProductPanel>
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 14),
+
+                            // ── Giá gốc ─────────────
+                            _buildLabel('Giá gốc (tùy chọn)'),
+                            const SizedBox(height: 6),
+                            _buildTextField(
+                              controller: _costPriceCtrl,
+                              hint: '0',
+                              icon: Icons.price_change_outlined,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                _ThousandSeparatorFormatter(),
+                              ],
+                            ),
                             const SizedBox(height: 18),
 
                             // ── Danh mục ─────────────
@@ -253,6 +281,42 @@ class _AddProductPanelState extends State<AddProductPanel>
                             ),
                             const SizedBox(height: 18),
 
+                            // ── Số lượng ─────────────
+                            _buildLabel('Số lượng tồn kho'),
+                            const SizedBox(height: 6),
+                            _buildTextField(
+                              controller: _qtyCtrl,
+                              hint: '0 = không giới hạn',
+                              icon: Icons.inventory_2_outlined,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                            ),
+                            const SizedBox(height: 18),
+
+                            // ── Toggle Switches ──────
+                            _buildToggleRow(
+                              icon: Icons.local_fire_department_rounded,
+                              iconColor: const Color(0xFFF59E0B),
+                              bgColor: const Color(0xFFFFF7ED),
+                              label: 'Bán chạy',
+                              desc: 'Đánh dấu sản phẩm bán chạy',
+                              value: _isHot,
+                              onChanged: (v) => setState(() => _isHot = v),
+                            ),
+                            const SizedBox(height: 10),
+                            _buildToggleRow(
+                              icon: Icons.remove_shopping_cart_outlined,
+                              iconColor: AppColors.red500,
+                              bgColor: const Color(0xFFFEF2F2),
+                              label: 'Hết hàng',
+                              desc: 'Tạm ngưng bán sản phẩm',
+                              value: _isOutOfStock,
+                              onChanged: (v) => setState(() => _isOutOfStock = v),
+                            ),
+                            const SizedBox(height: 18),
+
                             // ── Action Buttons ───────
                             _buildButtons(),
                           ],
@@ -263,6 +327,7 @@ class _AddProductPanelState extends State<AddProductPanel>
                 ),
               ),
             ),
+          ),
           ),
         ],
       ),
@@ -781,6 +846,8 @@ class _AddProductPanelState extends State<AddProductPanel>
       store.showToast('Giá phải lớn hơn 0', 'error');
       return;
     }
+    final costPriceText = _costPriceCtrl.text.replaceAll('.', '');
+    final costPrice = double.tryParse(costPriceText) ?? 0;
 
     if (_isEditMode) {
       store.updateProduct(widget.existingProduct!.copyWith(
@@ -791,6 +858,8 @@ class _AddProductPanelState extends State<AddProductPanel>
         description: _descCtrl.text.trim(),
         isOutOfStock: _isOutOfStock,
         isHot: _isHot,
+        quantity: int.tryParse(_qtyCtrl.text) ?? 0,
+        costPrice: costPrice,
       ));
       store.showToast('Đã cập nhật sản phẩm "$name"!');
     } else {
@@ -803,9 +872,69 @@ class _AddProductPanelState extends State<AddProductPanel>
         description: _descCtrl.text.trim(),
         isOutOfStock: _isOutOfStock,
         isHot: _isHot,
+        quantity: int.tryParse(_qtyCtrl.text) ?? 0,
+        costPrice: costPrice,
       ));
       store.showToast('Đã thêm sản phẩm "$name"!');
     }
     _closeWithAnimation();
   }
+
+  // ── Toggle Row ──────────────────────────────────
+  Widget _buildToggleRow({
+    required IconData icon,
+    required Color iconColor,
+    required Color bgColor,
+    required String label,
+    required String desc,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.slate200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: iconColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.slate800)),
+                Text(desc,
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.slate400)),
+              ],
+            ),
+          ),
+          Transform.scale(
+            scale: 0.85,
+            child: Switch(
+              value: value,
+              onChanged: onChanged,
+              activeTrackColor: AppColors.emerald500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
+

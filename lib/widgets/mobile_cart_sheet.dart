@@ -129,7 +129,7 @@ class MobileCartSheet extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'Chọn món ăn để thêm vào giỏ',
+                          'Chọn sản phẩm để thêm vào giỏ',
                           style: TextStyle(
                               color: AppColors.slate400, fontSize: 13),
                         ),

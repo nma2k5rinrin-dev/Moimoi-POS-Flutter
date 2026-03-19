@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../store/app_store.dart';
 import '../../models/user_model.dart';
@@ -29,6 +30,19 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   String? _selectedSection;
+  bool _tabParamApplied = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_tabParamApplied) {
+      final tab = GoRouterState.of(context).uri.queryParameters['tab'];
+      if (tab != null && tab.isNotEmpty) {
+        _selectedSection = tab;
+      }
+      _tabParamApplied = true;
+    }
+  }
 
   final List<_SettingMenu> _menus = [
     _SettingMenu(
@@ -45,8 +59,8 @@ class _SettingsPageState extends State<SettingsPage> {
     ),
     _SettingMenu(
       id: 'menu',
-      name: 'Quản Lý Danh Mục & Thực Đơn',
-      desc: 'Thêm/sửa món ăn, danh mục',
+      name: 'Quản Lý Danh Mục & Sản Phẩm',
+      desc: 'Thêm/sửa sản phẩm, danh mục',
       icon: Icons.restaurant_menu,
     ),
     _SettingMenu(

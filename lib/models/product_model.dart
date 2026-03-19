@@ -8,6 +8,8 @@ class ProductModel {
   final String description;
   final bool isOutOfStock;
   final bool isHot;
+  final int quantity;
+  final double costPrice;
 
   const ProductModel({
     required this.id,
@@ -19,6 +21,8 @@ class ProductModel {
     this.description = '',
     this.isOutOfStock = false,
     this.isHot = false,
+    this.quantity = 0,
+    this.costPrice = 0,
   });
 
   factory ProductModel.fromMap(Map<String, dynamic> map) {
@@ -32,6 +36,8 @@ class ProductModel {
       description: map['description'] ?? '',
       isOutOfStock: map['is_out_of_stock'] ?? false,
       isHot: map['is_hot'] ?? false,
+      quantity: map['quantity'] ?? 0,
+      costPrice: (map['cost_price'] ?? 0).toDouble(),
     );
   }
 
@@ -45,6 +51,8 @@ class ProductModel {
     String? description,
     bool? isOutOfStock,
     bool? isHot,
+    int? quantity,
+    double? costPrice,
   }) {
     return ProductModel(
       id: id ?? this.id,
@@ -56,6 +64,8 @@ class ProductModel {
       description: description ?? this.description,
       isOutOfStock: isOutOfStock ?? this.isOutOfStock,
       isHot: isHot ?? this.isHot,
+      quantity: quantity ?? this.quantity,
+      costPrice: costPrice ?? this.costPrice,
     );
   }
 }

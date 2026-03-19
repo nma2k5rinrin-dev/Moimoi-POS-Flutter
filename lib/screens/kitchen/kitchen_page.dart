@@ -43,8 +43,15 @@ class _KitchenPageState extends State<KitchenPage>
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     final allOrders = store.visibleOrders;
-    final filteredOrders =
-        allOrders.where((o) => o.status == _statusFilter).toList();
+    final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+    final filteredOrders = allOrders.where((o) {
+      if (o.status != _statusFilter) return false;
+      // Completed and cancelled orders only show today's
+      if (o.status == 'completed' || o.status == 'cancelled') {
+        return o.time.startsWith(todayStr);
+      }
+      return true;
+    }).toList();
     final pendingCount =
         allOrders.where((o) => o.status == 'pending').length;
     final cookingCount =
@@ -312,62 +319,21 @@ class _KitchenPageState extends State<KitchenPage>
   }
 }
 
-// ─── Animated Status Bar (pulse from bottom to top) ────────
-class _AnimatedStatusBar extends StatefulWidget {
+// ─── Static Status Bar ────────
+class _StatusBar extends StatelessWidget {
   final Color color;
   final double height;
-  const _AnimatedStatusBar({required this.color, this.height = 40});
-
-  @override
-  State<_AnimatedStatusBar> createState() => _AnimatedStatusBarState();
-}
-
-class _AnimatedStatusBarState extends State<_AnimatedStatusBar>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
+  const _StatusBar({required this.color, this.height = 40});
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (context, child) {
-        return Container(
-          width: 4,
-          height: widget.height,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4),
-            gradient: LinearGradient(
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-              colors: [
-                widget.color.withValues(alpha: 0.15),
-                widget.color,
-                widget.color.withValues(alpha: 0.15),
-              ],
-              stops: [
-                (_ctrl.value - 0.3).clamp(0.0, 1.0),
-                _ctrl.value,
-                (_ctrl.value + 0.3).clamp(0.0, 1.0),
-              ],
-            ),
-          ),
-        );
-      },
+    return Container(
+      width: 4,
+      height: height,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(4),
+      ),
     );
   }
 }
@@ -444,7 +410,7 @@ class _OrderCardState extends State<_OrderCard> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // Animated left bar
-                  _AnimatedStatusBar(color: statusColor, height: 36),
+                  _StatusBar(color: statusColor, height: 36),
                   const SizedBox(width: 12),
                   // Info
                   Expanded(
@@ -730,6 +696,16 @@ class _OrderCardState extends State<_OrderCard> {
                                   decorationColor: AppColors.emerald500)),
                         ),
                       ),
+                      // Price
+                      Text(
+                        formatCurrency(item.price * item.quantity),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.emerald600,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
                       // Status badge
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -910,10 +886,10 @@ class _OrderCardState extends State<_OrderCard> {
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.local_fire_department_rounded,
+                          Icon(Icons.play_circle_outline_rounded,
                               size: 14, color: Colors.white),
                           SizedBox(width: 4),
-                          Text('Bắt đầu nấu',
+                          Text('Xử lý đơn hàng',
                               style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w700,

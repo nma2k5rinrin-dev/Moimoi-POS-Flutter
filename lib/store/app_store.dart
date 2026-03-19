@@ -645,6 +645,8 @@ class AppStore extends ChangeNotifier {
       'description': product.description,
       'is_out_of_stock': product.isOutOfStock,
       'is_hot': product.isHot,
+      'quantity': product.quantity,
+      'cost_price': product.costPrice,
     };
     await _supabase.from('products').insert(newProd);
     products.putIfAbsent(storeId, () => []);
@@ -662,6 +664,8 @@ class AppStore extends ChangeNotifier {
       'description': updatedProduct.description,
       'is_out_of_stock': updatedProduct.isOutOfStock,
       'is_hot': updatedProduct.isHot,
+      'quantity': updatedProduct.quantity,
+      'cost_price': updatedProduct.costPrice,
     }).eq('id', updatedProduct.id);
     products[storeId] = (products[storeId] ?? [])
         .map((p) => p.id == updatedProduct.id ? updatedProduct : p)

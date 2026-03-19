@@ -9,6 +9,7 @@ import '../utils/constants.dart';
 import '../widgets/notification_bell.dart';
 import '../widgets/store_selector.dart';
 import '../widgets/mobile_cart_sheet.dart';
+import '../widgets/account_dialog.dart';
 
 class MainShell extends StatefulWidget {
   final Widget child;
@@ -23,7 +24,7 @@ class _MainShellState extends State<MainShell> {
     _NavItem(icon: PhosphorIconsBold.storefront, label: 'Bán hàng', path: '/'),
     _NavItem(icon: PhosphorIconsBold.clipboardText, label: 'Đơn hàng', path: '/kitchen'),
     _NavItem(icon: Icons.bar_chart, label: 'Báo Cáo', path: '/dashboard'),
-    _NavItem(icon: Icons.settings, label: 'Cài Đặt', path: '/settings'),
+    _NavItem(icon: PhosphorIconsBold.package, label: 'Quản lý kho', path: '/inventory'),
   ];
 
   List<_NavItem> _getMenuItems(AppStore store) {
@@ -397,7 +398,7 @@ class _DesktopSidebar extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: () {
-                _showUserMenu(context);
+                showAccountDialog(context);
               },
               child: Row(
                 mainAxisAlignment: isExpanded
@@ -671,99 +672,7 @@ class _MobileHeader extends StatelessWidget {
 
           // User Avatar
           GestureDetector(
-            onTap: () {
-              showModalBottomSheet(
-                context: context,
-                shape: const RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(24)),
-                ),
-                builder: (ctx) => SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 20,
-                              backgroundColor: AppColors.emerald100,
-                              backgroundImage:
-                                  store.currentUser?.avatar.isNotEmpty == true
-                                      ? MemoryImage(_decodeAvatar(store.currentUser!.avatar))
-                                      : null,
-                              child: store.currentUser?.avatar.isEmpty != false
-                                  ? Text(
-                                      store.currentUser?.username
-                                                  .isNotEmpty ==
-                                              true
-                                          ? store.currentUser!.username[0]
-                                              .toUpperCase()
-                                          : 'U',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.emerald600,
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  store.currentUser?.fullname
-                                              .isNotEmpty ==
-                                          true
-                                      ? store.currentUser!.fullname
-                                      : store.currentUser?.username ??
-                                          '',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15,
-                                    color: AppColors.slate800,
-                                  ),
-                                ),
-                                Text(
-                                  store.currentUser?.role == 'sadmin'
-                                      ? 'Super Admin 👑'
-                                      : store.currentUser?.isPremium ==
-                                              true
-                                          ? 'VIP 💎'
-                                          : 'Gói Miễn Phí',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.slate500,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        const Divider(),
-                        ListTile(
-                          leading: const Icon(Icons.logout,
-                              color: AppColors.red500),
-                          title: const Text('Đăng xuất',
-                              style: TextStyle(
-                                  color: AppColors.red500,
-                                  fontWeight: FontWeight.w600)),
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            store.logout();
-                            context.go('/login');
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
+            onTap: () => showAccountDialog(context),
             child: CircleAvatar(
               radius: 16,
               backgroundColor: AppColors.emerald100,

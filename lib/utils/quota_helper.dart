@@ -58,7 +58,7 @@ class QuotaHelper {
       _isPremium || currentProductCount < QuotaLimits.maxProducts;
 
   String get productLimitMsg =>
-      'Gói Cơ bản chỉ cho phép tối đa ${QuotaLimits.maxProducts} món ăn. '
+      'Gói Cơ bản chỉ cho phép tối đa ${QuotaLimits.maxProducts} sản phẩm. '
       'Nâng cấp Premium để thêm không giới hạn.';
 
   // ── Orders / day ───────────────────────────────────────

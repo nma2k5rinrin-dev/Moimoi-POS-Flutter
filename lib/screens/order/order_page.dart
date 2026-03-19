@@ -77,7 +77,7 @@ class _ProductGrid extends StatelessWidget {
                 style: const TextStyle(
                     fontWeight: FontWeight.w500, fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Tìm kiếm món ăn...',
+                  hintText: 'Tìm kiếm sản phẩm...',
                   hintStyle: TextStyle(
                     color: AppColors.slate400.withValues(alpha: 0.8),
                     fontWeight: FontWeight.w400,
@@ -234,7 +234,7 @@ class _ProductGrid extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Thêm món ăn trong Cài đặt → Quản lý thực đơn',
+            'Thêm sản phẩm trong Quản lý kho → Quản lý danh mục / sản phẩm',
             style: TextStyle(color: AppColors.slate400, fontSize: 13),
           ),
         ],
@@ -807,7 +807,7 @@ class _CartPanel extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           const Text(
-            'Chưa có món nào',
+            'Chưa có sản phẩm nào',
             style: TextStyle(
               color: AppColors.slate500,
               fontWeight: FontWeight.w700,
@@ -816,7 +816,7 @@ class _CartPanel extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           const Text(
-            'Chạm vào món ăn để thêm vào đơn',
+            'Chạm vào sản phẩm để thêm vào đơn',
             style: TextStyle(
               color: AppColors.slate400,
               fontSize: 13,

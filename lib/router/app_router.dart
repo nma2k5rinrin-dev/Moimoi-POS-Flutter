@@ -8,6 +8,9 @@ import '../screens/order/order_page.dart';
 import '../screens/kitchen/kitchen_page.dart';
 import '../screens/dashboard/dashboard_page.dart';
 import '../screens/settings/settings_page.dart';
+import '../screens/premium/premium_page.dart';
+import '../screens/inventory/inventory_page.dart';
+import '../screens/settings/menu_management.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -76,6 +79,20 @@ GoRouter createRouter(AppStore store) {
             pageBuilder: (context, state) => _fadeTransitionPage(
               key: state.pageKey,
               child: const SettingsPage(),
+            ),
+          ),
+          GoRoute(
+            path: '/premium',
+            pageBuilder: (context, state) => _fadeTransitionPage(
+              key: state.pageKey,
+              child: const PremiumPage(),
+            ),
+          ),
+          GoRoute(
+            path: '/inventory',
+            pageBuilder: (context, state) => _fadeTransitionPage(
+              key: state.pageKey,
+              child: const MenuManagementSection(),
             ),
           ),
         ],

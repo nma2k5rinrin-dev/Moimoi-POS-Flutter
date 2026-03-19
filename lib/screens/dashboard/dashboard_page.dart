@@ -22,13 +22,16 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     final allOrders = store.visibleOrders;
-    final paidOrders =
-        allOrders.where((o) => o.paymentStatus == 'paid').toList();
-    final filteredOrders = _filterByTime(paidOrders);
+    final completedPaidOrders =
+        allOrders.where((o) => o.status == 'completed' && o.paymentStatus == 'paid').toList();
+    final filteredOrders = _filterByTime(completedPaidOrders);
+    final cancelledOrders =
+        _filterByTime(allOrders.where((o) => o.status == 'cancelled').toList());
 
     final totalRevenue =
         filteredOrders.fold(0.0, (acc, o) => acc + o.totalAmount);
     final totalOrders = filteredOrders.length;
+    final totalCancelled = cancelledOrders.length;
     final avgOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
     final bestSellers = _getBestSellers(filteredOrders);
     final hourlyData = _getHourlyData(filteredOrders);
@@ -37,183 +40,188 @@ class _DashboardPageState extends State<DashboardPage> {
       color: const Color(0xFFFAFBFC),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
+        child: LayoutBuilder(
+          builder: (context, outerConstraints) {
+            final isWide = outerConstraints.maxWidth >= 600;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.blue50,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(Icons.insights_rounded,
-                      color: AppColors.blue500, size: 24),
-                ),
-                const SizedBox(width: 14),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Báo Cáo Doanh Thu',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.slate800,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    Text(
-                      'Phân tích hiệu quả kinh doanh',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.slate500,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Date Range Picker only
-            GestureDetector(
-              onTap: () async {
-                final picked = await showCompactDateRangePicker(
-                  context: context,
-                  initialStart: _dateFrom,
-                  initialEnd: _dateTo,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime.now(),
-                );
-                if (picked != null) {
-                  setState(() {
-                    _dateFrom = picked.start;
-                    _dateTo = picked.end;
-                    _timeRange = 'range';
-                  });
-                }
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.slate200),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.calendar_today_rounded,
-                        size: 16, color: AppColors.emerald600),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${_dateFrom.day.toString().padLeft(2, '0')}/${_dateFrom.month.toString().padLeft(2, '0')}/${_dateFrom.year}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        color: AppColors.slate800,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.arrow_forward_rounded,
-                        size: 14, color: AppColors.slate400),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${_dateTo.day.toString().padLeft(2, '0')}/${_dateTo.month.toString().padLeft(2, '0')}/${_dateTo.year}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        color: AppColors.slate800,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.keyboard_arrow_down_rounded,
-                        size: 16, color: AppColors.slate400),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Stats Cards — 1 large + 2 small
-            _StatCard(
-              label: 'Doanh thu',
-              value: formatCurrency(totalRevenue),
-              icon: Icons.trending_up_rounded,
-              gradient: const [Color(0xFF10B981), Color(0xFF059669)],
-              width: double.infinity,
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    label: 'Tổng đơn',
-                    value: '$totalOrders',
-                    icon: Icons.receipt_long_rounded,
-                    gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
-                    width: double.infinity,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: _StatCard(
-                    label: 'TB/đơn',
-                    value: _formatShortCurrency(avgOrder),
-                    icon: Icons.analytics_outlined,
-                    gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
-                    width: double.infinity,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // Charts Row
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final isWide = constraints.maxWidth >= 900;
-                if (isWide) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                // ── Header + Date picker ────────────
+                if (isWide)
+                  Row(
                     children: [
-                      Expanded(
-                        flex: 2,
-                        child: _HourlyRevenueChart(hourlyData: hourlyData),
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppColors.emerald50,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(Icons.bar_chart_rounded,
+                                color: AppColors.emerald500, size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Báo Cáo Doanh Thu',
+                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800,
+                                      color: AppColors.slate800, letterSpacing: -0.5)),
+                              Text('Phân tích hiệu quả kinh doanh',
+                                  style: TextStyle(fontSize: 13, color: AppColors.slate500)),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      _buildDatePicker(),
+                    ],
+                  )
+                else ...[
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.emerald50,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(Icons.bar_chart_rounded,
+                            color: AppColors.emerald500, size: 24),
                       ),
                       const SizedBox(width: 14),
-                      Expanded(
-                        flex: 1,
-                        child: Column(
-                          children: [
-                            _BestSellersCard(items: bestSellers),
-                            const SizedBox(height: 14),
-                            _StaffRankingCard(orders: filteredOrders),
-                          ],
-                        ),
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Báo Cáo Doanh Thu',
+                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800,
+                                  color: AppColors.slate800, letterSpacing: -0.5)),
+                          Text('Phân tích hiệu quả kinh doanh',
+                              style: TextStyle(fontSize: 13, color: AppColors.slate500)),
+                        ],
                       ),
                     ],
-                  );
-                }
-                return Column(
-                  children: [
+                  ),
+                  const SizedBox(height: 20),
+                  _buildDatePicker(),
+                ],
+
+                const SizedBox(height: 20),
+
+                // ── Stats Cards ─────────────────────
+                if (isWide)
+                  Row(
+                    children: [
+                      Expanded(child: _StatCard(label: 'Doanh thu', value: formatCurrency(totalRevenue),
+                          icon: Icons.trending_up_rounded, gradient: const [Color(0xFF10B981), Color(0xFF059669)], width: double.infinity)),
+                      const SizedBox(width: 16),
+                      Expanded(child: _StatCard(label: 'Tổng đơn', value: '$totalOrders',
+                          icon: Icons.receipt_long_rounded, gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)], width: double.infinity)),
+                      const SizedBox(width: 16),
+                      Expanded(child: _StatCard(label: 'TB/đơn', value: _formatShortCurrency(avgOrder),
+                          icon: Icons.analytics_outlined, gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)], width: double.infinity)),
+                      const SizedBox(width: 16),
+                      Expanded(child: _StatCard(label: 'Đơn hủy', value: '$totalCancelled',
+                          icon: Icons.cancel_outlined, gradient: const [Color(0xFFEF4444), Color(0xFFDC2626)], width: double.infinity)),
+                    ],
+                  )
+                else ...[
+                  Row(children: [
+                    Expanded(child: _StatCard(label: 'Doanh thu', value: formatCurrency(totalRevenue),
+                        icon: Icons.trending_up_rounded, gradient: const [Color(0xFF10B981), Color(0xFF059669)], width: double.infinity)),
+                    const SizedBox(width: 14),
+                    Expanded(child: _StatCard(label: 'Tổng đơn', value: '$totalOrders',
+                        icon: Icons.receipt_long_rounded, gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)], width: double.infinity)),
+                  ]),
+                  const SizedBox(height: 14),
+                  Row(children: [
+                    Expanded(child: _StatCard(label: 'TB/đơn', value: _formatShortCurrency(avgOrder),
+                        icon: Icons.analytics_outlined, gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)], width: double.infinity)),
+                    const SizedBox(width: 14),
+                    Expanded(child: _StatCard(label: 'Đơn hủy', value: '$totalCancelled',
+                        icon: Icons.cancel_outlined, gradient: const [Color(0xFFEF4444), Color(0xFFDC2626)], width: double.infinity)),
+                  ]),
+                ],
+
+                const SizedBox(height: 24),
+
+                // ── Charts ──────────────────────────
+                if (outerConstraints.maxWidth >= 900)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 2, child: _HourlyRevenueChart(hourlyData: hourlyData)),
+                      const SizedBox(width: 14),
+                      Expanded(flex: 1, child: Column(children: [
+                        _BestSellersCard(items: bestSellers),
+                        const SizedBox(height: 14),
+                        _StaffRankingCard(orders: filteredOrders),
+                      ])),
+                    ],
+                  )
+                else
+                  Column(children: [
                     _HourlyRevenueChart(hourlyData: hourlyData),
                     const SizedBox(height: 14),
                     _BestSellersCard(items: bestSellers),
                     const SizedBox(height: 14),
                     _StaffRankingCard(orders: filteredOrders),
-                  ],
-                );
-              },
+                  ]),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDatePicker() {
+    return GestureDetector(
+      onTap: () async {
+        final picked = await showCompactDateRangePicker(
+          context: context,
+          initialStart: _dateFrom,
+          initialEnd: _dateTo,
+          firstDate: DateTime(2020),
+          lastDate: DateTime.now(),
+        );
+        if (picked != null) {
+          setState(() {
+            _dateFrom = picked.start;
+            _dateTo = picked.end;
+            _timeRange = 'range';
+          });
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.slate200),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.calendar_today_rounded,
+                size: 16, color: AppColors.emerald600),
+            const SizedBox(width: 8),
+            Text(
+              '${_dateFrom.day.toString().padLeft(2, '0')}/${_dateFrom.month.toString().padLeft(2, '0')}/${_dateFrom.year}',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.slate800),
             ),
+            const SizedBox(width: 8),
+            const Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.slate400),
+            const SizedBox(width: 8),
+            Text(
+              '${_dateTo.day.toString().padLeft(2, '0')}/${_dateTo.month.toString().padLeft(2, '0')}/${_dateTo.year}',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.slate800),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.slate400),
           ],
         ),
       ),
@@ -260,15 +268,15 @@ class _DashboardPageState extends State<DashboardPage> {
   List<_HourSlot> _getHourlyData(List<OrderModel> orders) {
     // Group revenue by 2-hour time slots
     final slots = <_HourSlot>[
-      _HourSlot(label: '6-8h', total: 0),
-      _HourSlot(label: '8-10h', total: 0),
-      _HourSlot(label: '10-12h', total: 0),
-      _HourSlot(label: '12-14h', total: 0),
-      _HourSlot(label: '14-16h', total: 0),
-      _HourSlot(label: '16-18h', total: 0),
-      _HourSlot(label: '18-20h', total: 0),
-      _HourSlot(label: '20-22h', total: 0),
-      _HourSlot(label: '22-0h', total: 0),
+      _HourSlot(label: '6-8', total: 0),
+      _HourSlot(label: '8-10', total: 0),
+      _HourSlot(label: '10-12', total: 0),
+      _HourSlot(label: '12-14', total: 0),
+      _HourSlot(label: '14-16', total: 0),
+      _HourSlot(label: '16-18', total: 0),
+      _HourSlot(label: '18-20', total: 0),
+      _HourSlot(label: '20-22', total: 0),
+      _HourSlot(label: '22-0', total: 0),
     ];
     for (final o in orders) {
       final dt = DateTime.tryParse(o.time);
