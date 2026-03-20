@@ -57,9 +57,9 @@ class _KitchenPageState extends State<KitchenPage>
     final cookingCount =
         allOrders.where((o) => o.status == 'cooking').length;
     final completedCount =
-        allOrders.where((o) => o.status == 'completed').length;
+        allOrders.where((o) => o.status == 'completed' && o.time.startsWith(todayStr)).length;
     final cancelledCount =
-        allOrders.where((o) => o.status == 'cancelled').length;
+        allOrders.where((o) => o.status == 'cancelled' && o.time.startsWith(todayStr)).length;
 
     return Container(
       color: const Color(0xFFFAFBFC),
