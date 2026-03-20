@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import '../utils/constants.dart';
+import '../utils/avatar_picker.dart';
 
 /// Shows a circular crop dialog matching the app's emerald theme.
 /// Takes raw image [bytes] and returns the cropped circular image as a
@@ -73,7 +74,7 @@ class _CircleCropDialogState extends State<_CircleCropDialog> {
       }
 
       final pngBytes = byteData.buffer.asUint8List();
-      final base64Str = 'data:image/png;base64,${base64Encode(pngBytes)}';
+      final base64Str = convertToWebpBase64(pngBytes);
 
       if (mounted) Navigator.pop(context, base64Str);
     } catch (e) {

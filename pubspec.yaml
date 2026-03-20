@@ -51,6 +51,7 @@ dependencies:
   image_picker: ^1.2.1
   image_cropper: ^11.0.0
   phosphor_flutter: ^2.1.0
+  image: ^4.8.0
 
 dev_dependencies:
   flutter_test:

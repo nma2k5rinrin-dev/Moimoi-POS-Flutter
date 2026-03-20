@@ -72,6 +72,7 @@ class OrderModel {
   final String createdBy;
   final String time;
   final String storeId;
+  final String paymentMethod; // 'cash', 'transfer', or '' (unknown)
 
   const OrderModel({
     required this.id,
@@ -83,6 +84,7 @@ class OrderModel {
     this.createdBy = '',
     this.time = '',
     this.storeId = '',
+    this.paymentMethod = '',
   });
 
   factory OrderModel.fromMap(Map<String, dynamic> map) {
@@ -99,6 +101,7 @@ class OrderModel {
       createdBy: map['created_by'] ?? '',
       time: map['time'] ?? '',
       storeId: map['store_id'] ?? '',
+      paymentMethod: map['payment_method'] ?? '',
     );
   }
 
@@ -112,6 +115,7 @@ class OrderModel {
     String? createdBy,
     String? time,
     String? storeId,
+    String? paymentMethod,
   }) {
     return OrderModel(
       id: id ?? this.id,
@@ -123,6 +127,7 @@ class OrderModel {
       createdBy: createdBy ?? this.createdBy,
       time: time ?? this.time,
       storeId: storeId ?? this.storeId,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
     );
   }
 }

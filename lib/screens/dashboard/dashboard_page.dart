@@ -32,7 +32,10 @@ class _DashboardPageState extends State<DashboardPage> {
         filteredOrders.fold(0.0, (acc, o) => acc + o.totalAmount);
     final totalOrders = filteredOrders.length;
     final totalCancelled = cancelledOrders.length;
-    final avgOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
+    final cashRevenue =
+        filteredOrders.where((o) => o.paymentMethod == 'cash').fold(0.0, (acc, o) => acc + o.totalAmount);
+    final transferRevenue =
+        filteredOrders.where((o) => o.paymentMethod == 'transfer').fold(0.0, (acc, o) => acc + o.totalAmount);
     final bestSellers = _getBestSellers(filteredOrders);
     final hourlyData = _getHourlyData(filteredOrders);
 
@@ -93,8 +96,11 @@ class _DashboardPageState extends State<DashboardPage> {
                       Expanded(child: _StatCard(label: 'Tổng đơn', value: '$totalOrders',
                           icon: Icons.receipt_long_rounded, gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)], width: double.infinity)),
                       const SizedBox(width: 16),
-                      Expanded(child: _StatCard(label: 'TB/đơn', value: _formatShortCurrency(avgOrder),
-                          icon: Icons.analytics_outlined, gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)], width: double.infinity)),
+                      Expanded(child: _StatCard(label: 'DT tiền mặt', value: _formatShortCurrency(cashRevenue),
+                          icon: Icons.payments_rounded, gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)], width: double.infinity)),
+                      const SizedBox(width: 16),
+                      Expanded(child: _StatCard(label: 'DT chuyển khoản', value: _formatShortCurrency(transferRevenue),
+                          icon: Icons.account_balance_rounded, gradient: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)], width: double.infinity)),
                       const SizedBox(width: 16),
                       Expanded(child: _StatCard(label: 'Đơn hủy', value: '$totalCancelled',
                           icon: Icons.cancel_outlined, gradient: const [Color(0xFFEF4444), Color(0xFFDC2626)], width: double.infinity)),
@@ -169,10 +175,17 @@ class _DashboardPageState extends State<DashboardPage> {
                       )),
                       const SizedBox(width: 10),
                       Expanded(child: _MiniStat(
-                        icon: Icons.analytics_outlined,
-                        label: 'TB/đơn',
-                        value: _formatShortCurrency(avgOrder),
+                        icon: Icons.payments_rounded,
+                        label: 'Tiền mặt',
+                        value: _formatShortCurrency(cashRevenue),
                         color: AppColors.amber500,
+                      )),
+                      const SizedBox(width: 10),
+                      Expanded(child: _MiniStat(
+                        icon: Icons.account_balance_rounded,
+                        label: 'CK',
+                        value: _formatShortCurrency(transferRevenue),
+                        color: const Color(0xFF8B5CF6),
                       )),
                       const SizedBox(width: 10),
                       Expanded(child: _MiniStat(

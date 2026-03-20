@@ -20,17 +20,23 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  static const List<_NavItem> _allMenuItems = [
+  static const List<_NavItem> _adminMenuItems = [
+    _NavItem(icon: Icons.bar_chart, label: 'Báo Cáo', path: '/dashboard'),
     _NavItem(icon: PhosphorIconsBold.storefront, label: 'Bán hàng', path: '/'),
     _NavItem(icon: PhosphorIconsBold.clipboardText, label: 'Đơn hàng', path: '/kitchen'),
-    _NavItem(icon: Icons.bar_chart, label: 'Báo Cáo', path: '/dashboard'),
     _NavItem(icon: PhosphorIconsBold.package, label: 'Quản lý kho', path: '/inventory'),
+    _NavItem(icon: Icons.settings_outlined, label: 'Cài đặt', path: '/settings'),
+  ];
+
+  // Staff tabs: Order + Kitchen only
+  static const List<_NavItem> _staffMenuItems = [
+    _NavItem(icon: PhosphorIconsBold.storefront, label: 'Bán hàng', path: '/'),
+    _NavItem(icon: PhosphorIconsBold.clipboardText, label: 'Đơn hàng', path: '/kitchen'),
   ];
 
   List<_NavItem> _getMenuItems(AppStore store) {
     final isAdmin = ['admin', 'sadmin'].contains(store.currentUser?.role);
-    if (isAdmin) return _allMenuItems;
-    return _allMenuItems.sublist(0, 2); // Staff: Order + Kitchen only
+    return isAdmin ? _adminMenuItems : _staffMenuItems;
   }
 
   void _onTabTapped(int index, List<_NavItem> items) {
@@ -39,10 +45,9 @@ class _MainShellState extends State<MainShell> {
 
   int _getCurrentIndex(List<_NavItem> items) {
     var location = GoRouterState.of(context).matchedLocation;
-    // Map sub-routes to their parent nav item
-    // Settings and other non-nav routes → no active tab
-    if (location == '/settings' || location == '/premium' || location == '/thu-chi' || location == '/nhap-thu' || location == '/nhap-chi') {
-      return -1;
+    // Settings sub-routes → map to /settings
+    if (location == '/nhap-thu' || location == '/nhap-chi' || location == '/premium') {
+      location = '/settings';
     }
     for (int i = 0; i < items.length; i++) {
       if (items[i].path == location) return i;
@@ -189,20 +194,35 @@ class _DesktopSidebar extends StatelessWidget {
                   child: storeInfo.logoUrl.isNotEmpty
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            storeInfo.logoUrl,
-                            fit: BoxFit.cover,
-                            width: 40,
-                            height: 40,
-                            errorBuilder: (_, __, ___) => const Text(
-                              'POS',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
+                          child: storeInfo.logoUrl.startsWith('data:')
+                              ? Image.memory(
+                                  _decodeAvatar(storeInfo.logoUrl),
+                                  fit: BoxFit.cover,
+                                  width: 40,
+                                  height: 40,
+                                  errorBuilder: (_, __, ___) => const Text(
+                                    'POS',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                )
+                              : Image.network(
+                                  storeInfo.logoUrl,
+                                  fit: BoxFit.cover,
+                                  width: 40,
+                                  height: 40,
+                                  errorBuilder: (_, __, ___) => const Text(
+                                    'POS',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
                         )
                       : const Text(
                           'POS',
@@ -403,34 +423,14 @@ class _DesktopSidebar extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: () {
-                showAccountDialog(context);
+                context.go('/settings?tab=account');
               },
               child: Row(
                 mainAxisAlignment: isExpanded
                     ? MainAxisAlignment.start
                     : MainAxisAlignment.center,
                 children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: AppColors.emerald100,
-                    backgroundImage:
-                        store.currentUser?.avatar.isNotEmpty == true
-                            ? MemoryImage(_decodeAvatar(store.currentUser!.avatar))
-                            : null,
-                    child: store.currentUser?.avatar.isEmpty != false
-                        ? Text(
-                            (store.currentUser?.username.isNotEmpty ==
-                                    true)
-                                ? store.currentUser!.username[0]
-                                    .toUpperCase()
-                                : 'U',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.emerald600,
-                            ),
-                          )
-                        : null,
-                  ),
+                  _buildAvatarWidget(store, 20),
                   if (isExpanded) ...[
                     const SizedBox(width: 12),
                     Expanded(
@@ -494,27 +494,7 @@ class _DesktopSidebar extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: AppColors.emerald100,
-                      backgroundImage:
-                          store.currentUser?.avatar.isNotEmpty == true
-                              ? MemoryImage(_decodeAvatar(store.currentUser!.avatar))
-                              : null,
-                      child: store.currentUser?.avatar.isEmpty != false
-                          ? Text(
-                              store.currentUser?.username.isNotEmpty == true
-                                  ? store.currentUser!.username[0]
-                                      .toUpperCase()
-                                  : 'U',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.emerald600,
-                                fontSize: 18,
-                              ),
-                            )
-                          : null,
-                    ),
+                    _buildAvatarWidget(store, 24),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -678,26 +658,7 @@ class _MobileHeader extends StatelessWidget {
           // User Avatar
           GestureDetector(
             onTap: () => showAccountDialog(context),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.emerald100,
-              backgroundImage:
-                  store.currentUser?.avatar.isNotEmpty == true
-                      ? MemoryImage(_decodeAvatar(store.currentUser!.avatar))
-                      : null,
-              child: store.currentUser?.avatar.isEmpty != false
-                  ? Text(
-                      store.currentUser?.username.isNotEmpty == true
-                          ? store.currentUser!.username[0].toUpperCase()
-                          : 'U',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        color: AppColors.emerald600,
-                      ),
-                    )
-                  : null,
-            ),
+            child: _buildAvatarWidget(store, 16),
           ),
         ],
       ),
@@ -980,4 +941,42 @@ class _MobileBottomNav extends StatelessWidget {
 Uint8List _decodeAvatar(String dataUri) {
   final base64Part = dataUri.contains(',') ? dataUri.split(',').last : dataUri;
   return base64Decode(base64Part);
+}
+
+Widget _buildAvatarWidget(AppStore store, double radius) {
+  final hasAvatar = store.currentUser?.avatar.isNotEmpty == true;
+  final letter = (store.currentUser?.username.isNotEmpty == true)
+      ? store.currentUser!.username[0].toUpperCase()
+      : 'U';
+  if (hasAvatar) {
+    try {
+      final bytes = _decodeAvatar(store.currentUser!.avatar);
+      return ClipOval(
+        child: Image.memory(
+          bytes,
+          width: radius * 2,
+          height: radius * 2,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => CircleAvatar(
+            radius: radius,
+            backgroundColor: AppColors.emerald100,
+            child: Text(letter, style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: radius * 0.7,
+              color: AppColors.emerald600,
+            )),
+          ),
+        ),
+      );
+    } catch (_) {}
+  }
+  return CircleAvatar(
+    radius: radius,
+    backgroundColor: AppColors.emerald100,
+    child: Text(letter, style: TextStyle(
+      fontWeight: FontWeight.bold,
+      fontSize: radius * 0.7,
+      color: AppColors.emerald600,
+    )),
+  );
 }

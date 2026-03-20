@@ -62,7 +62,7 @@ class _DateRangePickerContentState extends State<_DateRangePickerContent> {
     return Material(
       color: Colors.transparent,
       child: Container(
-        width: 340,
+        width: 400,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),

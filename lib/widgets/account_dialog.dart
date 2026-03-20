@@ -62,7 +62,8 @@ class _AccountDialogContent extends StatelessWidget {
     final avatar = store.currentUser?.avatar ?? '';
     if (avatar.isEmpty) return null;
     try {
-      return base64Decode(avatar);
+      final base64Part = avatar.contains(',') ? avatar.split(',').last : avatar;
+      return base64Decode(base64Part);
     } catch (_) {
       return null;
     }
@@ -159,22 +160,39 @@ class _AccountDialogContent extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
         child: Column(
           children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: AppColors.emerald100,
-              backgroundImage:
-                  avatarBytes != null ? MemoryImage(avatarBytes) : null,
-              child: avatarBytes == null
-                  ? Text(
+            avatarBytes != null
+                ? ClipOval(
+                    child: Image.memory(
+                      avatarBytes,
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => CircleAvatar(
+                        radius: 28,
+                        backgroundColor: AppColors.emerald100,
+                        child: Text(
+                          _avatarLetter,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.emerald600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : CircleAvatar(
+                    radius: 28,
+                    backgroundColor: AppColors.emerald100,
+                    child: Text(
                       _avatarLetter,
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
                         color: AppColors.emerald600,
                       ),
-                    )
-                  : null,
-            ),
+                    ),
+                  ),
             const SizedBox(height: 8),
             Text(
               _displayName,
@@ -185,7 +203,7 @@ class _AccountDialogContent extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -462,11 +480,15 @@ class _AccountDialogContent extends StatelessWidget {
 
   void _showQRDialog(BuildContext context) {
     final storeInfo = store.currentStoreInfo;
+    final hasQrImage = storeInfo.qrImageUrl.isNotEmpty;
+    final hasBankInfo = storeInfo.bankAccount.isNotEmpty;
+
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
+        child: Container(
+          width: 480,
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -481,8 +503,31 @@ class _AccountDialogContent extends StatelessWidget {
                   color: AppColors.slate800,
                 ),
               ),
-              const SizedBox(height: 8),
-              if (storeInfo.bankAccount.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              if (hasQrImage) ...[
+                // Show QR image centered
+                Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(maxHeight: 320),
+                  decoration: BoxDecoration(
+                    color: AppColors.slate50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.slate200),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(11),
+                    child: storeInfo.qrImageUrl.startsWith('data:')
+                        ? Image.memory(
+                            _decodeBase64(storeInfo.qrImageUrl),
+                            fit: BoxFit.contain,
+                          )
+                        : Image.network(
+                            storeInfo.qrImageUrl,
+                            fit: BoxFit.contain,
+                          ),
+                  ),
+                ),
+              ] else if (hasBankInfo) ...[
                 Text(
                   'Ngân hàng: ${storeInfo.bankId}',
                   style: const TextStyle(fontSize: 13, color: AppColors.slate600),
@@ -507,11 +552,37 @@ class _AccountDialogContent extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13, color: AppColors.slate500),
                 ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: TextButton.styleFrom(
+                    backgroundColor: AppColors.slate100,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Đóng',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.slate600,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Uint8List _decodeBase64(String dataUri) {
+    final base64Part = dataUri.split(',').last;
+    return base64Decode(base64Part);
   }
 }

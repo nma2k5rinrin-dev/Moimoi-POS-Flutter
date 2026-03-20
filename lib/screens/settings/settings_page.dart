@@ -7,9 +7,9 @@ import 'package:provider/provider.dart';
 import '../../store/app_store.dart';
 import '../../models/user_model.dart';
 import '../../utils/constants.dart';
+import '../../utils/avatar_picker.dart';
 import '../../utils/validators.dart';
 import 'menu_management.dart';
-import '../../utils/avatar_picker.dart';
 import '../../widgets/square_crop_dialog.dart';
 import '../../widgets/circle_crop_dialog.dart';
 import '../../models/store_info_model.dart';
@@ -32,17 +32,15 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   String? _selectedSection;
-  bool _tabParamApplied = false;
+  String? _lastAppliedTab;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_tabParamApplied) {
-      final tab = GoRouterState.of(context).uri.queryParameters['tab'];
-      if (tab != null && tab.isNotEmpty) {
-        _selectedSection = tab;
-      }
-      _tabParamApplied = true;
+    final tab = GoRouterState.of(context).uri.queryParameters['tab'];
+    if (tab != null && tab.isNotEmpty && tab != _lastAppliedTab) {
+      _selectedSection = tab;
+      _lastAppliedTab = tab;
     }
   }
 
@@ -411,14 +409,33 @@ class _AccountSectionState extends State<_AccountSection> {
                           children: [
                             Stack(
                               children: [
-                                CircleAvatar(
-                                  radius: 44,
-                                  backgroundColor: AppColors.emerald100,
-                                  backgroundImage: (user?.avatar ?? '').isNotEmpty
-                                      ? MemoryImage(_decodeAvatar(user!.avatar))
-                                      : null,
-                                  child: (user?.avatar ?? '').isEmpty
-                                      ? Text(
+                                (user?.avatar ?? '').isNotEmpty
+                                    ? ClipOval(
+                                        child: Image.memory(
+                                          _decodeAvatar(user!.avatar),
+                                          width: 88,
+                                          height: 88,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => CircleAvatar(
+                                            radius: 44,
+                                            backgroundColor: AppColors.emerald100,
+                                            child: Text(
+                                              (user.fullname.isNotEmpty ? user.fullname : 'U')
+                                                  .substring(0, 1)
+                                                  .toUpperCase(),
+                                              style: const TextStyle(
+                                                fontSize: 32,
+                                                fontWeight: FontWeight.w700,
+                                                color: AppColors.emerald600,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : CircleAvatar(
+                                        radius: 44,
+                                        backgroundColor: AppColors.emerald100,
+                                        child: Text(
                                           (user?.fullname ?? 'U')
                                               .substring(0, 1)
                                               .toUpperCase(),
@@ -427,9 +444,8 @@ class _AccountSectionState extends State<_AccountSection> {
                                             fontWeight: FontWeight.w700,
                                             color: AppColors.emerald600,
                                           ),
-                                        )
-                                      : null,
-                                ),
+                                        ),
+                                      ),
                                 Positioned(
                                   bottom: 0,
                                   right: 0,
@@ -456,7 +472,7 @@ class _AccountSectionState extends State<_AccountSection> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  user?.fullname ?? 'User',
+                                  user?.fullname.isNotEmpty == true ? user!.fullname : (user?.username ?? 'User'),
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
@@ -464,14 +480,17 @@ class _AccountSectionState extends State<_AccountSection> {
                                   ),
                                 ),
                                 const SizedBox(width: 6),
-                                Icon(Icons.edit,
-                                    size: 16, color: AppColors.emerald500),
+                                GestureDetector(
+                                  onTap: () => _showEditFullnameDialog(context, store, user),
+                                  child: Icon(Icons.edit,
+                                      size: 16, color: AppColors.emerald500),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 4),
-                            const Text(
-                              'Kích hoạt: 01/01/2026',
-                              style: TextStyle(
+                            Text(
+                              'Kích hoạt: ${_formatCreatedAt(user?.createdAt ?? '')}',
+                              style: const TextStyle(
                                 fontSize: 13,
                                 color: AppColors.slate400,
                               ),
@@ -1189,16 +1208,17 @@ class _AccountSectionState extends State<_AccountSection> {
       final picker = ImagePicker();
       final picked = await picker.pickImage(
         source: source,
-        maxWidth: 800, maxHeight: 800,
-        imageQuality: 85,
       );
       if (picked == null || user == null) return;
 
       final bytes = await picked.readAsBytes();
       if (!mounted) return;
 
+      // Auto-resize & compress if needed (max 1024px, under 1MB)
+      final prepared = prepareImageBytes(bytes);
+
       // Show circle crop dialog
-      final result = await showCircleCropDialog(context, imageBytes: bytes);
+      final result = await showCircleCropDialog(context, imageBytes: prepared);
       if (result != null && mounted) {
         store.updateUser(user.username, {'avatar': result});
         setState(() {});
@@ -1206,6 +1226,72 @@ class _AccountSectionState extends State<_AccountSection> {
     } catch (e) {
       debugPrint('[AvatarPicker] error: $e');
     }
+  }
+
+  String _formatCreatedAt(String dateStr) {
+    if (dateStr.isEmpty) return '—';
+    try {
+      final date = DateTime.parse(dateStr);
+      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  void _showEditFullnameDialog(BuildContext context, AppStore store, dynamic user) {
+    if (user == null) return;
+    final controller = TextEditingController(text: user.fullname ?? '');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Sửa tên hiển thị', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: 'Nhập tên đầy đủ',
+            filled: true,
+            fillColor: AppColors.slate50,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.slate200),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.slate200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.emerald400),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy', style: TextStyle(color: AppColors.slate500)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newName = controller.text.trim();
+              if (newName.isNotEmpty) {
+                store.updateUser(user.username, {'fullname': newName});
+                setState(() {});
+                store.showToast('Đã cập nhật tên hiển thị!');
+              }
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.emerald500,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1346,6 +1432,7 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
   final _bankNameController = TextEditingController();
   final _bankAccountController = TextEditingController();
   final _bankOwnerController = TextEditingController();
+  String _qrImageUrl = '';
 
   @override
   void initState() {
@@ -1360,6 +1447,7 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
     _bankNameController.text = info.bankId;
     _bankAccountController.text = info.bankAccount;
     _bankOwnerController.text = info.bankOwner;
+    _qrImageUrl = info.qrImageUrl;
   }
 
   @override
@@ -1599,6 +1687,139 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
                               ),
                             ],
                           ),
+                          const SizedBox(height: 16),
+
+                          // ── QR Payment Image ──────────────
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              const Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text('Ảnh QR thanh toán',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppColors.slate600)),
+                              ),
+                              const SizedBox(height: 4),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'Nếu có ảnh QR, thông tin ngân hàng sẽ không hiển thị khi thanh toán. Ấn Lưu để áp dụng.',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.slate400,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              if (_qrImageUrl.isNotEmpty)
+                                // QR đã có: hiển thị ảnh + overlay + nút xóa bên cạnh
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // QR image with dark overlay
+                                    GestureDetector(
+                                      onTap: () => _pickQrImage(store),
+                                      child: Container(
+                                        width: 200,
+                                        height: 200,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.slate50,
+                                          borderRadius: BorderRadius.circular(14),
+                                          border: Border.all(color: AppColors.slate200),
+                                        ),
+                                        child: Stack(
+                                          children: [
+                                            // QR image
+                                            ClipRRect(
+                                              borderRadius: BorderRadius.circular(13),
+                                              child: Center(
+                                                child: _qrImageUrl.startsWith('data:')
+                                                    ? Image.memory(
+                                                        _decodeStoreImage(_qrImageUrl),
+                                                        width: 200,
+                                                        height: 200,
+                                                        fit: BoxFit.contain,
+                                                      )
+                                                    : Image.network(
+                                                        _qrImageUrl,
+                                                        width: 200,
+                                                        height: 200,
+                                                        fit: BoxFit.contain,
+                                                      ),
+                                              ),
+                                            ),
+                                            // Dark overlay with "Thay đổi QR"
+                                            Positioned.fill(
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black.withValues(alpha: 0.45),
+                                                  borderRadius: BorderRadius.circular(13),
+                                                ),
+                                                child: const Column(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(Icons.camera_alt_rounded, size: 28, color: Colors.white),
+                                                    SizedBox(height: 6),
+                                                    Text('Thay đổi QR',
+                                                      style: TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    // Delete button beside the QR
+                                    GestureDetector(
+                                      onTap: () => setState(() => _qrImageUrl = ''),
+                                      child: Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.red50,
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: AppColors.red200),
+                                        ),
+                                        child: const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.red500),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else
+                                // Chưa có QR: nút chọn ảnh
+                                GestureDetector(
+                                  onTap: () => _pickQrImage(store),
+                                  child: Container(
+                                    width: 200,
+                                    height: 200,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.slate50,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: AppColors.slate200),
+                                    ),
+                                    child: const Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.qr_code_rounded, size: 40, color: AppColors.slate300),
+                                        SizedBox(height: 6),
+                                        Text('Chọn ảnh QR',
+                                            style: TextStyle(fontSize: 12, color: AppColors.slate400)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                           const SizedBox(height: 20),
 
                           // ── Cancel + Save buttons ──────────────
@@ -1616,6 +1837,7 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
                                     _bankNameController.text = info.bankId;
                                     _bankAccountController.text = info.bankAccount;
                                     _bankOwnerController.text = info.bankOwner;
+                                    _qrImageUrl = info.qrImageUrl;
                                     store.showToast('Đã hủy thay đổi');
                                   },
                                   icon: const Icon(Icons.close_rounded, size: 18),
@@ -1669,18 +1891,18 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
     final picker = ImagePicker();
     final XFile? pickedFile = await picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 512,
-      maxHeight: 512,
-      imageQuality: 85,
     );
     if (pickedFile == null) return;
 
     final bytes = await pickedFile.readAsBytes();
     if (!mounted) return;
 
+    // Auto-resize & compress if needed (max 1024px, under 1MB)
+    final prepared = prepareImageBytes(bytes);
+
     final base64 = await showSquareCropDialog(
       context,
-      imageBytes: bytes,
+      imageBytes: prepared,
       borderRadius: 24,
     );
     if (base64 != null) {
@@ -1700,9 +1922,41 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
       bankId: _bankNameController.text.trim(),
       bankAccount: _bankAccountController.text.trim(),
       bankOwner: _bankOwnerController.text.trim(),
+      qrImageUrl: _qrImageUrl,
     );
     store.updateStoreInfo(info);
     store.showToast('Cập nhật thông tin thành công!');
+  }
+
+  Future<void> _pickQrImage(AppStore store) async {
+    final picker = ImagePicker();
+    final XFile? pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+    );
+    if (pickedFile == null) return;
+
+    final bytes = await pickedFile.readAsBytes();
+    if (!mounted) return;
+
+    // Auto-resize & compress if needed (max 1024px, under 1MB)
+    final prepared = prepareImageBytes(bytes);
+
+    // Show square crop dialog to let user adjust/resize
+    final base64 = await showSquareCropDialog(
+      context,
+      imageBytes: prepared,
+      borderRadius: 12,
+      title: 'Điều chỉnh ảnh QR',
+    );
+    if (base64 != null && mounted) {
+      setState(() => _qrImageUrl = base64);
+      store.showToast('Đã chọn ảnh QR. Ấn Lưu để áp dụng.');
+    }
+  }
+
+  Uint8List _decodeStoreImage(String dataUri) {
+    final base64Part = dataUri.split(',').last;
+    return base64Decode(base64Part);
   }
 }
 

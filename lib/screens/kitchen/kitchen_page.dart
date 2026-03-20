@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -996,6 +998,7 @@ class _OrderCardState extends State<_OrderCard> {
   }
 
   void _showPaymentQR(BuildContext context, OrderModel order, AppStore store) {
+    final storeInfo = store.currentStoreInfo;
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -1016,7 +1019,7 @@ class _OrderCardState extends State<_OrderCard> {
           // Centered QR panel
           Center(
             child: Container(
-              width: 340,
+              constraints: const BoxConstraints(maxWidth: 480),
               margin: const EdgeInsets.symmetric(horizontal: 20),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -1089,28 +1092,8 @@ class _OrderCardState extends State<_OrderCard> {
                       padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
                       child: Column(
                         children: [
-                          // QR placeholder
-                          Container(
-                            width: 180,
-                            height: 180,
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border:
-                                  Border.all(color: AppColors.slate200),
-                            ),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: AppColors.slate50,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Center(
-                                child: Icon(Icons.qr_code_rounded,
-                                    size: 80, color: AppColors.slate300),
-                              ),
-                            ),
-                          ),
+                          // QR / bank info / prompt
+                          _buildPaymentQRContent(storeInfo),
                           const SizedBox(height: 8),
                           const Text(
                             'Cần thanh toán',
@@ -1138,73 +1121,81 @@ class _OrderCardState extends State<_OrderCard> {
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                       child: Column(
                         children: [
-                          // Confirm paid
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.pop(ctx);
-                              store.updateOrderPaymentStatus(
-                                  order.id, 'paid');
-                              store.updateOrderStatus(
-                                  order.id, 'completed');
-                            },
-                            child: Container(
-                              width: double.infinity,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFF10B981),
-                                    Color(0xFF059669)
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(14),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF10B981)
-                                        .withValues(alpha: 0.3),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.check_circle_rounded,
-                                      color: Colors.white, size: 20),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Xác nhận đã thanh toán',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 15,
-                                      color: Colors.white,
+                          // Two paid buttons side by side
+                          Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    store.updateOrderPaymentStatus(order.id, 'paid', paymentMethod: 'cash');
+                                    store.updateOrderStatus(order.id, 'completed');
+                                  },
+                                  child: Container(
+                                    height: 52,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
+                                      borderRadius: BorderRadius.circular(14),
+                                      boxShadow: [BoxShadow(color: const Color(0xFF10B981).withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.payments_rounded, size: 20, color: Colors.white),
+                                        SizedBox(width: 8),
+                                        Text('Tiền mặt', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Colors.white)),
+                                      ],
                                     ),
                                   ),
-                                ],
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    store.updateOrderPaymentStatus(order.id, 'paid', paymentMethod: 'transfer');
+                                    store.updateOrderStatus(order.id, 'completed');
+                                  },
+                                  child: Container(
+                                    height: 52,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFF2563EB)]),
+                                      borderRadius: BorderRadius.circular(14),
+                                      boxShadow: [BoxShadow(color: const Color(0xFF3B82F6).withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.account_balance_rounded, size: 20, color: Colors.white),
+                                        SizedBox(width: 8),
+                                        Text('Chuyển khoản', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Colors.white)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 10),
-                          // Close / Pay later
+                          // Pay later
                           GestureDetector(
                             onTap: () => Navigator.pop(ctx),
                             child: Container(
                               width: double.infinity,
-                              height: 44,
+                              height: 48,
                               decoration: BoxDecoration(
-                                color: AppColors.slate100,
-                                borderRadius: BorderRadius.circular(12),
+                                color: const Color(0xFFFFFBEB),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFF59E0B), width: 1.5),
                               ),
-                              child: const Center(
-                                child: Text(
-                                  'Thanh toán sau',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: AppColors.slate500,
-                                  ),
-                                ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.schedule_rounded, size: 18, color: Color(0xFFF59E0B)),
+                                  SizedBox(width: 8),
+                                  Text('Thanh toán sau', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFFF59E0B))),
+                                ],
                               ),
                             ),
                           ),
@@ -1216,6 +1207,89 @@ class _OrderCardState extends State<_OrderCard> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// Builds QR / bank info / prompt — matches payment_confirmation_dialog.
+  Widget _buildPaymentQRContent(storeInfo) {
+    final hasQr = storeInfo.qrImageUrl.isNotEmpty;
+    final hasBank = storeInfo.bankId.isNotEmpty &&
+        storeInfo.bankAccount.isNotEmpty &&
+        storeInfo.bankOwner.isNotEmpty;
+
+    if (hasQr) {
+      Uint8List? qrBytes;
+      try {
+        final base64Part = storeInfo.qrImageUrl.split(',').last;
+        qrBytes = base64Decode(base64Part);
+      } catch (_) {}
+
+      return Container(
+        width: 280,
+        height: 280,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.slate200),
+        ),
+        child: qrBytes != null
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Image.memory(
+                  qrBytes,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Center(
+                    child: Icon(Icons.broken_image, size: 40, color: AppColors.slate300),
+                  ),
+                ),
+              )
+            : const Center(
+                child: Icon(Icons.qr_code_rounded, size: 80, color: AppColors.slate300),
+              ),
+      );
+    }
+
+    if (hasBank) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.slate50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.slate200),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.account_balance_rounded, size: 28, color: AppColors.emerald500),
+            const SizedBox(height: 8),
+            Text(storeInfo.bankId, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate700)),
+            const SizedBox(height: 4),
+            Text(storeInfo.bankAccount, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.slate800, letterSpacing: 1.5)),
+            const SizedBox(height: 4),
+            Text(storeInfo.bankOwner, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.slate500)),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.info_outline_rounded, size: 28, color: Color(0xFFF59E0B)),
+          SizedBox(height: 8),
+          Text('Chưa có thông tin thanh toán', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFFB45309))),
+          SizedBox(height: 4),
+          Text('Vào Cài đặt → Thông tin cửa hàng để chọn ảnh QR hoặc nhập STK', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Color(0xFFD97706))),
         ],
       ),
     );

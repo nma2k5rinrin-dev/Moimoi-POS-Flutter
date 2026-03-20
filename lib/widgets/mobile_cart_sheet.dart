@@ -687,9 +687,9 @@ void _showPaymentConfirmation(BuildContext context, AppStore store) {
   showPaymentConfirmation(
     context,
     amount: store.getCartTotal(),
-    onPaid: () {
+    onPaid: (method) {
       Navigator.pop(context); // close cart sheet
-      store.checkoutOrder(paymentStatus: 'paid');
+      store.checkoutOrder(paymentStatus: 'paid', paymentMethod: method);
       store.showToast('Thanh toán thành công!');
     },
     onUnpaid: () {

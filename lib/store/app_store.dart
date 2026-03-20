@@ -501,6 +501,7 @@ class AppStore extends ChangeNotifier {
       'bank_id': info.bankId,
       'bank_account': info.bankAccount,
       'bank_owner': info.bankOwner,
+      'qr_image_url': info.qrImageUrl,
     };
     dbData.removeWhere((k, v) => v.toString().isEmpty);
     await _supabase
@@ -698,14 +699,18 @@ class AppStore extends ChangeNotifier {
   }
 
   Future<void> updateOrderPaymentStatus(
-      String orderId, String paymentStatus) async {
+      String orderId, String paymentStatus, {String paymentMethod = ''}) async {
+    final updateData = <String, dynamic>{'payment_status': paymentStatus};
+    if (paymentMethod.isNotEmpty) {
+      updateData['payment_method'] = paymentMethod;
+    }
     await _supabase
         .from('orders')
-        .update({'payment_status': paymentStatus})
+        .update(updateData)
         .eq('id', orderId);
     orders = orders
         .map((o) =>
-            o.id == orderId ? o.copyWith(paymentStatus: paymentStatus) : o)
+            o.id == orderId ? o.copyWith(paymentStatus: paymentStatus, paymentMethod: paymentMethod.isNotEmpty ? paymentMethod : null) : o)
         .toList();
     notifyListeners();
   }
@@ -771,7 +776,7 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> checkoutOrder({String paymentStatus = 'unpaid'}) async {
+  Future<void> checkoutOrder({String paymentStatus = 'unpaid', String paymentMethod = ''}) async {
     if (cart.isEmpty) return;
 
     // Quota check for Basic tier
@@ -797,6 +802,7 @@ class AppStore extends ChangeNotifier {
       'time': DateTime.now().toIso8601String(),
       'total_amount': totalAmount,
       'created_by': (currentUser?.fullname.isNotEmpty == true ? currentUser!.fullname : currentUser?.username) ?? 'unknown',
+      'payment_method': paymentMethod,
     };
 
     try {

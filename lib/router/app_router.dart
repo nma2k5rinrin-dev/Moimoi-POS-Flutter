@@ -11,7 +11,7 @@ import '../screens/settings/settings_page.dart';
 import '../screens/premium/premium_page.dart';
 import '../screens/inventory/inventory_page.dart';
 import '../screens/settings/menu_management.dart';
-import '../screens/thu_chi/thu_chi_page.dart';
+
 import '../screens/thu_chi/nhap_thu_page.dart';
 import '../screens/thu_chi/nhap_chi_page.dart';
 
@@ -31,7 +31,11 @@ GoRouter createRouter(AppStore store) {
       final isLoggedIn = store.currentUser != null;
       final isLoggingIn = state.matchedLocation == '/login';
       if (!isLoggedIn && !isLoggingIn) return '/login';
-      if (isLoggedIn && isLoggingIn) return '/';
+      if (isLoggedIn && isLoggingIn) {
+        // Admin → Dashboard, Staff → Order page
+        final isAdmin = ['admin', 'sadmin'].contains(store.currentUser?.role);
+        return isAdmin ? '/dashboard' : '/';
+      }
       return null;
     },
     routes: [
@@ -98,13 +102,7 @@ GoRouter createRouter(AppStore store) {
               child: const MenuManagementSection(),
             ),
           ),
-          GoRoute(
-            path: '/thu-chi',
-            pageBuilder: (context, state) => _fadeTransitionPage(
-              key: state.pageKey,
-              child: const ThuChiPage(),
-            ),
-          ),
+
           GoRoute(
             path: '/nhap-thu',
             pageBuilder: (context, state) => _fadeTransitionPage(

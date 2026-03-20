@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../store/app_store.dart';
 import '../../models/product_model.dart';
 import '../../utils/constants.dart';
+import '../../utils/avatar_picker.dart';
 import '../../widgets/square_crop_dialog.dart';
 
 /// Formats number with thousand separators (e.g. 15000 → 15.000)
@@ -800,20 +801,20 @@ class _AddProductPanelState extends State<AddProductPanel>
     try {
       final picked = await _picker.pickImage(
         source: source,
-        maxWidth: 400,
-        maxHeight: 400,
-        imageQuality: 50,
       );
       if (picked == null) return;
 
-      // Read bytes for crop dialog
+      // Read bytes for validation and crop dialog
       final bytes = await picked.readAsBytes();
       if (!mounted) return;
+
+      // Auto-resize & compress if needed (max 1024px, under 1MB)
+      final prepared = prepareImageBytes(bytes);
 
       // Show square crop dialog
       final result = await showSquareCropDialog(
         context,
-        imageBytes: bytes,
+        imageBytes: prepared,
         borderRadius: 16,
         title: 'Cắt ảnh sản phẩm',
       );

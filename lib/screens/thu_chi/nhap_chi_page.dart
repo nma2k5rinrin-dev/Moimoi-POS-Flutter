@@ -51,7 +51,7 @@ class _NhapChiPageState extends State<NhapChiPage> {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => context.go('/thu-chi'),
+                    onTap: () => context.go('/settings?tab=thu-chi'),
                     child: Container(
                       width: 36,
                       height: 36,
@@ -94,7 +94,7 @@ class _NhapChiPageState extends State<NhapChiPage> {
             // ── Content ─────────────────────────
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 600),
                   child: Column(
@@ -102,53 +102,51 @@ class _NhapChiPageState extends State<NhapChiPage> {
                     children: [
                       const SizedBox(height: 8),
 
-                      // ── Panel 1: Amount ──────────────
-                      _panel(
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFFEF2F2), Color(0xFFFEE2E2)],
+                      // ── Amount ──────────────
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFEF2F2), Color(0xFFFEE2E2)],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.red200),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text('Số tiền chi',
+                              style: TextStyle(fontSize: 13, color: AppColors.red600,
+                                  fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: _amountCtrl,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w800,
+                                  color: AppColors.red600),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                _ThousandSeparatorFormatter(),
+                              ],
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                hintText: '0',
+                                hintStyle: TextStyle(fontSize: 36, fontWeight: FontWeight.w800,
+                                    color: AppColors.red400),
+                              ),
                             ),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.red200),
-                          ),
-                          child: Column(
-                            children: [
-                              const Text('Số tiền chi',
-                                style: TextStyle(fontSize: 13, color: AppColors.red600,
-                                    fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: _amountCtrl,
-                                keyboardType: TextInputType.number,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w800,
-                                    color: AppColors.red600),
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                  _ThousandSeparatorFormatter(),
-                                ],
-                                decoration: const InputDecoration(
-                                  border: InputBorder.none,
-                                  hintText: '0',
-                                  hintStyle: TextStyle(fontSize: 36, fontWeight: FontWeight.w800,
-                                      color: AppColors.red400),
-                                ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.7),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Text('VND',
-                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700,
-                                      color: AppColors.red600)),
-                              ),
-                            ],
-                          ),
+                              child: const Text('VND',
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700,
+                                    color: AppColors.red600)),
+                            ),
+                          ],
                         ),
                       ),
 
@@ -236,58 +234,56 @@ class _NhapChiPageState extends State<NhapChiPage> {
 
                       const SizedBox(height: 14),
 
-                      // ── Panel 3: Buttons ─────────────
-                      _panel(
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => context.go('/thu-chi'),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.slate50,
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(color: AppColors.slate200),
-                                  ),
-                                  child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.close_rounded, size: 18, color: AppColors.slate500),
-                                      SizedBox(width: 6),
-                                      Text('Hủy bỏ',
-                                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600,
-                                            color: AppColors.slate600)),
-                                    ],
-                                  ),
+                      // ── Buttons ─────────────
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => context.go('/settings?tab=thu-chi'),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                decoration: BoxDecoration(
+                                  color: AppColors.slate50,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: AppColors.slate200),
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.close_rounded, size: 18, color: AppColors.slate500),
+                                    SizedBox(width: 6),
+                                    Text('Hủy bỏ',
+                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600,
+                                          color: AppColors.slate600)),
+                                  ],
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: _handleSave,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.red500,
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.save_rounded, size: 18, color: Colors.white),
-                                      SizedBox(width: 6),
-                                      Text('Lưu',
-                                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
-                                            color: Colors.white)),
-                                    ],
-                                  ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: _handleSave,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                decoration: BoxDecoration(
+                                  color: AppColors.red500,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.save_rounded, size: 18, color: Colors.white),
+                                    SizedBox(width: 6),
+                                    Text('Lưu',
+                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
+                                          color: Colors.white)),
+                                  ],
                                 ),
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 24),
@@ -327,7 +323,7 @@ class _NhapChiPageState extends State<NhapChiPage> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 5,
+        crossAxisCount: 6,
         mainAxisSpacing: 8,
         crossAxisSpacing: 4,
         childAspectRatio: 0.75,
@@ -424,7 +420,7 @@ class _NhapChiPageState extends State<NhapChiPage> {
       const SnackBar(content: Text('Đã lưu khoản chi thành công!'),
           backgroundColor: AppColors.red500),
     );
-    context.go('/thu-chi');
+    context.go('/settings?tab=thu-chi');
   }
 }
 

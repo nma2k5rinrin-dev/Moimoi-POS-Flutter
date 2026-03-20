@@ -6,6 +6,7 @@ import 'package:vector_math/vector_math_64.dart' as vm;
 
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
+import '../utils/avatar_picker.dart';
 
 /// Custom avatar crop dialog with emerald-themed UI.
 /// Shows a circle overlay on top of the image. User can zoom/pan to position
@@ -142,7 +143,7 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
       if (byteData == null) return null;
 
       final pngBytes = byteData.buffer.asUint8List();
-      return 'data:image/png;base64,${base64Encode(pngBytes)}';
+      return convertToWebpBase64(pngBytes);
     } catch (_) {
       return null;
     } finally {

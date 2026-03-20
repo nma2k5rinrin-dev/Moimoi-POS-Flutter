@@ -8,6 +8,7 @@ class StoreInfoModel {
   final String bankId;
   final String bankAccount;
   final String bankOwner;
+  final String qrImageUrl;
   final bool isPremium;
 
   const StoreInfoModel({
@@ -20,6 +21,7 @@ class StoreInfoModel {
     this.bankId = '',
     this.bankAccount = '',
     this.bankOwner = '',
+    this.qrImageUrl = '',
     this.isPremium = false,
   });
 
@@ -34,6 +36,7 @@ class StoreInfoModel {
       bankId: map['bank_id'] ?? '',
       bankAccount: map['bank_account'] ?? '',
       bankOwner: map['bank_owner'] ?? '',
+      qrImageUrl: map['qr_image_url'] ?? '',
       isPremium: map['is_premium'] ?? false,
     );
   }
@@ -48,6 +51,7 @@ class StoreInfoModel {
     String? bankId,
     String? bankAccount,
     String? bankOwner,
+    String? qrImageUrl,
     bool? isPremium,
   }) {
     return StoreInfoModel(
@@ -60,6 +64,7 @@ class StoreInfoModel {
       bankId: bankId ?? this.bankId,
       bankAccount: bankAccount ?? this.bankAccount,
       bankOwner: bankOwner ?? this.bankOwner,
+      qrImageUrl: qrImageUrl ?? this.qrImageUrl,
       isPremium: isPremium ?? this.isPremium,
     );
   }
