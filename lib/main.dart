@@ -57,6 +57,7 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> {
             error: AppColors.red500,
           ),
           fontFamily: GoogleFonts.inter().fontFamily,
+          fontFamilyFallback: const ['NotoSans', 'Inter', 'sans-serif'],
           textTheme: GoogleFonts.interTextTheme(),
           scaffoldBackgroundColor: AppColors.slate50,
           useMaterial3: true,

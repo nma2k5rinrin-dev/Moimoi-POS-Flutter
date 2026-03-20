@@ -162,16 +162,9 @@ class _MenuManagementSectionState extends State<MenuManagementSection>
                   ),
                   const SizedBox(height: 12),
 
-                  // ── Panel 3: List Content ──────────────────
+                  // ── List Content ──────────────────
                   Expanded(
-                    child: Container(
-                      clipBehavior: Clip.antiAlias,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: AppColors.slate200),
-                      ),
-                      child: TabBarView(
+                    child: TabBarView(
                         controller: _tabController,
                         children: [
                           _ProductsTab(
@@ -190,25 +183,32 @@ class _MenuManagementSectionState extends State<MenuManagementSection>
                               ));
                             },
                           ),
-                          _CategoriesTab(
-                            searchQuery: _searchQuery,
-                            onEditCategory: (cat) {
-                              setState(() {
-                                _editingCategory = cat;
-                                _subScreen = 'addCategory';
-                              });
-                              _showPanelDialog(AddCategoryPanel(
-                                existingCategory: cat,
-                                onClose: () {
-                                  Navigator.of(context, rootNavigator: true).pop();
-                                  _closePanel();
-                                },
-                              ));
-                            },
+                          Container(
+                            clipBehavior: Clip.antiAlias,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: AppColors.slate200),
+                            ),
+                            child: _CategoriesTab(
+                              searchQuery: _searchQuery,
+                              onEditCategory: (cat) {
+                                setState(() {
+                                  _editingCategory = cat;
+                                  _subScreen = 'addCategory';
+                                });
+                                _showPanelDialog(AddCategoryPanel(
+                                  existingCategory: cat,
+                                  onClose: () {
+                                    Navigator.of(context, rootNavigator: true).pop();
+                                    _closePanel();
+                                  },
+                                ));
+                              },
+                            ),
                           ),
                         ],
                       ),
-                    ),
                   ),
                   const SizedBox(height: 12),
 
@@ -468,10 +468,17 @@ class _MenuManagementSectionState extends State<MenuManagementSection>
 }
 
 // ─── Products Tab ──────────────────────────────────
-class _ProductsTab extends StatelessWidget {
+class _ProductsTab extends StatefulWidget {
   final String searchQuery;
   final void Function(ProductModel) onEditProduct;
   const _ProductsTab({required this.searchQuery, required this.onEditProduct});
+
+  @override
+  State<_ProductsTab> createState() => _ProductsTabState();
+}
+
+class _ProductsTabState extends State<_ProductsTab> {
+  final Set<String> _collapsedCategories = {};
 
   @override
   Widget build(BuildContext context) {
@@ -480,9 +487,9 @@ class _ProductsTab extends StatelessWidget {
     final categories = store.currentCategories;
 
     var filtered = products.toList();
-    if (searchQuery.isNotEmpty) {
+    if (widget.searchQuery.isNotEmpty) {
       filtered = filtered
-          .where((p) => p.name.toLowerCase().contains(searchQuery.toLowerCase()))
+          .where((p) => p.name.toLowerCase().contains(widget.searchQuery.toLowerCase()))
           .toList();
     }
 
@@ -508,148 +515,120 @@ class _ProductsTab extends StatelessWidget {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: filtered.length,
-      itemBuilder: (_, i) {
-        final p = filtered[i];
-        final catName = categories
-            .where((c) => c.id == p.category)
-            .map((c) => c.name)
-            .firstOrNull;
-        return _ProductListTile(
-          product: p,
-          categoryName: catName,
-          onEdit: () => onEditProduct(p),
-          onDelete: () {
-            final initials = p.name.length >= 2
-                ? p.name.substring(0, 2).toUpperCase()
-                : p.name[0].toUpperCase();
-            store.showConfirm(
-              'Xóa sản phẩm "${p.name}"?',
-              () => store.deleteProduct(p.id),
-              title: 'Xóa sản phẩm?',
-              description:
-                  'Bạn có chắc muốn xóa sản phẩm này? Hành động này không thể hoàn tác.',
-              icon: Icons.delete_forever_rounded,
-              itemName: p.name,
-              itemSubtitle: catName ?? 'Không có danh mục',
-              avatarInitials: initials,
-              avatarColor: AppColors.emerald500,
-            );
-          },
-          onToggleStock: () {
-            store.updateProduct(p.copyWith(isOutOfStock: !p.isOutOfStock));
-          },
-        );
-      },
-    );
-  }
+    // Group products by category
+    final Map<String, List<ProductModel>> categoryGroups = {};
+    for (final p in filtered) {
+      final catId = p.category.isNotEmpty ? p.category : '_uncategorized';
+      categoryGroups.putIfAbsent(catId, () => []);
+      categoryGroups[catId]!.add(p);
+    }
 
-  void _showProductDialog(BuildContext context, AppStore store,
-      List<CategoryModel> categories, ProductModel? existing) {
-    final nameCtrl = TextEditingController(text: existing?.name ?? '');
-    final priceCtrl =
-        TextEditingController(text: existing?.price.toStringAsFixed(0) ?? '');
-    final imageCtrl = TextEditingController(text: existing?.image ?? '');
-    final descCtrl = TextEditingController(text: existing?.description ?? '');
-    String selectedCat = existing?.category ?? '';
+    // Sort: real categories first, uncategorized last
+    final sortedKeys = categoryGroups.keys.toList()
+      ..sort((a, b) {
+        if (a == '_uncategorized') return 1;
+        if (b == '_uncategorized') return -1;
+        return a.compareTo(b);
+      });
 
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Text(
-            existing != null ? 'Sửa Sản Phẩm' : 'Thêm Sản Phẩm Mới',
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-          content: SingleChildScrollView(
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: sortedKeys.map((catId) {
+        final items = categoryGroups[catId]!;
+        final isCollapsed = _collapsedCategories.contains(catId);
+        final catName = catId == '_uncategorized'
+            ? 'Chưa phân loại'
+            : categories.where((c) => c.id == catId).map((c) => c.name).firstOrNull ?? 'Danh mục không xác định';
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Container(
+            clipBehavior: Clip.antiAlias,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.slate200),
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _DialogInput(controller: nameCtrl, label: 'Tên sản phẩm *'),
-                const SizedBox(height: 10),
-                _DialogInput(controller: priceCtrl, label: 'Giá (VNĐ) *',
-                    keyboardType: TextInputType.number),
-                const SizedBox(height: 10),
-                const Text('Danh mục', style: TextStyle(fontSize: 13,
-                    fontWeight: FontWeight.w600, color: AppColors.slate700)),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.slate50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.slate200),
-                  ),
-                  child: DropdownButton<String>(
-                    value: selectedCat.isNotEmpty ? selectedCat : null,
-                    hint: const Text('Chọn danh mục', style: TextStyle(fontSize: 14)),
-                    isExpanded: true,
-                    underline: const SizedBox(),
-                    items: [
-                      const DropdownMenuItem(value: '', child: Text('Không có')),
-                      ...categories.map((c) =>
-                          DropdownMenuItem(value: c.id, child: Text(c.name))),
+                // Category Header
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => setState(() {
+                    isCollapsed
+                        ? _collapsedCategories.remove(catId)
+                        : _collapsedCategories.add(catId);
+                  }),
+                  child: Row(
+                    children: [
+                      Icon(
+                        catId == '_uncategorized' ? Icons.label_off_outlined : Icons.restaurant_menu,
+                        size: 16,
+                        color: catId == '_uncategorized' ? AppColors.slate400 : AppColors.emerald600,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(catName,
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.emerald50,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text('${items.length} sản phẩm',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.emerald600)),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(isCollapsed ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up,
+                          size: 18, color: AppColors.slate400),
                     ],
-                    onChanged: (v) => setDialogState(() => selectedCat = v ?? ''),
                   ),
                 ),
-                const SizedBox(height: 10),
-                _DialogInput(controller: imageCtrl, label: 'URL hình ảnh (tùy chọn)'),
-                const SizedBox(height: 10),
-                _DialogInput(controller: descCtrl, label: 'Mô tả (tùy chọn)', maxLines: 2),
+                // Product Cards (collapsible)
+                if (!isCollapsed)
+                  ...items.map((p) {
+                    final catDisplayName = categories
+                        .where((c) => c.id == p.category)
+                        .map((c) => c.name)
+                        .firstOrNull;
+                    return _ProductListTile(
+                      product: p,
+                      categoryName: catDisplayName,
+                      onEdit: () => widget.onEditProduct(p),
+                      onDelete: () {
+                        final initials = p.name.length >= 2
+                            ? p.name.substring(0, 2).toUpperCase()
+                            : p.name[0].toUpperCase();
+                        store.showConfirm(
+                          'Xóa sản phẩm "${p.name}"?',
+                          () => store.deleteProduct(p.id),
+                          title: 'Xóa sản phẩm?',
+                          description: 'Bạn có chắc muốn xóa sản phẩm này? Hành động này không thể hoàn tác.',
+                          icon: Icons.delete_forever_rounded,
+                          itemName: p.name,
+                          itemSubtitle: catDisplayName ?? 'Không có danh mục',
+                          avatarInitials: initials,
+                          avatarColor: AppColors.emerald500,
+                        );
+                      },
+                      onToggleStock: () {
+                        store.updateProduct(p.copyWith(isOutOfStock: !p.isOutOfStock));
+                      },
+                    );
+                  }),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Hủy', style: TextStyle(color: AppColors.slate500)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (nameCtrl.text.trim().isEmpty) {
-                  store.showToast('Tên sản phẩm không được trống', 'error');
-                  return;
-                }
-                final price = double.tryParse(priceCtrl.text.replaceAll(',', '')) ?? 0;
-                if (price <= 0) {
-                  store.showToast('Giá phải lớn hơn 0', 'error');
-                  return;
-                }
-                if (existing != null) {
-                  store.updateProduct(existing.copyWith(
-                    name: nameCtrl.text.trim(), price: price,
-                    image: imageCtrl.text.trim(), category: selectedCat,
-                    description: descCtrl.text.trim(),
-                  ));
-                  store.showToast('Đã cập nhật sản phẩm!');
-                } else {
-                  store.addProduct(ProductModel(
-                    id: '', name: nameCtrl.text.trim(), price: price,
-                    image: imageCtrl.text.trim(), category: selectedCat,
-                    description: descCtrl.text.trim(),
-                  ));
-                  store.showToast('Đã thêm sản phẩm!');
-                }
-                Navigator.pop(ctx);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.emerald500,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text(existing != null ? 'Cập nhật' : 'Thêm'),
-            ),
-          ],
-        ),
-      ),
+        );
+      }).toList(),
     );
   }
 }
+
 
 // ─── Product List Tile ─────────────────────────────
 class _ProductListTile extends StatelessWidget {
@@ -666,86 +645,82 @@ class _ProductListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.slate50,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.slate200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.slate100,
-              borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: onEdit,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(14)),
+          child: Row(
+          children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.slate100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: product.image.isNotEmpty
+                  ? Image.network(product.image, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.restaurant,
+                          size: 22, color: AppColors.slate300))
+                  : const Icon(Icons.restaurant, size: 22, color: AppColors.slate300),
             ),
-            clipBehavior: Clip.antiAlias,
-            child: product.image.isNotEmpty
-                ? Image.network(product.image, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.restaurant,
-                        size: 22, color: AppColors.slate300))
-                : const Icon(Icons.restaurant, size: 22, color: AppColors.slate300),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(children: [
-                  Expanded(child: Text(product.name,
-                      style: const TextStyle(fontSize: 15,
-                          fontWeight: FontWeight.w700, color: AppColors.slate800),
-                      overflow: TextOverflow.ellipsis)),
-                  if (product.isHot)
-                    Container(
-                      margin: const EdgeInsets.only(left: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF7ED), borderRadius: BorderRadius.circular(6)),
-                      child: const Text('Bán chạy', style: TextStyle(fontSize: 10,
-                          fontWeight: FontWeight.w700, color: Color(0xFFF59E0B))),
-                    ),
-                  if (product.isOutOfStock)
-                    Container(
-                      margin: const EdgeInsets.only(left: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.red100, borderRadius: BorderRadius.circular(6)),
-                      child: const Text('Hết hàng', style: TextStyle(fontSize: 10,
-                          fontWeight: FontWeight.w700, color: AppColors.red500)),
-                    ),
-                ]),
-                const SizedBox(height: 2),
-                Row(children: [
-                  Text(formatCurrency(product.price),
-                      style: const TextStyle(fontWeight: FontWeight.w700,
-                          color: AppColors.emerald500, fontSize: 12)),
-                  if (categoryName != null) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.blue50, borderRadius: BorderRadius.circular(6)),
-                      child: Text(categoryName!, style: const TextStyle(fontSize: 10,
-                          color: AppColors.blue600, fontWeight: FontWeight.w600)),
-                    ),
-                  ],
-                ]),
-              ],
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Expanded(child: Text(product.name,
+                        style: const TextStyle(fontSize: 15,
+                            fontWeight: FontWeight.w700, color: AppColors.slate800),
+                        overflow: TextOverflow.ellipsis)),
+                    if (product.isHot)
+                      Container(
+                        margin: const EdgeInsets.only(left: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF7ED), borderRadius: BorderRadius.circular(6)),
+                        child: const Text('Bán chạy', style: TextStyle(fontSize: 10,
+                            fontWeight: FontWeight.w700, color: Color(0xFFF59E0B))),
+                      ),
+                    if (product.isOutOfStock)
+                      Container(
+                        margin: const EdgeInsets.only(left: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.red100, borderRadius: BorderRadius.circular(6)),
+                        child: const Text('Hết hàng', style: TextStyle(fontSize: 10,
+                            fontWeight: FontWeight.w700, color: AppColors.red500)),
+                      ),
+                  ]),
+                  const SizedBox(height: 2),
+                  Row(children: [
+                    Text(formatCurrency(product.price),
+                        style: const TextStyle(fontWeight: FontWeight.w700,
+                            color: AppColors.emerald500, fontSize: 12)),
+                    if (categoryName != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.blue50, borderRadius: BorderRadius.circular(6)),
+                        child: Text(categoryName!, style: const TextStyle(fontSize: 10,
+                            color: AppColors.blue600, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ]),
+                ],
+              ),
             ),
-          ),
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            _ActionButton(icon: Icons.edit_outlined, bgColor: AppColors.slate100,
-                iconColor: AppColors.slate500, tooltip: 'Sửa', onTap: onEdit),
-            const SizedBox(width: 6),
             _ActionButton(icon: Icons.delete_outline,
                 bgColor: const Color(0xFFFEF2F2), iconColor: AppColors.red500,
                 tooltip: 'Xóa', onTap: onDelete),
-          ]),
-        ],
+          ],
+          ),
+        ),
       ),
     );
   }
@@ -779,7 +754,18 @@ class _CategoriesTab extends StatelessWidget {
           .toList();
     }
 
-    if (filtered.isEmpty) {
+    // Add default "Chưa phân loại" category
+    final uncategorizedCount = products.where((p) => p.category.isEmpty).length;
+    final defaultCategory = CategoryModel(
+      id: '_uncategorized',
+      name: 'Chưa phân loại',
+      storeId: '',
+    );
+
+    // Build full list: default + filtered
+    final allCategories = [defaultCategory, ...filtered];
+
+    if (searchQuery.isNotEmpty && allCategories.length == 1 && !defaultCategory.name.toLowerCase().contains(searchQuery.toLowerCase())) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -794,7 +780,7 @@ class _CategoriesTab extends StatelessWidget {
                   size: 32, color: AppColors.slate300),
             ),
             const SizedBox(height: 12),
-            const Text('Chưa có danh mục nào',
+            const Text('Không tìm thấy danh mục',
                 style: TextStyle(color: AppColors.slate400, fontWeight: FontWeight.w500)),
           ],
         ),
@@ -803,65 +789,69 @@ class _CategoriesTab extends StatelessWidget {
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: filtered.length,
+      itemCount: allCategories.length,
       itemBuilder: (_, i) {
-        final cat = filtered[i];
-        final count = products.where((p) => p.category == cat.id).length;
-        final colorSet = _catColors[i % _catColors.length];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.slate50,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.slate200),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44, height: 44,
-                decoration: BoxDecoration(
-                  color: colorSet.$1,
-                  borderRadius: BorderRadius.circular(12),
+        final cat = allCategories[i];
+        final isDefault = cat.id == '_uncategorized';
+        final count = isDefault
+            ? uncategorizedCount
+            : products.where((p) => p.category == cat.id).length;
+        final colorSet = isDefault
+            ? (AppColors.slate100, AppColors.slate500, PhosphorIconsDuotone.question)
+            : _catColors[(i - 1) % _catColors.length];
+        return GestureDetector(
+          onTap: () => onEditCategory(cat),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.slate50,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    color: colorSet.$1,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: PhosphorIcon(colorSet.$3, color: colorSet.$2, size: 22),
                 ),
-                child: PhosphorIcon(colorSet.$3, color: colorSet.$2, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(cat.name, style: const TextStyle(fontSize: 15,
-                        fontWeight: FontWeight.w700, color: AppColors.slate800)),
-                    Text('$count sản phẩm', style: const TextStyle(
-                        fontSize: 12, color: AppColors.slate500)),
-                  ],
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(cat.name, style: const TextStyle(fontSize: 15,
+                          fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                      Text('$count sản phẩm', style: const TextStyle(
+                          fontSize: 12, color: AppColors.slate500)),
+                    ],
+                  ),
                 ),
-              ),
-              _ActionButton(icon: Icons.edit_outlined, bgColor: AppColors.slate100,
-                  iconColor: AppColors.slate500, tooltip: 'Sửa',
-                  onTap: () => onEditCategory(cat)),
-              const SizedBox(width: 6),
-              _ActionButton(icon: Icons.delete_outline,
-                  bgColor: const Color(0xFFFEF2F2), iconColor: AppColors.red500,
-                  tooltip: 'Xóa', onTap: () {
-                    final catInitials = cat.name.length >= 2
-                        ? cat.name.substring(0, 2).toUpperCase()
-                        : cat.name[0].toUpperCase();
-                    store.showConfirm(
-                      'Xóa danh mục "${cat.name}"?',
-                      () => store.deleteCategory(cat.id),
-                      title: 'Xóa danh mục?',
-                      description:
-                          'Bạn có chắc muốn xóa danh mục này? Các sản phẩm trong danh mục này sẽ không bị xóa.',
-                      icon: Icons.category_rounded,
-                      itemName: cat.name,
-                      itemSubtitle: 'Danh mục sản phẩm',
-                      avatarInitials: catInitials,
-                      avatarColor: const Color(0xFFF59E0B),
-                    );
-                  }),
-            ],
+                if (!isDefault)
+                  _ActionButton(icon: Icons.delete_outline,
+                      bgColor: const Color(0xFFFEF2F2), iconColor: AppColors.red500,
+                      tooltip: 'Xóa', onTap: () {
+                        final catInitials = cat.name.length >= 2
+                            ? cat.name.substring(0, 2).toUpperCase()
+                            : cat.name[0].toUpperCase();
+                        store.showConfirm(
+                          'Xóa danh mục "${cat.name}"?',
+                          () => store.deleteCategory(cat.id),
+                          title: 'Xóa danh mục?',
+                          description:
+                              'Bạn có chắc muốn xóa danh mục này? Các sản phẩm trong danh mục này sẽ không bị xóa.',
+                          icon: Icons.category_rounded,
+                          itemName: cat.name,
+                          itemSubtitle: 'Danh mục sản phẩm',
+                          avatarInitials: catInitials,
+                          avatarColor: const Color(0xFFF59E0B),
+                        );
+                      }),
+              ],
+            ),
           ),
         );
       },
@@ -937,10 +927,10 @@ class _ActionButton extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          width: 32, height: 32,
+          width: 36, height: 36,
           decoration: BoxDecoration(
-            color: bgColor, borderRadius: BorderRadius.circular(8)),
-          child: Icon(icon, color: iconColor, size: 16),
+            color: bgColor, borderRadius: BorderRadius.circular(10)),
+          child: Icon(icon, color: iconColor, size: 20),
         ),
       ),
     );

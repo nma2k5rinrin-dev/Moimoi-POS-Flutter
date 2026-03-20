@@ -13,6 +13,8 @@ import '../../utils/avatar_picker.dart';
 import '../../widgets/square_crop_dialog.dart';
 import '../../widgets/circle_crop_dialog.dart';
 import '../../models/store_info_model.dart';
+import '../../widgets/date_range_picker_dialog.dart';
+import '../thu_chi/thu_chi_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -58,9 +60,9 @@ class _SettingsPageState extends State<SettingsPage> {
       icon: Icons.storefront_outlined,
     ),
     _SettingMenu(
-      id: 'menu',
-      name: 'Quản Lý Danh Mục & Sản Phẩm',
-      desc: 'Thêm/sửa sản phẩm, danh mục',
+      id: 'management',
+      name: 'Danh Mục & Kho Hàng',
+      desc: 'Quản lý danh mục, sản phẩm, kho hàng',
       icon: Icons.restaurant_menu,
     ),
     _SettingMenu(
@@ -75,6 +77,12 @@ class _SettingsPageState extends State<SettingsPage> {
       desc: 'Quản lý nhân viên, phân quyền vai trò',
       icon: Icons.people_outline,
       adminOnly: true,
+    ),
+    _SettingMenu(
+      id: 'thu-chi',
+      name: 'Thu Chi',
+      desc: 'Quản lý dòng tiền thu chi',
+      icon: Icons.account_balance_wallet_outlined,
     ),
     _SettingMenu(
       id: 'printer',
@@ -204,7 +212,7 @@ class _SettingsPageState extends State<SettingsPage> {
         return const _AccountSection();
       case 'general':
         return const _StoreInfoSection();
-      case 'menu':
+      case 'management':
         return const MenuManagementSection();
       case 'tables':
         return const _TablesSection();
@@ -214,6 +222,8 @@ class _SettingsPageState extends State<SettingsPage> {
         return const _PrinterSection();
       case 'backup':
         return const _BackupSection();
+      case 'thu-chi':
+        return const ThuChiPage(embedded: true);
       default:
         return const Center(child: Text('Coming soon'));
     }
@@ -2796,62 +2806,67 @@ class _UsersSectionState extends State<_UsersSection> {
 
     return Padding(
       padding: const EdgeInsets.only(top: 10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(14)),
-        child: Row(
-          children: [
-            Container(
-              width: 40, height: 40,
-              decoration: BoxDecoration(color: avatarBg, borderRadius: BorderRadius.circular(20)),
-              child: Center(child: Text(initials, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: avatarFg))),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(child: Text(displayName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate800), overflow: TextOverflow.ellipsis)),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(color: roleBg, borderRadius: BorderRadius.circular(8)),
-                        child: Text(roleLabel, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: roleFg)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(storeName, style: const TextStyle(fontSize: 12, color: AppColors.slate500)),
-                ],
+      child: GestureDetector(
+        onTap: (!isCurrentUser && (currentUser?.role == 'sadmin' || user.role == 'staff'))
+            ? () => _openEditPanel(store, user)
+            : null,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(14)),
+          child: Row(
+            children: [
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(color: avatarBg, borderRadius: BorderRadius.circular(20)),
+                child: Center(child: Text(initials, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: avatarFg))),
               ),
-            ),
-            if (!isCurrentUser && (currentUser?.role == 'sadmin' || user.role == 'staff'))
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  GestureDetector(onTap: () => _openEditPanel(store, user), child: const Icon(Icons.edit, size: 18, color: AppColors.emerald500)),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () {
-                      store.showConfirm(
-                        'Xóa nhân viên "$displayName"?',
-                        () => store.deleteUser(user.username),
-                        title: 'Xóa nhân viên?',
-                        description: 'Bạn có chắc muốn xóa nhân viên này? Hành động này không thể hoàn tác.',
-                        icon: Icons.person_remove_rounded,
-                        itemName: displayName,
-                        itemSubtitle: '$roleLabel • @${user.username}',
-                        avatarInitials: initials,
-                        avatarColor: avatarFg,
-                      );
-                    },
-                    child: const Icon(Icons.delete, size: 18, color: Color(0xFFEF4444)),
-                  ),
-                ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(child: Text(displayName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate800), overflow: TextOverflow.ellipsis)),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(color: roleBg, borderRadius: BorderRadius.circular(8)),
+                          child: Text(roleLabel, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: roleFg)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(storeName, style: const TextStyle(fontSize: 12, color: AppColors.slate500)),
+                  ],
+                ),
               ),
-          ],
+              if (!isCurrentUser && (currentUser?.role == 'sadmin' || user.role == 'staff'))
+                GestureDetector(
+                  onTap: () {
+                    store.showConfirm(
+                      'Xóa nhân viên "$displayName"?',
+                      () => store.deleteUser(user.username),
+                      title: 'Xóa nhân viên?',
+                      description: 'Bạn có chắc muốn xóa nhân viên này? Hành động này không thể hoàn tác.',
+                      icon: Icons.person_remove_rounded,
+                      itemName: displayName,
+                      itemSubtitle: '$roleLabel • @${user.username}',
+                      avatarInitials: initials,
+                      avatarColor: avatarFg,
+                    );
+                  },
+                  child: Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFEF4444)),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -3656,3 +3671,4 @@ class _BackupSection extends StatelessWidget {
     );
   }
 }
+

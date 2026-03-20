@@ -11,6 +11,9 @@ import '../screens/settings/settings_page.dart';
 import '../screens/premium/premium_page.dart';
 import '../screens/inventory/inventory_page.dart';
 import '../screens/settings/menu_management.dart';
+import '../screens/thu_chi/thu_chi_page.dart';
+import '../screens/thu_chi/nhap_thu_page.dart';
+import '../screens/thu_chi/nhap_chi_page.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -93,6 +96,27 @@ GoRouter createRouter(AppStore store) {
             pageBuilder: (context, state) => _fadeTransitionPage(
               key: state.pageKey,
               child: const MenuManagementSection(),
+            ),
+          ),
+          GoRoute(
+            path: '/thu-chi',
+            pageBuilder: (context, state) => _fadeTransitionPage(
+              key: state.pageKey,
+              child: const ThuChiPage(),
+            ),
+          ),
+          GoRoute(
+            path: '/nhap-thu',
+            pageBuilder: (context, state) => _fadeTransitionPage(
+              key: state.pageKey,
+              child: const NhapThuPage(),
+            ),
+          ),
+          GoRoute(
+            path: '/nhap-chi',
+            pageBuilder: (context, state) => _fadeTransitionPage(
+              key: state.pageKey,
+              child: const NhapChiPage(),
             ),
           ),
         ],

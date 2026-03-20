@@ -43,75 +43,47 @@ class _DashboardPageState extends State<DashboardPage> {
         child: LayoutBuilder(
           builder: (context, outerConstraints) {
             final isWide = outerConstraints.maxWidth >= 600;
+            final dailyData = _getDailyData(filteredOrders);
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Header + Date picker ────────────
-                if (isWide)
-                  Row(
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: AppColors.emerald50,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: const Icon(Icons.bar_chart_rounded,
-                                color: AppColors.emerald500, size: 24),
-                          ),
-                          const SizedBox(width: 14),
-                          const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Báo Cáo Doanh Thu',
-                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800,
-                                      color: AppColors.slate800, letterSpacing: -0.5)),
-                              Text('Phân tích hiệu quả kinh doanh',
-                                  style: TextStyle(fontSize: 13, color: AppColors.slate500)),
-                            ],
-                          ),
-                        ],
+                // ── Header ────────────────────────
+                Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: AppColors.emerald50,
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      const Spacer(),
-                      _buildDatePicker(),
-                    ],
-                  )
-                else ...[
-                  Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.emerald50,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(Icons.bar_chart_rounded,
-                            color: AppColors.emerald500, size: 24),
-                      ),
-                      const SizedBox(width: 14),
-                      const Column(
+                      child: const Icon(Icons.trending_up_rounded,
+                          color: AppColors.emerald600, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                        children: const [
                           Text('Báo Cáo Doanh Thu',
-                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800,
+                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800,
                                   color: AppColors.slate800, letterSpacing: -0.5)),
                           Text('Phân tích hiệu quả kinh doanh',
                               style: TextStyle(fontSize: 13, color: AppColors.slate500)),
                         ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  _buildDatePicker(),
-                ],
+                    ),
+                  ],
+                ),
 
                 const SizedBox(height: 20),
 
-                // ── Stats Cards ─────────────────────
+                // ── Date Picker ──────────────────
+                _buildDatePicker(),
+
+                const SizedBox(height: 20),
+
+                // ── Stats ────────────────────────
                 if (isWide)
                   Row(
                     children: [
@@ -129,31 +101,104 @@ class _DashboardPageState extends State<DashboardPage> {
                     ],
                   )
                 else ...[
-                  Row(children: [
-                    Expanded(child: _StatCard(label: 'Doanh thu', value: formatCurrency(totalRevenue),
-                        icon: Icons.trending_up_rounded, gradient: const [Color(0xFF10B981), Color(0xFF059669)], width: double.infinity)),
-                    const SizedBox(width: 14),
-                    Expanded(child: _StatCard(label: 'Tổng đơn', value: '$totalOrders',
-                        icon: Icons.receipt_long_rounded, gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)], width: double.infinity)),
-                  ]),
+                  // Primary stat card — Doanh thu
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.slate100),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFF10B981), Color(0xFF059669)],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.emerald500.withValues(alpha: 0.3),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.trending_up_rounded, color: Colors.white, size: 26),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Doanh thu',
+                                style: TextStyle(color: AppColors.slate500,
+                                    fontWeight: FontWeight.w500, fontSize: 13)),
+                              const SizedBox(height: 4),
+                              Text(formatCurrency(totalRevenue),
+                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800,
+                                    color: AppColors.slate800, letterSpacing: -0.5)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 14),
-                  Row(children: [
-                    Expanded(child: _StatCard(label: 'TB/đơn', value: _formatShortCurrency(avgOrder),
-                        icon: Icons.analytics_outlined, gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)], width: double.infinity)),
-                    const SizedBox(width: 14),
-                    Expanded(child: _StatCard(label: 'Đơn hủy', value: '$totalCancelled',
-                        icon: Icons.cancel_outlined, gradient: const [Color(0xFFEF4444), Color(0xFFDC2626)], width: double.infinity)),
-                  ]),
+                  // 3 small stat metrics in a row
+                  Row(
+                    children: [
+                      Expanded(child: _MiniStat(
+                        icon: Icons.receipt_long_rounded,
+                        label: 'Số đơn',
+                        value: '$totalOrders',
+                        color: AppColors.blue500,
+                      )),
+                      const SizedBox(width: 10),
+                      Expanded(child: _MiniStat(
+                        icon: Icons.analytics_outlined,
+                        label: 'TB/đơn',
+                        value: _formatShortCurrency(avgOrder),
+                        color: AppColors.amber500,
+                      )),
+                      const SizedBox(width: 10),
+                      Expanded(child: _MiniStat(
+                        icon: Icons.cancel_outlined,
+                        label: 'Đơn hủy',
+                        value: '$totalCancelled',
+                        color: AppColors.red500,
+                      )),
+                    ],
+                  ),
                 ],
 
                 const SizedBox(height: 24),
 
-                // ── Charts ──────────────────────────
+                // ── Charts ──────────────────────
                 if (outerConstraints.maxWidth >= 900)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(flex: 2, child: _HourlyRevenueChart(hourlyData: hourlyData)),
+                      Expanded(flex: 2, child: Column(
+                        children: [
+                          _HourlyRevenueChart(hourlyData: hourlyData),
+                          const SizedBox(height: 14),
+                          _DailyRevenueChart(dailyData: dailyData),
+                        ],
+                      )),
                       const SizedBox(width: 14),
                       Expanded(flex: 1, child: Column(children: [
                         _BestSellersCard(items: bestSellers),
@@ -165,6 +210,8 @@ class _DashboardPageState extends State<DashboardPage> {
                 else
                   Column(children: [
                     _HourlyRevenueChart(hourlyData: hourlyData),
+                    const SizedBox(height: 14),
+                    _DailyRevenueChart(dailyData: dailyData),
                     const SizedBox(height: 14),
                     _BestSellersCard(items: bestSellers),
                     const SizedBox(height: 14),
@@ -316,6 +363,31 @@ class _DashboardPageState extends State<DashboardPage> {
       return '${(amount / 1000).toStringAsFixed(0)}K';
     }
     return '${amount.toInt()}';
+  }
+
+  List<_DailySlot> _getDailyData(List<OrderModel> orders) {
+    final now = DateTime.now();
+    final days = <_DailySlot>[];
+    for (int i = 6; i >= 0; i--) {
+      final day = now.subtract(Duration(days: i));
+      final dayStart = DateTime(day.year, day.month, day.day);
+      final dayEnd = dayStart.add(const Duration(days: 1));
+      double total = 0;
+      for (final o in orders) {
+        final dt = DateTime.tryParse(o.time);
+        if (dt == null) continue;
+        if (dt.isAfter(dayStart.subtract(const Duration(seconds: 1))) &&
+            dt.isBefore(dayEnd)) {
+          total += o.totalAmount;
+        }
+      }
+      final weekday = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+      days.add(_DailySlot(
+        label: weekday[day.weekday % 7],
+        total: total,
+      ));
+    }
+    return days;
   }
 }
 
@@ -855,6 +927,153 @@ class _HourSlot {
   final String label;
   final double total;
   const _HourSlot({required this.label, required this.total});
+}
+
+class _DailySlot {
+  final String label;
+  final double total;
+  const _DailySlot({required this.label, required this.total});
+}
+
+// ─── Mini Stat Card ─────────────────────────────────
+class _MiniStat extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  const _MiniStat({required this.icon, required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.slate100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.025),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 8),
+          Text(value,
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color)),
+          const SizedBox(height: 2),
+          Text(label,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.slate500)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Daily Revenue Chart (7 days) ───────────────────
+class _DailyRevenueChart extends StatelessWidget {
+  final List<_DailySlot> dailyData;
+  const _DailyRevenueChart({required this.dailyData});
+
+  @override
+  Widget build(BuildContext context) {
+    final maxVal = dailyData.fold<double>(0, (m, s) => s.total > m ? s.total : m);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.slate100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.bar_chart_rounded, size: 20, color: AppColors.emerald500),
+              const SizedBox(width: 8),
+              const Text('Doanh thu 7 ngày gần nhất',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 180,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: dailyData.asMap().entries.map((entry) {
+                final i = entry.key;
+                final slot = entry.value;
+                final fraction = maxVal > 0 ? slot.total / maxVal : 0.0;
+                final isToday = i == dailyData.length - 1;
+                final barColors = isToday
+                    ? [AppColors.emerald400, AppColors.emerald600]
+                    : [AppColors.blue400, AppColors.blue500];
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          _DailyRevenueChart._formatShortRevenue(slot.total),
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: isToday ? AppColors.emerald600 : AppColors.slate500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 500),
+                          height: (fraction * 130).clamp(4, 130),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: barColors,
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(slot.label,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                            color: isToday ? AppColors.emerald600 : AppColors.slate400,
+                          )),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _formatShortRevenue(double amount) {
+    if (amount >= 1000000) {
+      return '${(amount / 1000000).toStringAsFixed(1)}M';
+    } else if (amount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(0)}K';
+    }
+    return '${amount.toInt()}';
+  }
 }
 
 // ─── Staff Ranking ──────────────────────────────────

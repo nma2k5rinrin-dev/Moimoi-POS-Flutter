@@ -10,6 +10,7 @@ import '../models/product_model.dart';
 import '../models/category_model.dart';
 import '../models/notification_model.dart';
 import '../models/upgrade_request_model.dart';
+import '../models/thu_chi_transaction_model.dart';
 import '../utils/quota_helper.dart';
 import '../widgets/upgrade_dialog.dart';
 
@@ -49,6 +50,9 @@ class AppStore extends ChangeNotifier {
 
   // Upgrade Requests
   List<UpgradeRequestModel> upgradeRequests = [];
+
+  // Thu Chi Transactions (manual income/expense)
+  List<ThuChiTransaction> thuChiTransactions = [];
 
   // Cart (local only)
   List<OrderItemModel> cart = [];
@@ -193,6 +197,9 @@ class AppStore extends ChangeNotifier {
       upgradeRequests = (upgradeData as List)
           .map((r) => UpgradeRequestModel.fromMap(r))
           .toList();
+
+      // Load thu chi transactions
+      await loadThuChiTransactions(storeId);
 
       isLoading = false;
       notifyListeners();
@@ -358,6 +365,7 @@ class AppStore extends ChangeNotifier {
     orders = [];
     notifications = [];
     upgradeRequests = [];
+    thuChiTransactions = [];
     cart = [];
     selectedTable = '';
     authNotifier.notify();
@@ -798,6 +806,61 @@ class AppStore extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       showToast('Tạo đơn thất bại', 'error');
+    }
+  }
+
+  // ── Thu Chi Transactions ────────────────────────────────
+  Future<void> loadThuChiTransactions(String? storeId) async {
+    try {
+      PostgrestFilterBuilder query = _supabase
+          .from('thu_chi_transactions')
+          .select();
+      if (storeId != null) {
+        query = query.eq('store_id', storeId);
+      }
+      final data = await query.order('time', ascending: false);
+      thuChiTransactions = (data as List)
+          .map((r) => ThuChiTransaction.fromMap(r))
+          .toList();
+    } catch (e) {
+      debugPrint('[loadThuChiTransactions] $e');
+      // Table may not exist yet — silently ignore
+      thuChiTransactions = [];
+    }
+  }
+
+  Future<void> addThuChiTransaction({
+    required String type,
+    required double amount,
+    required String category,
+    String note = '',
+    DateTime? date,
+  }) async {
+    final storeId = getStoreId();
+    final txnId = 'tc_${DateTime.now().millisecondsSinceEpoch}';
+    final txnTime = (date ?? DateTime.now()).toIso8601String();
+    final createdBy = currentUser?.fullname.isNotEmpty == true
+        ? currentUser!.fullname
+        : (currentUser?.username ?? 'unknown');
+
+    final newTxn = {
+      'id': txnId,
+      'store_id': storeId,
+      'type': type,
+      'amount': amount,
+      'category': category,
+      'note': note,
+      'time': txnTime,
+      'created_by': createdBy,
+    };
+
+    try {
+      await _supabase.from('thu_chi_transactions').insert(newTxn);
+      thuChiTransactions.insert(0, ThuChiTransaction.fromMap(newTxn));
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[addThuChiTransaction] $e');
+      showToast('Lưu giao dịch thất bại', 'error');
     }
   }
 

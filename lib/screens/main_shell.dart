@@ -38,11 +38,16 @@ class _MainShellState extends State<MainShell> {
   }
 
   int _getCurrentIndex(List<_NavItem> items) {
-    final location = GoRouterState.of(context).matchedLocation;
+    var location = GoRouterState.of(context).matchedLocation;
+    // Map sub-routes to their parent nav item
+    // Settings and other non-nav routes → no active tab
+    if (location == '/settings' || location == '/premium' || location == '/thu-chi' || location == '/nhap-thu' || location == '/nhap-chi') {
+      return -1;
+    }
     for (int i = 0; i < items.length; i++) {
       if (items[i].path == location) return i;
     }
-    return 0;
+    return -1;
   }
 
   @override
