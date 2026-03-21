@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +7,8 @@ import '../../utils/constants.dart';
 import '../../utils/format.dart';
 import '../../models/product_model.dart';
 import '../../models/order_model.dart';
+import '../../models/store_info_model.dart';
+import '../../models/category_model.dart';
 import '../../widgets/payment_confirmation_dialog.dart';
 
 class OrderPage extends StatelessWidget {
@@ -28,17 +31,46 @@ class OrderPage extends StatelessWidget {
 }
 
 // ─── Product Grid ──────────────────────────────────────
-class _ProductGrid extends StatelessWidget {
+class _ProductGrid extends StatefulWidget {
   const _ProductGrid();
 
   @override
+  State<_ProductGrid> createState() => _ProductGridState();
+}
+
+class _ProductGridState extends State<_ProductGrid> {
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
-    final storeInfo = store.currentStoreInfo;
-    final allProducts = store.currentProducts;
-    final allCategories = store.currentCategories;
-    final selectedCategory = store.selectedCategory;
-    final searchQuery = store.searchQuery;
+    return Selector<AppStore, ({List<ProductModel> products, List<CategoryModel> categories, String selectedCategory, String searchQuery, StoreInfoModel storeInfo, String? userRole})>(
+      selector: (_, s) => (
+        products: s.currentProducts,
+        categories: s.currentCategories,
+        selectedCategory: s.selectedCategory,
+        searchQuery: s.searchQuery,
+        storeInfo: s.currentStoreInfo,
+        userRole: s.currentUser?.role,
+      ),
+      shouldRebuild: (prev, next) => prev != next,
+      builder: (context, data, _) {
+    final store = context.read<AppStore>();
+    final storeInfo = data.storeInfo;
+    final allProducts = data.products;
+    final allCategories = data.categories;
+    final selectedCategory = data.selectedCategory;
+    final searchQuery = data.searchQuery;
+
+    // Sync controller text with store searchQuery (e.g. after category tap clears it)
+    if (searchQuery.isEmpty && _searchController.text.isNotEmpty) {
+      _searchController.clear();
+    }
 
     var filteredProducts = allProducts.toList();
     if (selectedCategory != 'all') {
@@ -73,6 +105,7 @@ class _ProductGrid extends StatelessWidget {
                 ],
               ),
               child: TextField(
+                controller: _searchController,
                 onChanged: (v) => store.setSearchQuery(v),
                 style: const TextStyle(
                     fontWeight: FontWeight.w500, fontSize: 14),
@@ -88,6 +121,20 @@ class _ProductGrid extends StatelessWidget {
                         color: AppColors.slate400, size: 22),
                   ),
                   prefixIconConstraints: const BoxConstraints(minWidth: 0),
+                  suffixIcon: searchQuery.isNotEmpty
+                      ? GestureDetector(
+                          onTap: () {
+                            _searchController.clear();
+                            store.setSearchQuery('');
+                          },
+                          child: const Padding(
+                            padding: EdgeInsets.only(right: 10),
+                            child: Icon(Icons.close_rounded,
+                                color: AppColors.slate400, size: 20),
+                          ),
+                        )
+                      : null,
+                  suffixIconConstraints: const BoxConstraints(minWidth: 0),
                   filled: true,
                   fillColor: Colors.transparent,
                   contentPadding: const EdgeInsets.symmetric(
@@ -197,7 +244,9 @@ class _ProductGrid extends StatelessWidget {
                         ),
                         itemCount: filteredProducts.length,
                         itemBuilder: (ctx, i) {
-                          return _ProductCard(product: filteredProducts[i]);
+                          return RepaintBoundary(
+                            child: _ProductCard(product: filteredProducts[i]),
+                          );
                         },
                       );
                     },
@@ -205,6 +254,8 @@ class _ProductGrid extends StatelessWidget {
           ),
         ],
       ),
+    );
+      },
     );
   }
 
@@ -257,7 +308,7 @@ class _ProductGrid extends StatelessWidget {
             child: GestureDetector(
               onTap: () => Navigator.pop(ctx),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
                 child: Container(
                   color: Colors.black.withValues(alpha: 0.2),
                 ),
@@ -462,9 +513,11 @@ class _ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+    final store = context.read<AppStore>();
+    return Selector<AppStore, OrderItemModel?>(
+      selector: (_, s) => s.cart.where((c) => c.id == product.id).firstOrNull,
+      builder: (context, cartItem, _) {
     final isOutOfStock = product.isOutOfStock;
-    final cartItem = store.cart.where((c) => c.id == product.id).firstOrNull;
     final inCart = cartItem != null;
 
     return GestureDetector(
@@ -503,12 +556,21 @@ class _ProductCard extends StatelessWidget {
                     child: product.image.isNotEmpty
                         ? ClipRRect(
                             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                            child: Image.network(
-                              product.image,
-                              fit: BoxFit.cover,
-                              cacheWidth: 200,
-                              errorBuilder: (_, __, ___) => _buildPlaceholder(),
-                            ),
+                            child: product.image.startsWith('data:')
+                                ? Image.memory(
+                                    base64Decode(product.image.split(',').last),
+                                    fit: BoxFit.cover,
+                                    cacheWidth: 300,
+                                    cacheHeight: 300,
+                                    errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                                  )
+                                : Image.network(
+                                    product.image,
+                                    fit: BoxFit.cover,
+                                    cacheWidth: 300,
+                                    cacheHeight: 300,
+                                    errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                                  ),
                           )
                         : _buildPlaceholder(),
                   ),
@@ -605,6 +667,8 @@ class _ProductCard extends StatelessWidget {
             ),
         ],
       ),
+    );
+      },
     );
   }
 
@@ -706,8 +770,10 @@ class _CartPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
-    final cart = store.cart;
+    return Selector<AppStore, List<OrderItemModel>>(
+      selector: (_, s) => s.cart,
+      builder: (context, cart, _) {
+    final store = context.read<AppStore>();
 
     return Container(
       decoration: BoxDecoration(
@@ -746,6 +812,8 @@ class _CartPanel extends StatelessWidget {
           if (cart.isNotEmpty) _buildCheckoutFooter(context, store),
         ],
       ),
+    );
+      },
     );
   }
 
@@ -1007,6 +1075,15 @@ class _TableSelectorBtn extends StatelessWidget {
       areaGroups[groupName]!.add(t);
     }
 
+    // Compute occupied tables (have pending or cooking orders)
+    final activeOrders = store.visibleOrders.where(
+      (o) => o.status == 'pending' || o.status == 'cooking',
+    );
+    final occupiedTables = <String>{};
+    for (final o in activeOrders) {
+      if (o.table.isNotEmpty) occupiedTables.add(o.table);
+    }
+
     final isWide = MediaQuery.of(context).size.width >= 768;
 
     if (isWide) {
@@ -1117,13 +1194,24 @@ class _TableSelectorBtn extends StatelessWidget {
                               ),
                               ...areaTables.map((t) {
                                 final tableName = _nameOf(t);
+                                final isBusy = occupiedTables.contains(t);
                                 return _tableOption(
                                   ctx,
                                   icon: Icons.table_restaurant_outlined,
-                                  iconColor: AppColors.emerald500,
+                                  iconColor: isBusy ? AppColors.slate400 : AppColors.emerald500,
                                   label: tableName,
                                   isSelected: store.selectedTable == t,
+                                  isBusy: isBusy,
                                   onTap: () {
+                                    if (isBusy) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Bàn đang có đơn xử lý'),
+                                          duration: Duration(seconds: 2),
+                                        ),
+                                      );
+                                      return;
+                                    }
                                     store.setSelectedTable(t);
                                     Navigator.pop(ctx);
                                   },
@@ -1206,13 +1294,34 @@ class _TableSelectorBtn extends StatelessWidget {
                             ...areaTables.map((t) {
                               final tableName = _nameOf(t);
                               final area = _areaOf(t);
+                              final isBusy = occupiedTables.contains(t);
                               return ListTile(
-                                leading: const Icon(
+                                leading: Icon(
                                     Icons.table_restaurant_outlined,
-                                    color: AppColors.emerald500),
-                                title: Text(tableName,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w600)),
+                                    color: isBusy ? AppColors.slate400 : AppColors.emerald500),
+                                title: Row(
+                                  children: [
+                                    Text(tableName,
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            color: isBusy ? AppColors.slate400 : AppColors.slate800)),
+                                    if (isBusy) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.red50,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Text('Đang dùng',
+                                            style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                color: AppColors.red500)),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                                 subtitle: area.isNotEmpty
                                     ? Text(area,
                                         style: const TextStyle(
@@ -1223,10 +1332,19 @@ class _TableSelectorBtn extends StatelessWidget {
                                     ? const Icon(Icons.check_circle,
                                         color: AppColors.emerald500)
                                     : null,
-                                onTap: () {
-                                  store.setSelectedTable(t);
-                                  Navigator.pop(context);
-                                },
+                                onTap: isBusy
+                                    ? () {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Bàn đang có đơn xử lý'),
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+                                    : () {
+                                        store.setSelectedTable(t);
+                                        Navigator.pop(context);
+                                      },
                               );
                             }),
                           ],
@@ -1251,25 +1369,47 @@ class _TableSelectorBtn extends StatelessWidget {
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
+    bool isBusy = false,
   }) {
     return InkWell(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        color: isSelected ? AppColors.emerald50 : Colors.transparent,
+        color: isSelected ? AppColors.emerald50 : (isBusy ? AppColors.slate50 : Colors.transparent),
         child: Row(
           children: [
             Icon(icon, size: 18, color: iconColor),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected
-                        ? AppColors.emerald600
-                        : AppColors.slate700,
-                  )),
+              child: Row(
+                children: [
+                  Text(label,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isBusy
+                            ? AppColors.slate400
+                            : isSelected
+                                ? AppColors.emerald600
+                                : AppColors.slate700,
+                      )),
+                  if (isBusy) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.red50,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text('Đang dùng',
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.red500)),
+                    ),
+                  ],
+                ],
+              ),
             ),
             if (isSelected)
               const Icon(Icons.check_circle_rounded,
@@ -1310,13 +1450,23 @@ class _CartItemCard extends StatelessWidget {
               height: 56,
               color: AppColors.slate100,
               child: item.image != null && item.image!.isNotEmpty
-                  ? Image.network(item.image!, fit: BoxFit.cover,
-                      cacheWidth: 112,
-                      errorBuilder: (_, __, ___) => const Icon(
-                            Icons.restaurant_rounded,
-                            color: AppColors.slate300,
-                            size: 24,
-                          ))
+                  ? (item.image!.startsWith('data:')
+                      ? Image.memory(
+                          base64Decode(item.image!.split(',').last),
+                          fit: BoxFit.cover,
+                          cacheWidth: 112,
+                          errorBuilder: (_, __, ___) => const Icon(
+                                Icons.restaurant_rounded,
+                                color: AppColors.slate300,
+                                size: 24,
+                              ))
+                      : Image.network(item.image!, fit: BoxFit.cover,
+                          cacheWidth: 112,
+                          errorBuilder: (_, __, ___) => const Icon(
+                                Icons.restaurant_rounded,
+                                color: AppColors.slate300,
+                                size: 24,
+                              )))
                   : const Icon(Icons.restaurant_rounded,
                       color: AppColors.slate300, size: 24),
             ),

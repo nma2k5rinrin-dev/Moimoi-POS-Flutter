@@ -34,14 +34,32 @@ class _AuthPageState extends State<AuthPage>
   bool _showRegPassword = false;
   bool _showRegConfirmPass = false;
 
-
   String? _errorMessage;
 
+  final LocalAuthentication _localAuth = LocalAuthentication();
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
+  bool _biometricAvailable = false;
+  List<BiometricType> _availableBiometrics = [];
 
-  final LocalAuthentication _localAuth = LocalAuthentication();
+  IconData get _biometricIcon {
+    if (_availableBiometrics.contains(BiometricType.fingerprint)) {
+      return Icons.fingerprint;
+    } else if (_availableBiometrics.contains(BiometricType.face)) {
+      return Icons.face;
+    }
+    return Icons.lock_open_rounded;
+  }
+
+  String get _biometricLabel {
+    if (_availableBiometrics.contains(BiometricType.fingerprint)) {
+      return 'Vân tay';
+    } else if (_availableBiometrics.contains(BiometricType.face)) {
+      return 'Khuôn mặt';
+    }
+    return 'Sinh trắc học';
+  }
 
   @override
   void initState() {
@@ -62,6 +80,30 @@ class _AuthPageState extends State<AuthPage>
       curve: Curves.easeOutCubic,
     ));
     _animController.forward();
+    _initBiometric();
+  }
+
+  Future<void> _initBiometric() async {
+    try {
+      final canCheck = await _localAuth.canCheckBiometrics;
+      final isSupported = await _localAuth.isDeviceSupported();
+      if (canCheck && isSupported) {
+        final available = await _localAuth.getAvailableBiometrics();
+        if (!mounted) return;
+        setState(() {
+          _biometricAvailable = available.isNotEmpty;
+          _availableBiometrics = available;
+        });
+        // Auto-trigger biometric if user has saved credentials
+        if (_biometricAvailable) {
+          final store = context.read<AppStore>();
+          final hasCreds = await store.hasSavedCredentials();
+          if (hasCreds && mounted) {
+            _handleBiometric();
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -329,8 +371,8 @@ class _AuthPageState extends State<AuthPage>
 
         const SizedBox(height: 20),
 
-        // ── "hoặc đăng nhập bằng" divider + 3 buttons ──
-        if (isLogin) ...[
+        // ── "hoặc đăng nhập bằng" divider + biometric button ──
+        if (isLogin && _biometricAvailable) ...[
           Row(
             children: [
               const Expanded(child: Divider(color: AppColors.slate200)),
@@ -350,27 +392,12 @@ class _AuthPageState extends State<AuthPage>
           ),
           const SizedBox(height: 16),
 
-          // 3 biometric buttons row
-          Row(
-            children: [
-              Expanded(
-                child: _buildAuthMethodButton(
-                  icon: Icons.face,
-                  label: 'FaceID',
-                  color: const Color(0xFF3B82F6),
-                  onTap: _handleBiometric,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildAuthMethodButton(
-                  icon: Icons.fingerprint,
-                  label: 'Vân tay',
-                  color: const Color(0xFF10B981),
-                  onTap: _handleBiometric,
-                ),
-              ),
-            ],
+          // Single biometric button
+          _buildAuthMethodButton(
+            icon: _biometricIcon,
+            label: _biometricLabel,
+            color: const Color(0xFF10B981),
+            onTap: _handleBiometric,
           ),
           const SizedBox(height: 20),
         ],

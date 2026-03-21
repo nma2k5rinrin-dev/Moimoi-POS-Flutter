@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -24,7 +25,7 @@ class MobileCartSheet extends StatelessWidget {
             child: GestureDetector(
               onTap: () => Navigator.pop(context),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
                 child: Container(
                   color: const Color(0x66000000),
                 ),
@@ -306,12 +307,23 @@ class _CartItemState extends State<_CartItem> {
               height: 56,
               color: AppColors.slate100,
               child: item.image != null && item.image!.isNotEmpty
-                  ? Image.network(item.image!, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(
-                            Icons.restaurant_rounded,
-                            color: AppColors.slate300,
-                            size: 24,
-                          ))
+                  ? (item.image!.startsWith('data:')
+                      ? Image.memory(
+                          base64Decode(item.image!.split(',').last),
+                          fit: BoxFit.cover,
+                          cacheWidth: 112, cacheHeight: 112,
+                          errorBuilder: (_, __, ___) => const Icon(
+                                Icons.restaurant_rounded,
+                                color: AppColors.slate300,
+                                size: 24,
+                              ))
+                      : Image.network(item.image!, fit: BoxFit.cover,
+                          cacheWidth: 112, cacheHeight: 112,
+                          errorBuilder: (_, __, ___) => const Icon(
+                                Icons.restaurant_rounded,
+                                color: AppColors.slate300,
+                                size: 24,
+                              )))
                   : const Icon(Icons.restaurant_rounded,
                       color: AppColors.slate300, size: 24),
             ),
@@ -499,7 +511,28 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
     final renderBox = context.findRenderObject() as RenderBox;
     final buttonSize = renderBox.size;
     final tables = widget.store.currentTables;
-    final itemCount = tables.length + 1; // +1 for "Mang về"
+
+    // Group tables by area
+    final Map<String, List<String>> areaGroups = {};
+    for (final t in tables) {
+      final parts = t.split('::');
+      final area = parts.length > 1 ? parts[0] : 'Mặc định';
+      areaGroups.putIfAbsent(area, () => []);
+      areaGroups[area]!.add(t);
+    }
+
+    // Compute occupied tables
+    final activeOrders = widget.store.visibleOrders.where(
+      (o) => o.status == 'pending' || o.status == 'cooking',
+    );
+    final occupiedTables = <String>{};
+    for (final o in activeOrders) {
+      if (o.table.isNotEmpty) occupiedTables.add(o.table);
+    }
+
+    // Total items for height calculation
+    final itemCount = tables.length + 1 + areaGroups.length; // tables + Mang về + headers
+    final dropdownHeight = (itemCount * 42.0 + 18).clamp(0.0, 350.0);
 
     _overlayEntry = OverlayEntry(
       builder: (ctx) => Stack(
@@ -518,10 +551,11 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
             child: CompositedTransformFollower(
               link: _layerLink,
               showWhenUnlinked: false,
-              offset: Offset(0, -(itemCount * 42.0 + 18)),
+              offset: Offset(0, -dropdownHeight),
               child: Material(
                 color: Colors.transparent,
                 child: Container(
+                  constraints: const BoxConstraints(maxHeight: 350),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
@@ -540,20 +574,51 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
                     ],
                   ),
                   padding: const EdgeInsets.all(6),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ...tables.map((t) => _buildDropItem(
-                            t,
-                            Icons.table_restaurant_rounded,
-                            isSelected: widget.store.selectedTable == t,
-                          )),
-                      _buildDropItem(
-                        'Mang về',
-                        Icons.shopping_bag_rounded,
-                        isSelected: widget.store.selectedTable == 'Mang về',
-                      ),
-                    ],
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Mang về
+                        _buildDropItem(
+                          'Mang về',
+                          Icons.shopping_bag_rounded,
+                          isSelected: widget.store.selectedTable == 'Mang về',
+                          isBusy: false,
+                        ),
+                        // Grouped tables
+                        ...areaGroups.entries.expand((entry) {
+                          final areaName = entry.key;
+                          final areaTables = entry.value;
+                          return [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+                              child: Text(
+                                areaName.toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.slate400,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            ...areaTables.map((t) {
+                              final parts = t.split('::');
+                              final tableName = parts.length > 1 ? parts.sublist(1).join('::') : t;
+                              final isBusy = occupiedTables.contains(t);
+                              return _buildDropItem(
+                                tableName,
+                                Icons.table_restaurant_rounded,
+                                isSelected: widget.store.selectedTable == t,
+                                isBusy: isBusy,
+                                rawValue: t,
+                              );
+                            }),
+                          ];
+                        }),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -574,10 +639,19 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
   }
 
   Widget _buildDropItem(String label, IconData icon,
-      {required bool isSelected}) {
+      {required bool isSelected, bool isBusy = false, String? rawValue}) {
     return InkWell(
       onTap: () {
-        widget.store.setSelectedTable(label);
+        if (isBusy) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Bàn đang có đơn xử lý'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+        widget.store.setSelectedTable(rawValue ?? label);
         _closeDropdown();
       },
       borderRadius: BorderRadius.circular(12),
@@ -585,26 +659,54 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.emerald50 : Colors.transparent,
+          color: isSelected
+              ? AppColors.emerald50
+              : (isBusy ? AppColors.slate50 : Colors.transparent),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
             Icon(icon,
                 size: 18,
-                color:
-                    isSelected ? AppColors.emerald600 : AppColors.slate400),
+                color: isBusy
+                    ? AppColors.slate400
+                    : isSelected
+                        ? AppColors.emerald600
+                        : AppColors.slate400),
             const SizedBox(width: 10),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color:
-                    isSelected ? AppColors.emerald600 : AppColors.slate800,
+            Expanded(
+              child: Row(
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isBusy
+                          ? AppColors.slate400
+                          : isSelected
+                              ? AppColors.emerald600
+                              : AppColors.slate800,
+                    ),
+                  ),
+                  if (isBusy) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: AppColors.red50,
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: const Text('Đang dùng',
+                          style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.red500)),
+                    ),
+                  ],
+                ],
               ),
             ),
-            const Spacer(),
             if (isSelected)
               const Icon(Icons.check_circle_rounded,
                   size: 20, color: AppColors.emerald500),
@@ -653,7 +755,13 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
                       : AppColors.slate800),
               const SizedBox(width: 8),
               Text(
-                hasSelection ? selected : 'Chọn bàn',
+                hasSelection
+                    ? (selected == 'Mang về'
+                        ? selected
+                        : selected.contains('::')
+                            ? '${selected.split('::').sublist(1).join('::')} · ${selected.split('::')[0]}'
+                            : selected)
+                    : 'Chọn bàn',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight:

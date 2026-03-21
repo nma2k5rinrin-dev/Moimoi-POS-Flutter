@@ -1,4 +1,5 @@
 import 'dart:async';
+// ignore_for_file: avoid_print
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -72,6 +73,10 @@ class AppStore extends ChangeNotifier {
   RealtimeChannel? _productsChannel;
   RealtimeChannel? _notiChannel;
   RealtimeChannel? _upgradeChannel;
+  RealtimeChannel? _thuChiChannel;
+  RealtimeChannel? _categoriesChannel;
+  RealtimeChannel? _usersChannel;
+  RealtimeChannel? _storeInfoChannel;
 
   // ── Cache invalidation ──────────────────────────────────
   bool _cachesDirty = true;
@@ -91,6 +96,25 @@ class AppStore extends ChangeNotifier {
   void notifyListeners() {
     _invalidateCaches();
     super.notifyListeners();
+  }
+
+  // ── Optimistic UI Helper ──────────────────────────────
+  /// Updates state immediately, syncs to Supabase in background.
+  /// On failure: rolls back state and shows error toast.
+  void _optimistic({
+    required VoidCallback apply,
+    required Future<void> Function() remote,
+    required VoidCallback rollback,
+    String errorMsg = 'Có lỗi xảy ra, đã hoàn tác',
+  }) {
+    apply();
+    notifyListeners();
+    remote().catchError((e) {
+      debugPrint('[Optimistic rollback] $e');
+      rollback();
+      notifyListeners();
+      showToast(errorMsg, 'error');
+    });
   }
 
   // ── Derived: getStoreId ─────────────────────────────────
@@ -373,7 +397,7 @@ class AppStore extends ChangeNotifier {
   }
 
   // ── Update User ─────────────────────────────────────────
-  Future<void> updateUser(String username, Map<String, dynamic> updatedData) async {
+  void updateUser(String username, Map<String, dynamic> updatedData) {
     final dbData = <String, dynamic>{};
     if (updatedData.containsKey('fullname')) dbData['fullname'] = updatedData['fullname'];
     if (updatedData.containsKey('phone')) dbData['phone'] = updatedData['phone'];
@@ -388,52 +412,54 @@ class AppStore extends ChangeNotifier {
       dbData['created_by'] = updatedData['createdBy'];
     }
 
-    try {
-      await _supabase.from('users').update(dbData).eq('username', username);
-      showToast('Cập nhật thông tin thành công!');
+    // Snapshot for rollback
+    final oldUsers = List<UserModel>.from(users);
+    final oldCurrentUser = currentUser;
 
-      // Update local state
-      users = users.map((u) {
-        if (u.username == username) {
-          return UserModel(
-            username: u.username,
-            pass: updatedData['pass'] ?? u.pass,
-            role: updatedData['role'] ?? u.role,
-            fullname: updatedData['fullname'] ?? u.fullname,
-            phone: updatedData['phone'] ?? u.phone,
-            avatar: updatedData['avatar'] ?? u.avatar,
-            isPremium: updatedData['isPremium'] ?? u.isPremium,
-            expiresAt: updatedData['expiresAt'] ?? u.expiresAt,
-            createdBy: updatedData['createdBy'] ?? u.createdBy,
-            showVipExpired: updatedData['showVipExpired'] ?? u.showVipExpired,
-            showVipCongrat: updatedData['showVipCongrat'] ?? u.showVipCongrat,
-          );
+    _optimistic(
+      apply: () {
+        users = users.map((u) {
+          if (u.username == username) {
+            return UserModel(
+              username: u.username,
+              pass: updatedData['pass'] ?? u.pass,
+              role: updatedData['role'] ?? u.role,
+              fullname: updatedData['fullname'] ?? u.fullname,
+              phone: updatedData['phone'] ?? u.phone,
+              avatar: updatedData['avatar'] ?? u.avatar,
+              isPremium: updatedData['isPremium'] ?? u.isPremium,
+              expiresAt: updatedData['expiresAt'] ?? u.expiresAt,
+              createdBy: updatedData['createdBy'] ?? u.createdBy,
+              showVipExpired: updatedData['showVipExpired'] ?? u.showVipExpired,
+              showVipCongrat: updatedData['showVipCongrat'] ?? u.showVipCongrat,
+            );
+          }
+          return u;
+        }).toList();
+        if (currentUser?.username == username) {
+          currentUser = users.firstWhere((u) => u.username == username);
         }
-        return u;
-      }).toList();
-
-      if (currentUser?.username == username) {
-        currentUser = users.firstWhere((u) => u.username == username);
-      }
-      notifyListeners();
-    } catch (e) {
-      debugPrint('[updateUser] Error: $e');
-      debugPrint('[updateUser] dbData: $dbData');
-      showToast('Có lỗi kết nối CSDL', 'error');
-    }
+      },
+      remote: () => _supabase.from('users').update(dbData).eq('username', username),
+      rollback: () {
+        users = oldUsers;
+        currentUser = oldCurrentUser;
+      },
+      errorMsg: 'Cập nhật thất bại, đã hoàn tác',
+    );
   }
 
   // ── Delete User ─────────────────────────────────────────
-  Future<void> deleteUser(String username) async {
-    try {
-      await _supabase.from('users').delete().eq('username', username);
-      showToast('Đã xoá người dùng $username');
-      users.removeWhere((u) => u.username == username);
-      notifyListeners();
-    } catch (e) {
-      debugPrint('[deleteUser] $e');
-      showToast('Xoá hỏng do lỗi mạng', 'error');
-    }
+  void deleteUser(String username) {
+    final oldUsers = List<UserModel>.from(users);
+    _optimistic(
+      apply: () {
+        users.removeWhere((u) => u.username == username);
+      },
+      remote: () => _supabase.from('users').delete().eq('username', username),
+      rollback: () { users = oldUsers; },
+      errorMsg: 'Xoá người dùng thất bại, đã hoàn tác',
+    );
   }
 
   // ── Add Staff ───────────────────────────────────────────
@@ -489,8 +515,9 @@ class AppStore extends ChangeNotifier {
   }
 
   // ── Store Info ──────────────────────────────────────────
-  Future<void> updateStoreInfo(StoreInfoModel info) async {
+  void updateStoreInfo(StoreInfoModel info) {
     final storeId = getStoreId();
+    final oldInfo = storeInfos[storeId];
     final dbData = {
       'name': info.name,
       'phone': info.phone,
@@ -504,11 +531,18 @@ class AppStore extends ChangeNotifier {
       'qr_image_url': info.qrImageUrl,
     };
     dbData.removeWhere((k, v) => v.toString().isEmpty);
-    await _supabase
-        .from('store_infos')
-        .upsert({'store_id': storeId, ...dbData});
-    storeInfos[storeId] = info;
-    notifyListeners();
+    _optimistic(
+      apply: () { storeInfos[storeId] = info; },
+      remote: () => _supabase.from('store_infos').upsert({'store_id': storeId, ...dbData}),
+      rollback: () {
+        if (oldInfo != null) {
+          storeInfos[storeId] = oldInfo;
+        } else {
+          storeInfos.remove(storeId);
+        }
+      },
+      errorMsg: 'Cập nhật thông tin cửa hàng thất bại, đã hoàn tác',
+    );
   }
 
   // ── Tables ──────────────────────────────────────────────
@@ -523,71 +557,104 @@ class AppStore extends ChangeNotifier {
     final storeId = getStoreId();
     final currentTablesList = storeTables[storeId] ?? [];
     if (currentTablesList.contains(tableName)) return;
-    await _supabase.from('store_tables').insert({
-      'store_id': storeId,
-      'table_name': tableName,
-      'sort_order': currentTablesList.length,
-    });
-    storeTables.putIfAbsent(storeId, () => []);
-    storeTables[storeId]!.add(tableName);
-    notifyListeners();
+    _optimistic(
+      apply: () {
+        storeTables.putIfAbsent(storeId, () => []);
+        storeTables[storeId]!.add(tableName);
+      },
+      remote: () => _supabase.from('store_tables').insert({
+        'store_id': storeId,
+        'table_name': tableName,
+        'sort_order': currentTablesList.length,
+      }),
+      rollback: () { storeTables[storeId]?.remove(tableName); },
+      errorMsg: 'Thêm bàn thất bại, đã hoàn tác',
+    );
   }
 
-  Future<void> removeTable(String tableName) async {
+  void removeTable(String tableName) {
     final storeId = getStoreId();
-    await _supabase
-        .from('store_tables')
-        .delete()
-        .eq('store_id', storeId)
-        .eq('table_name', tableName);
-    storeTables[storeId]?.remove(tableName);
-    if (selectedTable == tableName) {
-      selectedTable = storeTables[storeId]?.isNotEmpty == true
-          ? storeTables[storeId]!.first
-          : '';
-    }
-    notifyListeners();
+    final oldTables = List<String>.from(storeTables[storeId] ?? []);
+    final oldSelectedTable = selectedTable;
+    _optimistic(
+      apply: () {
+        storeTables[storeId]?.remove(tableName);
+        if (selectedTable == tableName) {
+          selectedTable = storeTables[storeId]?.isNotEmpty == true
+              ? storeTables[storeId]!.first
+              : '';
+        }
+      },
+      remote: () => _supabase.from('store_tables').delete().eq('store_id', storeId).eq('table_name', tableName),
+      rollback: () {
+        storeTables[storeId] = oldTables;
+        selectedTable = oldSelectedTable;
+      },
+      errorMsg: 'Xoá bàn thất bại, đã hoàn tác',
+    );
   }
 
-  Future<void> updateTable(String oldName, String newName) async {
+  void updateTable(String oldName, String newName) {
     if (oldName.isEmpty || newName.isEmpty || oldName == newName) return;
     final storeId = getStoreId();
-    await _supabase
-        .from('store_tables')
-        .update({'table_name': newName})
-        .eq('store_id', storeId)
-        .eq('table_name', oldName);
-    final tablesList = storeTables[storeId] ?? [];
-    final idx = tablesList.indexOf(oldName);
-    if (idx >= 0) tablesList[idx] = newName;
-    if (selectedTable == oldName) selectedTable = newName;
-    notifyListeners();
+    final oldTables = List<String>.from(storeTables[storeId] ?? []);
+    final oldSelectedTable = selectedTable;
+    _optimistic(
+      apply: () {
+        final tablesList = storeTables[storeId] ?? [];
+        final idx = tablesList.indexOf(oldName);
+        if (idx >= 0) tablesList[idx] = newName;
+        if (selectedTable == oldName) selectedTable = newName;
+      },
+      remote: () => _supabase.from('store_tables').update({'table_name': newName}).eq('store_id', storeId).eq('table_name', oldName),
+      rollback: () {
+        storeTables[storeId] = oldTables;
+        selectedTable = oldSelectedTable;
+      },
+      errorMsg: 'Cập nhật bàn thất bại, đã hoàn tác',
+    );
   }
 
-  Future<void> renameArea(String oldArea, String newArea) async {
+  void renameArea(String oldArea, String newArea) {
     if (oldArea.isEmpty || newArea.isEmpty || oldArea == newArea) return;
     final storeId = getStoreId();
+    final oldTables = List<String>.from(storeTables[storeId] ?? []);
+    final oldSelectedTable = selectedTable;
     final tablesList = storeTables[storeId] ?? [];
     final prefix = '$oldArea::';
+    // Collect rename pairs for batch Supabase calls
+    final renamePairs = <MapEntry<String, String>>[];
     for (int i = 0; i < tablesList.length; i++) {
       if (tablesList[i].startsWith(prefix)) {
         final tablePart = tablesList[i].substring(prefix.length);
         final oldFullName = tablesList[i];
         final newFullName = '$newArea::$tablePart';
-        await _supabase
-            .from('store_tables')
-            .update({'table_name': newFullName})
-            .eq('store_id', storeId)
-            .eq('table_name', oldFullName);
-        tablesList[i] = newFullName;
-        if (selectedTable == oldFullName) selectedTable = newFullName;
+        renamePairs.add(MapEntry(oldFullName, newFullName));
       }
     }
-    notifyListeners();
+    _optimistic(
+      apply: () {
+        for (final pair in renamePairs) {
+          final idx = tablesList.indexOf(pair.key);
+          if (idx >= 0) tablesList[idx] = pair.value;
+          if (selectedTable == pair.key) selectedTable = pair.value;
+        }
+      },
+      remote: () async {
+        for (final pair in renamePairs) {
+          await _supabase.from('store_tables').update({'table_name': pair.value}).eq('store_id', storeId).eq('table_name', pair.key);
+        }
+      },
+      rollback: () {
+        storeTables[storeId] = oldTables;
+        selectedTable = oldSelectedTable;
+      },
+      errorMsg: 'Đổi tên khu vực thất bại, đã hoàn tác',
+    );
   }
 
   // ── Categories ──────────────────────────────────────────
-  Future<void> addCategory(String categoryName) async {
+  Future<void> addCategory(String categoryName, {String emoji = '', String color = ''}) async {
     // Quota check for Basic tier
     final quota = QuotaHelper(this);
     if (!quota.canAddCategory) {
@@ -600,38 +667,61 @@ class AppStore extends ChangeNotifier {
       'id': 'cat_${DateTime.now().millisecondsSinceEpoch}',
       'store_id': storeId,
       'name': categoryName,
+      'emoji': emoji,
+      'color': color,
     };
-    await _supabase.from('categories').insert(newCat);
-    categories.putIfAbsent(storeId, () => []);
-    categories[storeId]!.add(CategoryModel.fromMap(newCat));
-    notifyListeners();
+    final catModel = CategoryModel.fromMap(newCat);
+    _optimistic(
+      apply: () {
+        categories.putIfAbsent(storeId, () => []);
+        categories[storeId]!.add(catModel);
+      },
+      remote: () => _supabase.from('categories').insert(newCat),
+      rollback: () { categories[storeId]?.removeWhere((c) => c.id == catModel.id); },
+      errorMsg: 'Thêm danh mục thất bại, đã hoàn tác',
+    );
   }
 
-  Future<void> updateCategory(CategoryModel updatedCategory) async {
+  void updateCategory(CategoryModel updatedCategory) {
     final storeId = getStoreId();
-    await _supabase
-        .from('categories')
-        .update({'name': updatedCategory.name})
-        .eq('id', updatedCategory.id);
-    categories[storeId] = (categories[storeId] ?? [])
-        .map((c) => c.id == updatedCategory.id ? updatedCategory : c)
-        .toList();
-    notifyListeners();
+    final oldCategories = List<CategoryModel>.from(categories[storeId] ?? []);
+    _optimistic(
+      apply: () {
+        categories[storeId] = (categories[storeId] ?? [])
+            .map((c) => c.id == updatedCategory.id ? updatedCategory : c)
+            .toList();
+      },
+      remote: () => _supabase.from('categories').update({
+        'name': updatedCategory.name,
+        'emoji': updatedCategory.emoji,
+        'color': updatedCategory.color,
+      }).eq('id', updatedCategory.id),
+      rollback: () { categories[storeId] = oldCategories; },
+      errorMsg: 'Cập nhật danh mục thất bại, đã hoàn tác',
+    );
   }
 
-  Future<void> deleteCategory(String categoryId) async {
+  void deleteCategory(String categoryId) {
     final storeId = getStoreId();
-    await _supabase.from('categories').delete().eq('id', categoryId);
-    await _supabase
-        .from('products')
-        .update({'category': ''})
-        .eq('store_id', storeId)
-        .eq('category', categoryId);
-    categories[storeId]?.removeWhere((c) => c.id == categoryId);
-    products[storeId] = (products[storeId] ?? []).map((p) {
-      return p.category == categoryId ? p.copyWith(category: '') : p;
-    }).toList();
-    notifyListeners();
+    final oldCategories = List<CategoryModel>.from(categories[storeId] ?? []);
+    final oldProducts = List<ProductModel>.from(products[storeId] ?? []);
+    _optimistic(
+      apply: () {
+        categories[storeId]?.removeWhere((c) => c.id == categoryId);
+        products[storeId] = (products[storeId] ?? []).map((p) {
+          return p.category == categoryId ? p.copyWith(category: '') : p;
+        }).toList();
+      },
+      remote: () async {
+        await _supabase.from('categories').delete().eq('id', categoryId);
+        await _supabase.from('products').update({'category': ''}).eq('store_id', storeId).eq('category', categoryId);
+      },
+      rollback: () {
+        categories[storeId] = oldCategories;
+        products[storeId] = oldProducts;
+      },
+      errorMsg: 'Xoá danh mục thất bại, đã hoàn tác',
+    );
   }
 
   // ── Products ────────────────────────────────────────────
@@ -657,123 +747,182 @@ class AppStore extends ChangeNotifier {
       'quantity': product.quantity,
       'cost_price': product.costPrice,
     };
-    await _supabase.from('products').insert(newProd);
-    products.putIfAbsent(storeId, () => []);
-    products[storeId]!.insert(0, product.copyWith(id: newProd['id'] as String, storeId: storeId));
-    notifyListeners();
+    final newProduct = product.copyWith(id: newProd['id'] as String, storeId: storeId);
+    _optimistic(
+      apply: () {
+        products.putIfAbsent(storeId, () => []);
+        products[storeId]!.insert(0, newProduct);
+      },
+      remote: () => _supabase.from('products').insert(newProd),
+      rollback: () { products[storeId]?.removeWhere((p) => p.id == newProduct.id); },
+      errorMsg: 'Thêm sản phẩm thất bại, đã hoàn tác',
+    );
   }
 
-  Future<void> updateProduct(ProductModel updatedProduct) async {
+  void updateProduct(ProductModel updatedProduct) {
     final storeId = getStoreId();
-    await _supabase.from('products').update({
-      'name': updatedProduct.name,
-      'price': updatedProduct.price,
-      'image': updatedProduct.image,
-      'category': updatedProduct.category,
-      'description': updatedProduct.description,
-      'is_out_of_stock': updatedProduct.isOutOfStock,
-      'is_hot': updatedProduct.isHot,
-      'quantity': updatedProduct.quantity,
-      'cost_price': updatedProduct.costPrice,
-    }).eq('id', updatedProduct.id);
-    products[storeId] = (products[storeId] ?? [])
-        .map((p) => p.id == updatedProduct.id ? updatedProduct : p)
-        .toList();
-    notifyListeners();
+    final oldProducts = List<ProductModel>.from(products[storeId] ?? []);
+    _optimistic(
+      apply: () {
+        products[storeId] = (products[storeId] ?? [])
+            .map((p) => p.id == updatedProduct.id ? updatedProduct : p)
+            .toList();
+      },
+      remote: () => _supabase.from('products').update({
+        'name': updatedProduct.name,
+        'price': updatedProduct.price,
+        'image': updatedProduct.image,
+        'category': updatedProduct.category,
+        'description': updatedProduct.description,
+        'is_out_of_stock': updatedProduct.isOutOfStock,
+        'is_hot': updatedProduct.isHot,
+        'quantity': updatedProduct.quantity,
+        'cost_price': updatedProduct.costPrice,
+      }).eq('id', updatedProduct.id),
+      rollback: () { products[storeId] = oldProducts; },
+      errorMsg: 'Cập nhật sản phẩm thất bại, đã hoàn tác',
+    );
   }
 
-  Future<void> deleteProduct(String productId) async {
+  void deleteProduct(String productId) {
     final storeId = getStoreId();
-    await _supabase.from('products').delete().eq('id', productId);
-    products[storeId]?.removeWhere((p) => p.id == productId);
-    notifyListeners();
+    final oldProducts = List<ProductModel>.from(products[storeId] ?? []);
+    _optimistic(
+      apply: () { products[storeId]?.removeWhere((p) => p.id == productId); },
+      remote: () => _supabase.from('products').delete().eq('id', productId),
+      rollback: () { products[storeId] = oldProducts; },
+      errorMsg: 'Xoá sản phẩm thất bại, đã hoàn tác',
+    );
   }
 
   // ── Orders ──────────────────────────────────────────────
-  Future<void> updateOrderStatus(String orderId, String status) async {
-    await _supabase.from('orders').update({'status': status}).eq('id', orderId);
-    orders = orders
-        .map((o) => o.id == orderId ? o.copyWith(status: status) : o)
-        .toList();
-    notifyListeners();
+  void updateOrderStatus(String orderId, String status) {
+    final oldOrders = List<OrderModel>.from(orders);
+    _optimistic(
+      apply: () {
+        orders = orders.map((o) => o.id == orderId ? o.copyWith(status: status) : o).toList();
+      },
+      remote: () => _supabase.from('orders').update({'status': status}).eq('id', orderId),
+      rollback: () { orders = oldOrders; },
+      errorMsg: 'Cập nhật trạng thái đơn thất bại, đã hoàn tác',
+    );
   }
 
-  Future<void> updateOrderPaymentStatus(
-      String orderId, String paymentStatus, {String paymentMethod = ''}) async {
+  /// Atomically mark an order as completed + paid in one call.
+  void completeOrderWithPayment(String orderId, String paymentMethod) {
+    final oldOrders = List<OrderModel>.from(orders);
+    _optimistic(
+      apply: () {
+        orders = orders.map((o) => o.id == orderId
+            ? o.copyWith(status: 'completed', paymentStatus: 'paid', paymentMethod: paymentMethod)
+            : o).toList();
+      },
+      remote: () => _supabase.from('orders').update({
+        'status': 'completed',
+        'payment_status': 'paid',
+        'payment_method': paymentMethod,
+      }).eq('id', orderId),
+      rollback: () { orders = oldOrders; },
+      errorMsg: 'Thanh toán thất bại, đã hoàn tác',
+    );
+  }
+
+  /// Change the table of an existing order.
+  void updateOrderTable(String orderId, String newTable) {
+    final oldOrders = List<OrderModel>.from(orders);
+    _optimistic(
+      apply: () {
+        orders = orders.map((o) => o.id == orderId ? o.copyWith(table: newTable) : o).toList();
+      },
+      remote: () => _supabase.from('orders').update({'table_name': newTable}).eq('id', orderId),
+      rollback: () { orders = oldOrders; },
+      errorMsg: 'Đổi bàn thất bại, đã hoàn tác',
+    );
+  }
+
+  void updateOrderPaymentStatus(
+      String orderId, String paymentStatus, {String paymentMethod = ''}) {
+    final oldOrders = List<OrderModel>.from(orders);
     final updateData = <String, dynamic>{'payment_status': paymentStatus};
-    if (paymentMethod.isNotEmpty) {
-      updateData['payment_method'] = paymentMethod;
-    }
-    await _supabase
-        .from('orders')
-        .update(updateData)
-        .eq('id', orderId);
-    orders = orders
-        .map((o) =>
-            o.id == orderId ? o.copyWith(paymentStatus: paymentStatus, paymentMethod: paymentMethod.isNotEmpty ? paymentMethod : null) : o)
-        .toList();
-    notifyListeners();
+    if (paymentMethod.isNotEmpty) updateData['payment_method'] = paymentMethod;
+    _optimistic(
+      apply: () {
+        orders = orders.map((o) => o.id == orderId
+            ? o.copyWith(paymentStatus: paymentStatus, paymentMethod: paymentMethod.isNotEmpty ? paymentMethod : null)
+            : o).toList();
+      },
+      remote: () => _supabase.from('orders').update(updateData).eq('id', orderId),
+      rollback: () { orders = oldOrders; },
+      errorMsg: 'Cập nhật thanh toán thất bại, đã hoàn tác',
+    );
   }
 
-  Future<void> updateOrderItemStatus(
-      String orderId, String itemId, bool isDone) async {
+  void updateOrderItemStatus(
+      String orderId, String itemId, bool isDone) {
     final order = orders.firstWhere((o) => o.id == orderId,
         orElse: () => const OrderModel(id: ''));
     if (order.id.isEmpty) return;
     final newItems =
         order.items.map((i) => i.id == itemId ? i.copyWith(isDone: isDone) : i).toList();
-    await _supabase
-        .from('orders')
-        .update({'items': newItems.map((i) => i.toMap()).toList()})
-        .eq('id', orderId);
-    orders = orders
-        .map((o) => o.id == orderId ? o.copyWith(items: newItems) : o)
-        .toList();
-    notifyListeners();
+    _optimistic(
+      apply: () {
+        orders = orders.map((o) => o.id == orderId ? o.copyWith(items: newItems) : o).toList();
+      },
+      remote: () => _supabase.from('orders').update({'items': newItems.map((i) => i.toMap()).toList()}).eq('id', orderId),
+      rollback: () {
+        orders = orders.map((o) => o.id == orderId ? o.copyWith(items: order.items) : o).toList();
+      },
+    );
   }
 
-  Future<void> updateOrderItemNote(
-      String orderId, String itemId, String note) async {
+  void updateOrderItemNote(
+      String orderId, String itemId, String note) {
     final order = orders.firstWhere((o) => o.id == orderId,
         orElse: () => const OrderModel(id: ''));
     if (order.id.isEmpty) return;
     final newItems =
         order.items.map((i) => i.id == itemId ? i.copyWith(note: note) : i).toList();
-    await _supabase
-        .from('orders')
-        .update({'items': newItems.map((i) => i.toMap()).toList()})
-        .eq('id', orderId);
-    orders = orders
-        .map((o) => o.id == orderId ? o.copyWith(items: newItems) : o)
-        .toList();
-    notifyListeners();
+    _optimistic(
+      apply: () {
+        orders = orders.map((o) => o.id == orderId ? o.copyWith(items: newItems) : o).toList();
+      },
+      remote: () => _supabase.from('orders').update({'items': newItems.map((i) => i.toMap()).toList()}).eq('id', orderId),
+      rollback: () {
+        orders = orders.map((o) => o.id == orderId ? o.copyWith(items: order.items) : o).toList();
+      },
+    );
   }
 
 
-  Future<void> updateOrderItems(
-      String orderId, List<OrderItemModel> newItems, double newTotal) async {
-    await _supabase.from('orders').update({
-      'items': newItems.map((i) => i.toMap()).toList(),
-      'total_amount': newTotal,
-    }).eq('id', orderId);
-    orders = orders
-        .map((o) => o.id == orderId
+  void updateOrderItems(
+      String orderId, List<OrderItemModel> newItems, double newTotal) {
+    final oldOrders = List<OrderModel>.from(orders);
+    _optimistic(
+      apply: () {
+        orders = orders.map((o) => o.id == orderId
             ? o.copyWith(items: newItems, totalAmount: newTotal)
-            : o)
-        .toList();
-    notifyListeners();
+            : o).toList();
+      },
+      remote: () => _supabase.from('orders').update({
+        'items': newItems.map((i) => i.toMap()).toList(),
+        'total_amount': newTotal,
+      }).eq('id', orderId),
+      rollback: () { orders = oldOrders; },
+      errorMsg: 'Cập nhật đơn hàng thất bại, đã hoàn tác',
+    );
   }
 
-  Future<void> cancelOrder(String orderId) async {
-    await _supabase
-        .from('orders')
-        .update({'status': 'cancelled'})
-        .eq('id', orderId);
-    final idx = orders.indexWhere((o) => o.id == orderId);
-    if (idx != -1) {
-      orders[idx] = orders[idx].copyWith(status: 'cancelled');
-    }
-    notifyListeners();
+  void cancelOrder(String orderId) {
+    final oldOrders = List<OrderModel>.from(orders);
+    _optimistic(
+      apply: () {
+        final idx = orders.indexWhere((o) => o.id == orderId);
+        if (idx != -1) orders[idx] = orders[idx].copyWith(status: 'cancelled');
+      },
+      remote: () => _supabase.from('orders').update({'status': 'cancelled'}).eq('id', orderId),
+      rollback: () { orders = oldOrders; },
+      errorMsg: 'Huỷ đơn thất bại, đã hoàn tác',
+    );
   }
 
   Future<void> checkoutOrder({String paymentStatus = 'unpaid', String paymentMethod = ''}) async {
@@ -835,13 +984,13 @@ class AppStore extends ChangeNotifier {
     }
   }
 
-  Future<void> addThuChiTransaction({
+  void addThuChiTransaction({
     required String type,
     required double amount,
     required String category,
     String note = '',
     DateTime? date,
-  }) async {
+  }) {
     final storeId = getStoreId();
     final txnId = 'tc_${DateTime.now().millisecondsSinceEpoch}';
     final txnTime = (date ?? DateTime.now()).toIso8601String();
@@ -859,15 +1008,13 @@ class AppStore extends ChangeNotifier {
       'time': txnTime,
       'created_by': createdBy,
     };
-
-    try {
-      await _supabase.from('thu_chi_transactions').insert(newTxn);
-      thuChiTransactions.insert(0, ThuChiTransaction.fromMap(newTxn));
-      notifyListeners();
-    } catch (e) {
-      debugPrint('[addThuChiTransaction] $e');
-      showToast('Lưu giao dịch thất bại', 'error');
-    }
+    final txnModel = ThuChiTransaction.fromMap(newTxn);
+    _optimistic(
+      apply: () { thuChiTransactions.insert(0, txnModel); },
+      remote: () => _supabase.from('thu_chi_transactions').insert(newTxn),
+      rollback: () { thuChiTransactions.removeWhere((t) => t.id == txnId); },
+      errorMsg: 'Lưu giao dịch thất bại, đã hoàn tác',
+    );
   }
 
   // ── Cart ────────────────────────────────────────────────
@@ -934,6 +1081,8 @@ class AppStore extends ChangeNotifier {
 
   void setCategory(String category) {
     selectedCategory = category;
+    searchQuery = '';
+    _searchDebounce?.cancel();
     notifyListeners();
   }
 
@@ -1004,54 +1153,66 @@ class AppStore extends ChangeNotifier {
   }
 
   // ── Notifications ───────────────────────────────────────
-  Future<void> markNotificationAsRead(String id) async {
-    await _supabase.from('notifications').update({'read': true}).eq('id', id);
-    notifications = notifications
-        .map((n) => n.id == id ? n.copyWith(read: true) : n)
-        .toList();
-    notifyListeners();
+  void markNotificationAsRead(String id) {
+    final oldNotifications = List<NotificationModel>.from(notifications);
+    _optimistic(
+      apply: () {
+        notifications = notifications.map((n) => n.id == id ? n.copyWith(read: true) : n).toList();
+      },
+      remote: () => _supabase.from('notifications').update({'read': true}).eq('id', id),
+      rollback: () { notifications = oldNotifications; },
+    );
   }
 
-  Future<void> clearNotifications(String userId) async {
-    await _supabase.from('notifications').delete().eq('user_id', userId);
-    notifications.removeWhere((n) => n.userId == userId);
-    notifyListeners();
+  void clearNotifications(String userId) {
+    final oldNotifications = List<NotificationModel>.from(notifications);
+    _optimistic(
+      apply: () { notifications.removeWhere((n) => n.userId == userId); },
+      remote: () => _supabase.from('notifications').delete().eq('user_id', userId),
+      rollback: () { notifications = oldNotifications; },
+    );
   }
 
   // ── VIP ─────────────────────────────────────────────────
-  Future<void> clearVipCongrat(String username) async {
-    await _supabase
-        .from('users')
-        .update({'show_vip_congrat': false})
-        .eq('username', username);
-    users = users
-        .map((u) =>
-            u.username == username ? u.copyWith(showVipCongrat: false) : u)
-        .toList();
-    if (currentUser?.username == username) {
-      currentUser = currentUser!.copyWith(showVipCongrat: false);
-    }
-    notifyListeners();
+  void clearVipCongrat(String username) {
+    final oldUsers = List<UserModel>.from(users);
+    final oldCurrentUser = currentUser;
+    _optimistic(
+      apply: () {
+        users = users.map((u) => u.username == username ? u.copyWith(showVipCongrat: false) : u).toList();
+        if (currentUser?.username == username) {
+          currentUser = currentUser!.copyWith(showVipCongrat: false);
+        }
+      },
+      remote: () => _supabase.from('users').update({'show_vip_congrat': false}).eq('username', username),
+      rollback: () {
+        users = oldUsers;
+        currentUser = oldCurrentUser;
+      },
+    );
   }
 
-  Future<void> closeVipExpiredModal(String username) async {
-    await _supabase
-        .from('users')
-        .update({'show_vip_expired': false})
-        .eq('username', username);
-    users = users
-        .map((u) =>
-            u.username == username ? u.copyWith(showVipExpired: false) : u)
-        .toList();
-    if (currentUser?.username == username) {
-      currentUser = currentUser!.copyWith(showVipExpired: false);
-    }
-    notifyListeners();
+  void closeVipExpiredModal(String username) {
+    final oldUsers = List<UserModel>.from(users);
+    final oldCurrentUser = currentUser;
+    _optimistic(
+      apply: () {
+        users = users.map((u) => u.username == username ? u.copyWith(showVipExpired: false) : u).toList();
+        if (currentUser?.username == username) {
+          currentUser = currentUser!.copyWith(showVipExpired: false);
+        }
+      },
+      remote: () => _supabase.from('users').update({'show_vip_expired': false}).eq('username', username),
+      rollback: () {
+        users = oldUsers;
+        currentUser = oldCurrentUser;
+      },
+    );
   }
 
   // ── Upgrade Requests ────────────────────────────────────
-  Future<void> requestUpgrade(
-      String username, int planIndex, String planName, int months) async {
+  void requestUpgrade(
+      String username, int planIndex, String planName, int months) {
     if (upgradeRequests.any((r) => r.username == username)) {
       showToast('Bạn đã có yêu cầu đang chờ duyệt!', 'error');
       return;
@@ -1064,11 +1225,18 @@ class AppStore extends ChangeNotifier {
       'months': months,
       'time': DateTime.now().toIso8601String(),
     };
-    await _supabase.from('upgrade_requests').insert(newReq);
-    showToast('Đã gửi yêu cầu nâng cấp $planName!');
-    upgradeRequests.add(UpgradeRequestModel.fromMap(newReq));
-    isUpgradeModalOpen = false;
-    notifyListeners();
+    final reqModel = UpgradeRequestModel.fromMap(newReq);
+    _optimistic(
+      apply: () {
+        upgradeRequests.add(reqModel);
+        isUpgradeModalOpen = false;
+      },
+      remote: () => _supabase.from('upgrade_requests').insert(newReq),
+      rollback: () {
+        upgradeRequests.removeWhere((r) => r.id == reqModel.id);
+      },
+      errorMsg: 'Gửi yêu cầu nâng cấp thất bại, đã hoàn tác',
+    );
   }
 
   Future<void> approveUpgrade(String requestId) async {
@@ -1117,11 +1285,14 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> rejectUpgrade(String requestId) async {
-    await _supabase.from('upgrade_requests').delete().eq('id', requestId);
-    upgradeRequests.removeWhere((r) => r.id == requestId);
-    showToast('Đã từ chối yêu cầu nâng cấp', 'error');
-    notifyListeners();
+  void rejectUpgrade(String requestId) {
+    final oldRequests = List<UpgradeRequestModel>.from(upgradeRequests);
+    _optimistic(
+      apply: () { upgradeRequests.removeWhere((r) => r.id == requestId); },
+      remote: () => _supabase.from('upgrade_requests').delete().eq('id', requestId),
+      rollback: () { upgradeRequests = oldRequests; },
+      errorMsg: 'Từ chối yêu cầu thất bại, đã hoàn tác',
+    );
   }
 
   // ── Realtime ────────────────────────────────────────────
@@ -1148,11 +1319,31 @@ class AppStore extends ChangeNotifier {
             notifyListeners();
           }
         } else if (payload.eventType == PostgresChangeEvent.update) {
-          final updated = OrderModel.fromMap(payload.newRecord);
-          orders = orders
-              .map((o) => o.id == updated.id ? updated : o)
-              .toList();
-          notifyListeners();
+          final rec = payload.newRecord;
+          final id = rec['id']?.toString() ?? '';
+          final idx = orders.indexWhere((o) => o.id == id);
+          if (idx != -1) {
+            final existing = orders[idx];
+            // Merge: use new values if present, keep existing otherwise
+            // Supabase Realtime may not include JSONB columns like 'items'
+            final updatedItems = rec['items'] != null
+                ? (rec['items'] as List<dynamic>)
+                    .map((e) => OrderItemModel.fromMap(e as Map<String, dynamic>))
+                    .toList()
+                : existing.items;
+            orders[idx] = existing.copyWith(
+              status: rec['status'] ?? existing.status,
+              paymentStatus: rec['payment_status'] ?? existing.paymentStatus,
+              paymentMethod: (rec['payment_method'] != null && (rec['payment_method'] as String).isNotEmpty)
+                  ? rec['payment_method'] as String
+                  : existing.paymentMethod,
+              totalAmount: rec['total_amount'] != null
+                  ? (rec['total_amount'] as num).toDouble()
+                  : null,
+              items: updatedItems,
+            );
+            notifyListeners();
+          }
         } else if (payload.eventType == PostgresChangeEvent.delete) {
           orders.removeWhere((o) => o.id == payload.oldRecord['id']);
           notifyListeners();
@@ -1175,9 +1366,9 @@ class AppStore extends ChangeNotifier {
       callback: (payload) {
         if (payload.eventType == PostgresChangeEvent.insert) {
           final p = ProductModel.fromMap(payload.newRecord);
-          products.putIfAbsent(p.storeId, () => []);
-          if (!products[p.storeId]!.any((x) => x.id == p.id)) {
-            products[p.storeId]!.insert(0, p);
+          final existing = products[p.storeId] ?? [];
+          if (!existing.any((x) => x.id == p.id)) {
+            products[p.storeId] = [p, ...existing];
             notifyListeners();
           }
         } else if (payload.eventType == PostgresChangeEvent.update) {
@@ -1190,7 +1381,9 @@ class AppStore extends ChangeNotifier {
           final sid = payload.oldRecord['store_id'] as String?;
           final pid = payload.oldRecord['id'];
           if (sid != null) {
-            products[sid]?.removeWhere((x) => x.id == pid);
+            products[sid] = (products[sid] ?? [])
+                .where((x) => x.id != pid)
+                .toList();
             notifyListeners();
           }
         }
@@ -1230,6 +1423,132 @@ class AppStore extends ChangeNotifier {
         },
       ).subscribe();
     }
+
+    // Thu Chi Transactions realtime
+    _thuChiChannel = _supabase.channel('thu-chi-changes').onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'thu_chi_transactions',
+      filter: storeId != null
+          ? PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'store_id',
+              value: storeId,
+            )
+          : null,
+      callback: (payload) {
+        if (payload.eventType == PostgresChangeEvent.insert) {
+          final t = ThuChiTransaction.fromMap(payload.newRecord);
+          if (!thuChiTransactions.any((x) => x.id == t.id)) {
+            thuChiTransactions = [t, ...thuChiTransactions];
+            notifyListeners();
+          }
+        } else if (payload.eventType == PostgresChangeEvent.update) {
+          final t = ThuChiTransaction.fromMap(payload.newRecord);
+          thuChiTransactions = thuChiTransactions
+              .map((x) => x.id == t.id ? t : x)
+              .toList();
+          notifyListeners();
+        } else if (payload.eventType == PostgresChangeEvent.delete) {
+          thuChiTransactions = thuChiTransactions
+              .where((x) => x.id != payload.oldRecord['id'])
+              .toList();
+          notifyListeners();
+        }
+      },
+    ).subscribe();
+
+    // Categories realtime
+    _categoriesChannel = _supabase.channel('categories-changes').onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'categories',
+      filter: storeId != null
+          ? PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'store_id',
+              value: storeId,
+            )
+          : null,
+      callback: (payload) {
+        if (payload.eventType == PostgresChangeEvent.insert) {
+          final c = CategoryModel.fromMap(payload.newRecord);
+          final existing = categories[c.storeId] ?? [];
+          if (!existing.any((x) => x.id == c.id)) {
+            categories[c.storeId] = [...existing, c];
+            notifyListeners();
+          }
+        } else if (payload.eventType == PostgresChangeEvent.update) {
+          final c = CategoryModel.fromMap(payload.newRecord);
+          categories[c.storeId] = (categories[c.storeId] ?? [])
+              .map((x) => x.id == c.id ? c : x)
+              .toList();
+          notifyListeners();
+        } else if (payload.eventType == PostgresChangeEvent.delete) {
+          final sid = payload.oldRecord['store_id'] as String?;
+          final cid = payload.oldRecord['id'];
+          if (sid != null) {
+            categories[sid] = (categories[sid] ?? [])
+                .where((x) => x.id != cid)
+                .toList();
+            notifyListeners();
+          }
+        }
+      },
+    ).subscribe();
+
+    // Users realtime (admin sees staff changes)
+    _usersChannel = _supabase.channel('users-changes').onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'users',
+      callback: (payload) {
+        if (payload.eventType == PostgresChangeEvent.insert) {
+          final u = UserModel.fromMap(payload.newRecord);
+          if (!users.any((x) => x.username == u.username)) {
+            users.add(u);
+            notifyListeners();
+          }
+        } else if (payload.eventType == PostgresChangeEvent.update) {
+          final u = UserModel.fromMap(payload.newRecord);
+          users = users
+              .map((x) => x.username == u.username ? u : x)
+              .toList();
+          // Also update currentUser if it's the same user
+          if (currentUser?.username == u.username) {
+            currentUser = u;
+          }
+          notifyListeners();
+        } else if (payload.eventType == PostgresChangeEvent.delete) {
+          users.removeWhere(
+              (x) => x.username == payload.oldRecord['username']);
+          notifyListeners();
+        }
+      },
+    ).subscribe();
+
+    // Store info realtime
+    _storeInfoChannel = _supabase.channel('store-info-changes').onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'store_infos',
+      callback: (payload) {
+        if (payload.eventType == PostgresChangeEvent.insert ||
+            payload.eventType == PostgresChangeEvent.update) {
+          final sid = payload.newRecord['store_id'] as String?;
+          if (sid != null) {
+            storeInfos[sid] = StoreInfoModel.fromMap(payload.newRecord);
+            notifyListeners();
+          }
+        } else if (payload.eventType == PostgresChangeEvent.delete) {
+          final sid = payload.oldRecord['store_id'] as String?;
+          if (sid != null) {
+            storeInfos.remove(sid);
+            notifyListeners();
+          }
+        }
+      },
+    ).subscribe();
   }
 
   void _removeRealtimeChannels() {
@@ -1237,13 +1556,21 @@ class AppStore extends ChangeNotifier {
     if (_productsChannel != null) _supabase.removeChannel(_productsChannel!);
     if (_notiChannel != null) _supabase.removeChannel(_notiChannel!);
     if (_upgradeChannel != null) _supabase.removeChannel(_upgradeChannel!);
+    if (_thuChiChannel != null) _supabase.removeChannel(_thuChiChannel!);
+    if (_categoriesChannel != null) _supabase.removeChannel(_categoriesChannel!);
+    if (_usersChannel != null) _supabase.removeChannel(_usersChannel!);
+    if (_storeInfoChannel != null) _supabase.removeChannel(_storeInfoChannel!);
     _ordersChannel = null;
     _productsChannel = null;
     _notiChannel = null;
     _upgradeChannel = null;
+    _thuChiChannel = null;
+    _categoriesChannel = null;
+    _usersChannel = null;
+    _storeInfoChannel = null;
   }
 
-  // ── Kitchen Badges (cached) ─────────────────────────────
+  // ── Processing Badges (cached) ─────────────────────────────
   List<String> get storeUsernames {
     if (_cachedStoreUsernames != null) return _cachedStoreUsernames!;
     if (currentUser == null) return const [];
@@ -1279,10 +1606,10 @@ class AppStore extends ChangeNotifier {
     return _cachedStoreOrders!;
   }
 
-  int get pendingKitchen =>
+  int get pendingProcessing =>
       visibleOrders.where((o) => o.status == 'pending').length;
 
-  int get cookingKitchen =>
+  int get cookingProcessing =>
       visibleOrders.where((o) => o.status == 'cooking').length;
 
   int get unpaidTables =>

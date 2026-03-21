@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import '../../store/app_store.dart';
 import '../../utils/constants.dart';
 import '../../utils/format.dart';
@@ -20,26 +21,31 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    return Selector<AppStore, List<OrderModel>>(
+      selector: (_, s) => s.visibleOrders,
+      builder: (context, allOrders, _) {
     final store = context.watch<AppStore>();
-    final allOrders = store.visibleOrders;
+    final isLoading = store.isLoading;
     final completedPaidOrders =
-        allOrders.where((o) => o.status == 'completed' && o.paymentStatus == 'paid').toList();
+        allOrders.where((o) => o.paymentStatus == 'paid' || o.status == 'completed').toList();
     final filteredOrders = _filterByTime(completedPaidOrders);
     final cancelledOrders =
         _filterByTime(allOrders.where((o) => o.status == 'cancelled').toList());
 
     final totalRevenue =
-        filteredOrders.fold(0.0, (acc, o) => acc + o.totalAmount);
+        filteredOrders.fold(0.0, (acc, o) => acc + o.calculatedTotal);
     final totalOrders = filteredOrders.length;
     final totalCancelled = cancelledOrders.length;
     final cashRevenue =
-        filteredOrders.where((o) => o.paymentMethod == 'cash').fold(0.0, (acc, o) => acc + o.totalAmount);
+        filteredOrders.where((o) => o.paymentMethod == 'cash').fold(0.0, (acc, o) => acc + o.calculatedTotal);
     final transferRevenue =
-        filteredOrders.where((o) => o.paymentMethod == 'transfer').fold(0.0, (acc, o) => acc + o.totalAmount);
+        filteredOrders.where((o) => o.paymentMethod == 'transfer').fold(0.0, (acc, o) => acc + o.calculatedTotal);
     final bestSellers = _getBestSellers(filteredOrders);
     final hourlyData = _getHourlyData(filteredOrders);
 
-    return Container(
+    return Skeletonizer(
+      enabled: isLoading,
+      child: Container(
       color: const Color(0xFFFAFBFC),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -82,7 +88,10 @@ class _DashboardPageState extends State<DashboardPage> {
                 const SizedBox(height: 20),
 
                 // ── Date Picker ──────────────────
-                _buildDatePicker(),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: _buildDatePicker(),
+                ),
 
                 const SizedBox(height: 20),
 
@@ -107,93 +116,54 @@ class _DashboardPageState extends State<DashboardPage> {
                     ],
                   )
                 else ...[
-                  // Primary stat card — Doanh thu
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.slate100),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Color(0xFF10B981), Color(0xFF059669)],
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.emerald500.withValues(alpha: 0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(Icons.trending_up_rounded, color: Colors.white, size: 26),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Doanh thu',
-                                style: TextStyle(color: AppColors.slate500,
-                                    fontWeight: FontWeight.w500, fontSize: 13)),
-                              const SizedBox(height: 4),
-                              Text(formatCurrency(totalRevenue),
-                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800,
-                                    color: AppColors.slate800, letterSpacing: -0.5)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  // 3 small stat metrics in a row
+                  // ── 2×2 Stats Grid ──
                   Row(
                     children: [
-                      Expanded(child: _MiniStat(
-                        icon: Icons.receipt_long_rounded,
-                        label: 'Số đơn',
-                        value: '$totalOrders',
-                        color: AppColors.blue500,
-                      )),
-                      const SizedBox(width: 10),
-                      Expanded(child: _MiniStat(
-                        icon: Icons.payments_rounded,
-                        label: 'Tiền mặt',
-                        value: _formatShortCurrency(cashRevenue),
-                        color: AppColors.amber500,
-                      )),
-                      const SizedBox(width: 10),
-                      Expanded(child: _MiniStat(
-                        icon: Icons.account_balance_rounded,
-                        label: 'CK',
-                        value: _formatShortCurrency(transferRevenue),
-                        color: const Color(0xFF8B5CF6),
-                      )),
-                      const SizedBox(width: 10),
-                      Expanded(child: _MiniStat(
-                        icon: Icons.cancel_outlined,
-                        label: 'Đơn hủy',
-                        value: '$totalCancelled',
-                        color: AppColors.red500,
-                      )),
+                      // Column 1: Cash + Total Orders
+                      Expanded(
+                        child: Column(
+                          children: [
+                            _MobileMiniCard(
+                              icon: Icons.payments_rounded,
+                              label: 'Tiền mặt',
+                              value: formatCurrency(cashRevenue),
+                              gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+                            ),
+                            const SizedBox(height: 12),
+                            _MobileMiniCard(
+                              icon: Icons.receipt_long_rounded,
+                              label: 'Tổng đơn',
+                              value: '$totalOrders',
+                              gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                              subtitle: totalCancelled > 0 ? 'Đơn hủy: $totalCancelled' : null,
+                              subtitleColor: const Color(0xFFEF4444),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Column 2: Transfer + Average/Order
+                      Expanded(
+                        child: Column(
+                          children: [
+                            _MobileMiniCard(
+                              icon: Icons.account_balance_rounded,
+                              label: 'Chuyển khoản',
+                              value: formatCurrency(transferRevenue),
+                              gradient: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                            ),
+                            const SizedBox(height: 12),
+                            _MobileMiniCard(
+                              icon: Icons.analytics_rounded,
+                              label: 'TB/đơn',
+                              value: totalOrders > 0
+                                  ? _formatShortCurrency(totalRevenue / totalOrders)
+                                  : '0',
+                              gradient: const [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -235,6 +205,9 @@ class _DashboardPageState extends State<DashboardPage> {
           },
         ),
       ),
+    ),
+    );
+      },
     );
   }
 
@@ -322,7 +295,7 @@ class _DashboardPageState extends State<DashboardPage> {
     }
     final list = map.values.toList();
     list.sort((a, b) => b.sold.compareTo(a.sold));
-    return list.take(5).toList();
+    return list;
   }
 
   List<_HourSlot> _getHourlyData(List<OrderModel> orders) {
@@ -364,7 +337,7 @@ class _DashboardPageState extends State<DashboardPage> {
       } else {
         idx = 8;
       }
-      slots[idx] = _HourSlot(label: slots[idx].label, total: slots[idx].total + o.totalAmount);
+      slots[idx] = _HourSlot(label: slots[idx].label, total: slots[idx].total + o.calculatedTotal);
     }
     return slots;
   }
@@ -391,7 +364,7 @@ class _DashboardPageState extends State<DashboardPage> {
         if (dt == null) continue;
         if (dt.isAfter(dayStart.subtract(const Duration(seconds: 1))) &&
             dt.isBefore(dayEnd)) {
-          total += o.totalAmount;
+          total += o.calculatedTotal;
         }
       }
       final weekday = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
@@ -902,7 +875,7 @@ class _BestSellersCard extends StatelessWidget {
             if (items.length > 4)
               Center(
                 child: TextButton.icon(
-                  onPressed: () {},
+                  onPressed: () => _showAllBestSellersDialog(context, items),
                   icon: const Text('Xem thêm',
                       style: TextStyle(
                           color: AppColors.emerald600,
@@ -925,6 +898,132 @@ class _BestSellersCard extends StatelessWidget {
       return '${(amount / 1000).toStringAsFixed(0)}K';
     }
     return '${amount.toInt()}';
+  }
+
+  static void _showAllBestSellersDialog(BuildContext context, List<_BestSellerItem> items) {
+    final barColors = [
+      [const Color(0xFF10B981), const Color(0xFF059669)],
+      [const Color(0xFF3B82F6), const Color(0xFF2563EB)],
+      [const Color(0xFFF59E0B), const Color(0xFFD97706)],
+      [const Color(0xFF8B5CF6), const Color(0xFF7C3AED)],
+      [const Color(0xFFEC4899), const Color(0xFFDB2777)],
+    ];
+    final maxSold = items.isNotEmpty ? items.first.sold : 1;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: 480,
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.75,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 20, 12, 0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.local_fire_department_rounded,
+                        size: 22, color: Color(0xFFF59E0B)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Xếp hạng sản phẩm bán chạy',
+                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700,
+                                  color: AppColors.slate800)),
+                          const SizedBox(height: 2),
+                          Text('Tổng ${items.length} sản phẩm',
+                              style: const TextStyle(fontSize: 13, color: AppColors.slate400)),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(dialogCtx, rootNavigator: true).pop(),
+                      icon: const Icon(Icons.close_rounded, color: AppColors.slate400),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              // List
+              Flexible(
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  itemBuilder: (_, i) {
+                    final item = items[i];
+                    final fraction = maxSold > 0 ? item.sold / maxSold : 0.0;
+                    final colors = barColors[i % barColors.length];
+                    return Column(
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: i < 3
+                                    ? colors[0].withValues(alpha: 0.12)
+                                    : AppColors.slate50,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text('${i + 1}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 13,
+                                    color: i < 3 ? colors[0] : AppColors.slate500,
+                                  )),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(item.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: AppColors.slate800,
+                                  ),
+                                  overflow: TextOverflow.ellipsis),
+                            ),
+                            Text('${item.sold} phần',
+                                style: const TextStyle(fontSize: 12, color: AppColors.slate500)),
+                            const SizedBox(width: 8),
+                            Text(_formatShortRevenue(item.revenue),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                  color: colors[0],
+                                )),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: fraction,
+                            minHeight: 5,
+                            backgroundColor: AppColors.slate100,
+                            valueColor: AlwaysStoppedAnimation<Color>(colors[0]),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -981,6 +1080,62 @@ class _MiniStat extends StatelessWidget {
           const SizedBox(height: 2),
           Text(label,
             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.slate500)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Mobile Mini Card (for 2x2 grid) ───────────────
+class _MobileMiniCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final List<Color> gradient;
+  final String? subtitle;
+  final Color? subtitleColor;
+  const _MobileMiniCard({required this.icon, required this.label, required this.value, required this.gradient, this.subtitle, this.subtitleColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.slate100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: gradient,
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: Colors.white, size: 22),
+          ),
+          const SizedBox(height: 10),
+          Text(label,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
+                color: AppColors.slate500)),
+          const SizedBox(height: 4),
+          Text(value,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800,
+                color: AppColors.slate800, letterSpacing: -0.5)),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(subtitle!,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+                  color: subtitleColor ?? AppColors.slate400)),
+          ],
         ],
       ),
     );
@@ -1098,9 +1253,11 @@ class _StaffRankingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // Aggregate staff data from orders
     final Map<String, int> staffOrders = {};
+    final Map<String, double> staffRevenue = {};
     for (final o in orders) {
       final name = o.createdBy.isEmpty ? 'Nhân viên' : o.createdBy;
       staffOrders[name] = (staffOrders[name] ?? 0) + 1;
+      staffRevenue[name] = (staffRevenue[name] ?? 0) + o.calculatedTotal;
     }
     final sorted = staffOrders.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -1155,6 +1312,7 @@ class _StaffRankingCard extends StatelessWidget {
           else
             ...List.generate(topStaff.length, (i) {
               final entry = topStaff[i];
+              final revenue = staffRevenue[entry.key] ?? 0;
               final rankBgColors = [
                 const Color(0xFFFEF3C7), // gold
                 const Color(0xFFF1F5F9), // slate
@@ -1234,14 +1392,28 @@ class _StaffRankingCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    // Orders count
-                    Text(
-                      '${entry.value} đơn',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.slate400,
-                      ),
+                    // Revenue + Orders count
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          _formatShortRevenue(revenue),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.slate700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${entry.value} đơn',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.slate400,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1251,4 +1423,14 @@ class _StaffRankingCard extends StatelessWidget {
       ),
     );
   }
+
+  static String _formatShortRevenue(double amount) {
+    if (amount >= 1000000) {
+      return '${(amount / 1000000).toStringAsFixed(1)}M';
+    } else if (amount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(0)}K';
+    }
+    return '${amount.toInt()}đ';
+  }
 }
+

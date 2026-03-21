@@ -35,7 +35,7 @@ void showPaymentConfirmation(
             child: GestureDetector(
               onTap: () => Navigator.pop(ctx),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
                 child: Container(
                   color: const Color(0x66000000),
                 ),

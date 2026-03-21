@@ -20,15 +20,15 @@ class _NhapThuPageState extends State<NhapThuPage> {
   DateTime _selectedDate = DateTime.now();
 
   final List<_Cat> _categories = [
-    _Cat(icon: Icons.restaurant_rounded, label: 'Nguyên liệu', color: AppColors.emerald500),
-    _Cat(icon: Icons.build_rounded, label: 'Biên mức', color: AppColors.blue500),
-    _Cat(icon: Icons.alarm_rounded, label: 'Tiền thiết', color: AppColors.amber500),
-    _Cat(icon: Icons.local_shipping_rounded, label: 'Vận chuyển', color: AppColors.violet500),
-    _Cat(icon: Icons.handyman_rounded, label: 'Sửa chữa', color: AppColors.orange500),
-    _Cat(icon: Icons.people_rounded, label: 'Lương NV', color: AppColors.red500),
-    _Cat(icon: Icons.campaign_rounded, label: 'Marketing', color: const Color(0xFF9333EA)),
-    _Cat(icon: Icons.more_horiz_rounded, label: 'Khác', color: AppColors.slate500),
-    _Cat(icon: Icons.add_rounded, label: 'Thêm mới', color: AppColors.slate400),
+    _Cat(emoji: '🍽️', label: 'Nguyên liệu', color: AppColors.emerald500),
+    _Cat(emoji: '🔧', label: 'Biên mức', color: AppColors.blue500),
+    _Cat(emoji: '⏰', label: 'Tiền thiết', color: AppColors.amber500),
+    _Cat(emoji: '🚚', label: 'Vận chuyển', color: AppColors.violet500),
+    _Cat(emoji: '🛠', label: 'Sửa chữa', color: AppColors.orange500),
+    _Cat(emoji: '👥', label: 'Lương NV', color: AppColors.red500),
+    _Cat(emoji: '📢', label: 'Marketing', color: const Color(0xFF9333EA)),
+    _Cat(emoji: '📦', label: 'Khác', color: AppColors.slate500),
+    _Cat(emoji: '➕', label: 'Thêm mới', color: AppColors.slate400),
   ];
 
   @override
@@ -361,9 +361,11 @@ class _NhapThuPageState extends State<NhapThuPage> {
                           blurRadius: 12, offset: const Offset(0, 4))]
                       : null,
                 ),
-                child: Icon(cat.icon,
-                  color: isSelected ? Colors.white : isAdd ? AppColors.slate500 : cat.color,
-                  size: isSelected ? 24 : 20),
+                child: Center(
+                  child: Text(cat.emoji,
+                    style: TextStyle(fontSize: isSelected ? 24 : 20),
+                  ),
+                ),
               ),
               const SizedBox(height: 6),
               Text(cat.label,
@@ -388,10 +390,10 @@ class _NhapThuPageState extends State<NhapThuPage> {
     showAddCategoryDialog(
       context: context,
       type: 'thu',
-      onSave: (name, icon, color) {
+      onSave: (name, emoji, color) {
         setState(() {
           _categories.insert(_categories.length - 1,
-              _Cat(icon: icon, label: name, color: color));
+              _Cat(emoji: emoji, label: name, color: color));
           _selectedCategory = _categories.length - 2;
         });
       },
@@ -408,7 +410,7 @@ class _NhapThuPageState extends State<NhapThuPage> {
       return;
     }
     final store = context.read<AppStore>();
-    await store.addThuChiTransaction(
+    store.addThuChiTransaction(
       type: 'thu',
       amount: amount,
       category: _categories[_selectedCategory].label,
@@ -441,17 +443,17 @@ class _ThousandSeparatorFormatter extends TextInputFormatter {
 }
 
 class _Cat {
-  final IconData icon;
+  final String emoji;
   final String label;
   final Color color;
-  const _Cat({required this.icon, required this.label, required this.color});
+  const _Cat({required this.emoji, required this.label, required this.color});
 }
 
 /// ── Shared Add Category Dialog ─────────────────────────
 Future<void> showAddCategoryDialog({
   required BuildContext context,
   required String type, // 'thu' or 'chi'
-  required void Function(String name, IconData icon, Color color) onSave,
+  required void Function(String name, String emoji, Color color) onSave,
 }) {
   final typeLabel = type == 'thu' ? 'thu' : 'chi';
   return showAnimatedDialog(
@@ -465,7 +467,7 @@ Future<void> showAddCategoryDialog({
 
 class _AddCategoryDialogContent extends StatefulWidget {
   final String typeLabel;
-  final void Function(String name, IconData icon, Color color) onSave;
+  final void Function(String name, String emoji, Color color) onSave;
   const _AddCategoryDialogContent({required this.typeLabel, required this.onSave});
 
   @override
@@ -474,16 +476,116 @@ class _AddCategoryDialogContent extends StatefulWidget {
 
 class _AddCategoryDialogContentState extends State<_AddCategoryDialogContent> {
   final _nameCtrl = TextEditingController();
-  int _selectedIconIdx = 0;
+  int _selectedEmojiIdx = 0;
   int _selectedColorIdx = 0;
 
-  static const _icons = [
-    Icons.restaurant_rounded,
-    Icons.local_cafe_rounded,
-    Icons.shopping_bag_rounded,
-    Icons.build_rounded,
-    Icons.local_shipping_rounded,
-    Icons.people_rounded,
+  static const _emojis = [
+    // Hearts & Hands
+    '🔥','💛','💚','💙','💜','🖤','💔','❣','💕','💞',
+    '💓','💗','💖','💘','💝','💟','👏','🙏','🤝','👍',
+    '👎','👊','✊','🤛','🤜','🤞','✌','🤘','👌','👈',
+    '👉','👆','👇','☝','✋','🤚','🖐','🖖','👋','🤙',
+    '💪','🖕','✍','🤳','💅','💍','💄','💋','👄','👅',
+    // People
+    '👂','👃','👣','👁','👀','🗣','👤','👥','👶','👦',
+    '👧','👨','👩','👱','👴','👵','👲','👳','👮','👷',
+    '💂','🕵','🤶','🎅','👸','🤴','👰','🤵','👼','🤰',
+    '🙇','💁','🙅','🙆','🙋','🙎','🙍','💇','💆','🕴',
+    '💃','🕺','👯','🚶','🏃','👫','👭','👬','💑','👪',
+    // Clothing
+    '👚','👕','👖','👔','👗','👙','👘','👠','👡','👢',
+    '👞','👟','👒','🎩','🎓','👑','⛑','🎒','👝','👛',
+    '👜','💼','👓','🕶','🌂','☂',
+    // Tech & Tools
+    '⌚','📱','📲','💻','⌨','🖥','🖨','🖱','🖲','🕹',
+    '🗜','💽','💾','💿','📀','📼','📷','📸','📹','🎥',
+    '📽','🎞','📞','☎','📟','📠','📺','📻','🎙','🎚',
+    '🎛','⏱','⏲','⏰','🕰','⌛','⏳','📡','🔋','🔌',
+    '💡','🔦','🕯','🗑','🛢','💸','💵','💴','💶','💷',
+    '💰','💳','💎','⚖','🔧','🔨','⚒','🛠','⛏','🔩',
+    '🧱','⚙','⛓','🔫','💣','🔪','🗡','⚔','🛡','🚬',
+    // Misc objects
+    '🏺','🔮','📿','💈','⚗','🔭','🔬','🕳','💊','💉',
+    '🌡','🚽','🚰','🚿','🛁','🛀','🛎','🔑','🗝','🚪',
+    '🛋','🛏','🛌','🖼','🛍','🛒','🎁','🎈','🎏','🎀',
+    '🎊','🎉','🎎','🏮','🎐',
+    // Mail & Office
+    '✉','📩','📨','📧','💌','📥','📤','📦','🏷','📪',
+    '📫','📬','📭','📮','📯','📜','📃','📄','📑','📊',
+    '📈','📉','🗒','🗓','📆','📅','📇','🗃','🗳','🗄',
+    '📋','📁','📂','🗂','🗞','📰','📓','📔','📒','📕',
+    '📗','📘','📙','📚','📖','🔖','🔗','📎','🖇','📐',
+    '📏','📌','📍','✂','🖊','🖋','✒','🖌','🖍','📝',
+    '✏','🔍','🔎','🔏','🔐','🔒','🔓',
+    // Animals
+    '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯',
+    '🦁','🐮','🐷','🐽','🐸','🐵','🙊','🙉','🐒','🐔',
+    '🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🦇','🐺',
+    '🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐚','🐞','🐜',
+    '🕷','🕸','🐢','🐍','🦎','🦂','🦀','🦑','🐙','🦐',
+    '🐠','🐟','🐡','🐬','🦈','🐳','🐋','🐊','🐆','🐅',
+    '🐃','🐂','🐄','🦌','🐪','🐫','🐘','🦏','🦍','🐎',
+    '🐖','🐐','🐏','🐑','🐕','🐩','🐈','🐓','🦃','🕊',
+    '🐇','🐁','🐀','🐿','🐾','🐉','🐲',
+    // Nature
+    '🌵','🎄','🌲','🌳','🌴','🌱','🌿','☘','🍀','🎍',
+    '🎋','🍃','🍂','🍁','🍄','🌾','💐','🌷','🌹','🥀',
+    '🌻','🌼','🌸','🌺','🌎','🌍','🌏','🌕','🌑','🌙',
+    '💫','⭐','🌟','✨','⚡','🔥','💥','☄','☀','🌤',
+    '⛅','🌈','☁','🌊','💧','💦','☔',
+    // Food & Drink
+    '🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🍈',
+    '🍒','🍑','🍍','🥝','🥑','🍅','🍆','🥒','🥕','🌽',
+    '🌶','🥔','🍠','🌰','🥜','🍯','🥐','🍞','🥖','🧀',
+    '🥚','🍳','🥓','🥞','🍤','🍗','🍖','🍕','🌭','🍔',
+    '🍟','🥙','🌮','🌯','🥗','🥘','🍝','🍜','🍲','🍥',
+    '🍣','🍱','🍛','🍚','🍙','🍘','🍢','🍡','🍧','🍨',
+    '🍦','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪',
+    '🥛','🍼','☕','🍵','🍶','🍺','🍻','🥂','🍷','🥃',
+    '🍸','🍹','🍾','🥄','🍴','🍽',
+    // Sports & Activities
+    '⚽','🏀','🏈','⚾','🎾','🏐','🏉','🎱','🏓','🏸',
+    '🥅','🏒','🏑','🏏','⛳','🏹','🎣','🥊','🥋','⛸',
+    '🎿','⛷','🏂','🏋','🤺','🏌','🏄','🏊','🤽','🚣',
+    '🏇','🚴','🚵','🎽','🏅','🎖','🥇','🥈','🥉','🏆',
+    '🏵','🎗','🎫','🎟','🎪','🎭','🎨','🎬','🎤','🎧',
+    '🎼','🎹','🥁','🎷','🎺','🎸','🎻','🎲','🎯','🎳',
+    '🎮','🎰',
+    // Transport & Places
+    '🚗','🚕','🚙','🚌','🚎','🏎','🚓','🚑','🚒','🚐',
+    '🚚','🚛','🚜','🛴','🚲','🛵','🏍','🚨','🚔','🚍',
+    '🚘','🚖','🚡','🚠','🚟','🚃','🚋','🚞','🚝','🚄',
+    '🚅','🚈','🚂','🚆','🚇','🚊','🚉','🚁','🛩','✈',
+    '🛫','🛬','🚀','🛰','💺','🛶','⛵','🛥','🚤','🛳',
+    '⛴','🚢','⚓','🚧','⛽','🚏','🚦','🚥','🗺','🗿',
+    '🗽','⛲','🗼','🏰','🏯','🏟','🎡','🎢','🎠','⛱',
+    '🏖','🏝','⛰','🏔','🗻','🌋','🏜','🏕','⛺','🛤',
+    '🛣','🏗','🏭','🏠','🏡','🏘','🏚','🏢','🏬','🏣',
+    '🏤','🏥','🏦','🏨','🏪','🏫','🏩','💒','🏛','⛪',
+    '🕌','🕍','🕋','⛩','🗾','🎑','🏞','🌅','🌄','🌠',
+    '🎇','🎆','🌇','🌆','🏙','🌃','🌌','🌉','🌁',
+    // Symbols & Signs
+    '☮','✝','☪','🕉','☸','✡','🔯','🕎','☯','☦',
+    '🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏',
+    '♐','♑','♒','♓','🆔','⚛','☢','☣','🆚','💮',
+    '🅰','🅱','🆎','🆑','🅾','🆘','❌','⭕','🛑','⛔',
+    '📛','🚫','💯','💢','♨','🚷','🚯','🚳','🚱','🔞',
+    '📵','🚭','❗','❕','❓','❔','🔅','🔆','〽','⚠',
+    '🚸','🔱','⚜','🔰','♻','✅','💹','❇','✳','❎',
+    '🌐','💠','🌀','💤','🏧','🚾','♿','🅿','🈳','🛂',
+    '🛃','🛄','🛅','🚹','🚺','🚼','🚻','🚮','🎦','📶',
+    '🔣','ℹ','🔤','🔡','🔠','🆖','🆗','🆙','🆒','🆕',
+    '🆓','🔢','▶','⏸','⏯','⏹','⏺','⏭','⏮','⏩',
+    '⏪','⏫','⏬','◀','🔼','🔽','➡','⬅','⬆','⬇',
+    '↗','↘','↙','↖','↕','↔','↪','↩','⤴','⤵',
+    '🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗',
+    '✖','💲','💱','™','©','®','〰','➰','➿','🔚',
+    '🔙','🔛','🔝','✔','☑','⚫','🔴','🔵','🔺','🔻',
+    '🔸','🔹','🔶','🔷','🔈','🔇','🔊','🔔','🔕','📣',
+    '📢','💬','💭','🗯','♠','♣','♥','♦','🃏','🎴',
+    '🀄',
+    // Flags
+    '🏳','🏴','🏁','🚩','🏳',
   ];
 
   static const _colors = [
@@ -508,7 +610,7 @@ class _AddCategoryDialogContentState extends State<_AddCategoryDialogContent> {
     return Material(
       color: Colors.transparent,
       child: Container(
-        width: 300,
+        width: 400,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -564,32 +666,48 @@ class _AddCategoryDialogContentState extends State<_AddCategoryDialogContent> {
             ),
             const SizedBox(height: 16),
 
-            // Icon picker
+            // Emoji picker
             const Text('Chọn biểu tượng',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
                     color: AppColors.slate600)),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: List.generate(_icons.length, (i) {
-                final isSelected = i == _selectedIconIdx;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedIconIdx = i),
-                  child: Container(
-                    width: 38, height: 38,
-                    decoration: BoxDecoration(
-                      color: isSelected ? _colors[_selectedColorIdx].withValues(alpha: 0.15) : AppColors.slate50,
-                      shape: BoxShape.circle,
-                      border: isSelected
-                          ? Border.all(color: _colors[_selectedColorIdx], width: 2)
-                          : Border.all(color: AppColors.slate200),
+            Container(
+              height: 200,
+              decoration: BoxDecoration(
+                color: AppColors.slate50,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.slate200),
+              ),
+              child: GridView.builder(
+                padding: const EdgeInsets.all(8),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 10,
+                  mainAxisSpacing: 4,
+                  crossAxisSpacing: 4,
+                ),
+                itemCount: _emojis.length,
+                itemBuilder: (ctx, i) {
+                  final isSelected = i == _selectedEmojiIdx;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedEmojiIdx = i),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? _colors[_selectedColorIdx].withValues(alpha: 0.15)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                        border: isSelected
+                            ? Border.all(color: _colors[_selectedColorIdx], width: 2)
+                            : null,
+                      ),
+                      child: Center(
+                        child: Text(_emojis[i],
+                          style: const TextStyle(fontSize: 20)),
+                      ),
                     ),
-                    child: Icon(_icons[i], size: 18,
-                        color: isSelected ? _colors[_selectedColorIdx] : AppColors.slate400),
-                  ),
-                );
-              }),
+                  );
+                },
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -634,7 +752,7 @@ class _AddCategoryDialogContentState extends State<_AddCategoryDialogContent> {
                 onPressed: () {
                   final name = _nameCtrl.text.trim();
                   if (name.isEmpty) return;
-                  widget.onSave(name, _icons[_selectedIconIdx], _colors[_selectedColorIdx]);
+                  widget.onSave(name, _emojis[_selectedEmojiIdx], _colors[_selectedColorIdx]);
                   Navigator.pop(context);
                 },
                 icon: const Icon(Icons.save_rounded, size: 18),
@@ -657,3 +775,4 @@ class _AddCategoryDialogContentState extends State<_AddCategoryDialogContent> {
     );
   }
 }
+

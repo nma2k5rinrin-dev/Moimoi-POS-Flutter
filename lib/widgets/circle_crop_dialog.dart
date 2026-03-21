@@ -74,7 +74,7 @@ class _CircleCropDialogState extends State<_CircleCropDialog> {
       }
 
       final pngBytes = byteData.buffer.asUint8List();
-      final base64Str = convertToWebpBase64(pngBytes);
+      final base64Str = await convertToWebpBase64(pngBytes);
 
       if (mounted) Navigator.pop(context, base64Str);
     } catch (e) {

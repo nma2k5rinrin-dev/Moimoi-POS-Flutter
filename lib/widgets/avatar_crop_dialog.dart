@@ -143,7 +143,7 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
       if (byteData == null) return null;
 
       final pngBytes = byteData.buffer.asUint8List();
-      return convertToWebpBase64(pngBytes);
+      return await convertToWebpBase64(pngBytes);
     } catch (_) {
       return null;
     } finally {

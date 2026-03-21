@@ -181,7 +181,7 @@ class _IconPickerDialogState extends State<_IconPickerDialog> {
           child: GestureDetector(
             onTap: () => Navigator.pop(context),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
               child: Container(
                 color: Colors.black.withValues(alpha: 0.3),
               ),

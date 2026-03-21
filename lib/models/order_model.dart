@@ -130,4 +130,8 @@ class OrderModel {
       paymentMethod: paymentMethod ?? this.paymentMethod,
     );
   }
+
+  /// Always recalculate total from items to avoid stale values.
+  double get calculatedTotal =>
+      items.fold(0.0, (sum, i) => sum + (i.price * i.quantity));
 }

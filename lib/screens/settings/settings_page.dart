@@ -853,7 +853,7 @@ class _AccountSectionState extends State<_AccountSection> {
       case 'cashier':
         return 'Thu ngân';
       case 'kitchen':
-        return 'Bếp / Bar';
+        return 'Xử lý đơn';
       case 'staff':
         return 'Nhân viên';
       default:
@@ -1082,7 +1082,7 @@ class _AccountSectionState extends State<_AccountSection> {
             child: GestureDetector(
               onTap: () => Navigator.pop(ctx),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
                 child: Container(
                   color: Colors.black.withValues(alpha: 0.3),
                 ),
@@ -1215,7 +1215,7 @@ class _AccountSectionState extends State<_AccountSection> {
       if (!mounted) return;
 
       // Auto-resize & compress if needed (max 1024px, under 1MB)
-      final prepared = prepareImageBytes(bytes);
+      final prepared = await prepareImageBytes(bytes);
 
       // Show circle crop dialog
       final result = await showCircleCropDialog(context, imageBytes: prepared);
@@ -1898,7 +1898,7 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
     if (!mounted) return;
 
     // Auto-resize & compress if needed (max 1024px, under 1MB)
-    final prepared = prepareImageBytes(bytes);
+    final prepared = await prepareImageBytes(bytes);
 
     final base64 = await showSquareCropDialog(
       context,
@@ -1939,7 +1939,7 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
     if (!mounted) return;
 
     // Auto-resize & compress if needed (max 1024px, under 1MB)
-    final prepared = prepareImageBytes(bytes);
+    final prepared = await prepareImageBytes(bytes);
 
     // Show square crop dialog to let user adjust/resize
     final base64 = await showSquareCropDialog(
@@ -2381,7 +2381,7 @@ class _TablesSectionState extends State<_TablesSection> {
         child: Container(
           color: Colors.black.withValues(alpha: 0.4),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+            filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
             child: GestureDetector(
             onTap: () {}, // prevent close on panel tap
             child: Center(
@@ -2672,18 +2672,14 @@ class _TablesSectionState extends State<_TablesSection> {
     }
     final fullName = area.isNotEmpty ? '$area::$name' : name;
 
-    try {
-      if (_editingTable != null) {
-        await store.updateTable(_editingTable!, fullName);
-        store.showToast('Đã cập nhật bàn "$name"');
-      } else {
-        await store.addTable(fullName);
-        store.showToast('Đã thêm bàn "$name"');
-      }
-      _closePanel();
-    } catch (e) {
-      store.showToast('Lỗi: ${e.toString()}', 'error');
+    if (_editingTable != null) {
+      store.updateTable(_editingTable!, fullName);
+      store.showToast('Đã cập nhật bàn "$name"');
+    } else {
+      store.addTable(fullName);
+      store.showToast('Đã thêm bàn "$name"');
     }
+    _closePanel();
   }
 }
 
@@ -3050,7 +3046,7 @@ class _UsersSectionState extends State<_UsersSection> {
         break;
       case 'kitchen':
         avatarBg = const Color(0xFFFEE2E2); avatarFg = const Color(0xFFDC2626);
-        roleLabel = 'Bếp / Bar'; roleBg = const Color(0xFFFEE2E2); roleFg = const Color(0xFFDC2626);
+        roleLabel = 'Xử lý đơn'; roleBg = const Color(0xFFFEE2E2); roleFg = const Color(0xFFDC2626);
         break;
       default: // staff
         avatarBg = const Color(0xFFE0E7FF); avatarFg = const Color(0xFF4F46E5);
@@ -3216,7 +3212,7 @@ class _UsersSectionState extends State<_UsersSection> {
       child: Container(
         color: Colors.black.withValues(alpha: 0.4),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+          filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
           child: GestureDetector(
             onTap: () {}, // prevent close on panel tap
             child: Center(
@@ -3287,13 +3283,13 @@ class _UsersSectionState extends State<_UsersSection> {
                                         const MapEntry('manager', 'Quản lý chi nhánh (Store Manager)'),
                                         const MapEntry('cashier', 'Thu ngân (Cashier)'),
                                         const MapEntry('staff', 'Nhân viên (Waitstaff / Server)'),
-                                        const MapEntry('kitchen', 'Bếp / Bar (Kitchen / KDS)'),
+                                        const MapEntry('kitchen', 'Xử lý đơn (Processing / KDS)'),
                                       ]
                                     : [
                                         const MapEntry('manager', 'Quản lý chi nhánh (Store Manager)'),
                                         const MapEntry('cashier', 'Thu ngân (Cashier)'),
                                         const MapEntry('staff', 'Nhân viên (Waitstaff / Server)'),
-                                        const MapEntry('kitchen', 'Bếp / Bar (Kitchen / KDS)'),
+                                        const MapEntry('kitchen', 'Xử lý đơn (Processing / KDS)'),
                                       ],
                                 (v) => updateState(() => _selectedRole = v)),
                             const SizedBox(height: 14),

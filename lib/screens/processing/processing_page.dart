@@ -9,14 +9,14 @@ import '../../utils/format.dart';
 import '../../models/order_model.dart';
 import '../../models/product_model.dart';
 
-class KitchenPage extends StatefulWidget {
-  const KitchenPage({super.key});
+class ProcessingPage extends StatefulWidget {
+  const ProcessingPage({super.key});
 
   @override
-  State<KitchenPage> createState() => _KitchenPageState();
+  State<ProcessingPage> createState() => _ProcessingPageState();
 }
 
-class _KitchenPageState extends State<KitchenPage>
+class _ProcessingPageState extends State<ProcessingPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _statusFilter = 'pending';
@@ -435,6 +435,19 @@ class _OrderCardState extends State<_OrderCard> {
                                 color: AppColors.slate800,
                               ),
                             ),
+                            if (order.status == 'pending' || order.status == 'cooking')
+                              GestureDetector(
+                                onTap: () => _showChangeTableDialog(context, order, store),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.slate100,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(Icons.swap_horiz_rounded,
+                                      size: 16, color: AppColors.slate600),
+                                ),
+                              ),
                             if (isLate)
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -521,7 +534,7 @@ class _OrderCardState extends State<_OrderCard> {
                         // Price
                         FittedBox(
                           fit: BoxFit.scaleDown,
-                          child: Text(formatCurrency(order.totalAmount),
+                          child: Text(formatCurrency(order.calculatedTotal),
                               style: const TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 18,
@@ -735,7 +748,7 @@ class _OrderCardState extends State<_OrderCard> {
                                     : AppColors.red500),
                             const SizedBox(width: 3),
                             Text(
-                                item.isDone ? 'Đã nấu xong' : 'Chưa nấu',
+                                item.isDone ? 'Đã xong' : 'Chưa xong',
                                 style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: item.isDone
@@ -891,7 +904,7 @@ class _OrderCardState extends State<_OrderCard> {
                           Icon(Icons.play_circle_outline_rounded,
                               size: 14, color: Colors.white),
                           SizedBox(width: 4),
-                          Text('Xử lý đơn hàng',
+                          Text('Xác nhận đơn hàng',
                               style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w700,
@@ -954,7 +967,7 @@ class _OrderCardState extends State<_OrderCard> {
                       Icon(Icons.add_circle_outline_rounded,
                           size: 16, color: AppColors.emerald600),
                       SizedBox(width: 6),
-                      Text('Thêm món',
+                      Text('Thêm sản phẩm',
                           style: TextStyle(
                               color: AppColors.emerald600,
                               fontWeight: FontWeight.w700,
@@ -997,6 +1010,123 @@ class _OrderCardState extends State<_OrderCard> {
     );
   }
 
+  void _showChangeTableDialog(BuildContext context, OrderModel order, AppStore store) {
+    final tables = store.currentTables;
+    if (tables.isEmpty) return;
+
+    // Group tables by area
+    final Map<String, List<String>> areaGroups = {};
+    for (final t in tables) {
+      final parts = t.split('::');
+      final area = parts.length > 1 ? parts[0] : 'Mặc định';
+      areaGroups.putIfAbsent(area, () => []);
+      areaGroups[area]!.add(t);
+    }
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 400,
+              maxHeight: MediaQuery.of(context).size.height * 0.6,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.swap_horiz_rounded, color: AppColors.emerald500),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Đổi bàn',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                      ),
+                      const Spacer(),
+                      Text(
+                        'Hiện tại: ${order.table.isNotEmpty ? order.table.replaceAll('::', ' · ') : 'Mang về'}',
+                        style: const TextStyle(fontSize: 12, color: AppColors.slate500),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.shopping_bag_outlined,
+                            color: AppColors.orange500),
+                        title: const Text('Mang về',
+                            style: TextStyle(fontWeight: FontWeight.w600)),
+                        trailing: order.table == 'Mang về' || order.table.isEmpty
+                            ? const Icon(Icons.check_circle, color: AppColors.emerald500)
+                            : null,
+                        onTap: () {
+                          Navigator.of(dialogCtx, rootNavigator: true).pop();
+                          store.updateOrderTable(order.id, 'Mang về');
+                        },
+                      ),
+                      ...areaGroups.entries.map((entry) {
+                        final areaName = entry.key;
+                        final areaTables = entry.value;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                              child: Text(
+                                areaName.toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.slate400,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            ...areaTables.map((t) {
+                              final parts = t.split('::');
+                              final tableName = parts.length > 1 ? parts.sublist(1).join('::') : t;
+                              final isCurrent = order.table == t;
+                              return ListTile(
+                                leading: Icon(
+                                    Icons.table_restaurant_outlined,
+                                    color: isCurrent ? AppColors.emerald500 : AppColors.slate500),
+                                title: Text(tableName,
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: isCurrent ? AppColors.emerald600 : AppColors.slate800)),
+                                trailing: isCurrent
+                                    ? const Icon(Icons.check_circle, color: AppColors.emerald500)
+                                    : null,
+                                onTap: () {
+                                  Navigator.of(dialogCtx, rootNavigator: true).pop();
+                                  store.updateOrderTable(order.id, t);
+                                },
+                              );
+                            }),
+                          ],
+                        );
+                      }),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _showPaymentQR(BuildContext context, OrderModel order, AppStore store) {
     final storeInfo = store.currentStoreInfo;
     showGeneralDialog(
@@ -1011,7 +1141,7 @@ class _OrderCardState extends State<_OrderCard> {
             child: GestureDetector(
               onTap: () => Navigator.pop(ctx),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
                 child: Container(color: const Color(0x66000000)),
               ),
             ),
@@ -1105,7 +1235,7 @@ class _OrderCardState extends State<_OrderCard> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            formatCurrency(order.totalAmount),
+                            formatCurrency(order.calculatedTotal),
                             style: const TextStyle(
                               fontSize: 36,
                               fontWeight: FontWeight.w800,
@@ -1128,8 +1258,7 @@ class _OrderCardState extends State<_OrderCard> {
                                 child: GestureDetector(
                                   onTap: () {
                                     Navigator.pop(ctx);
-                                    store.updateOrderPaymentStatus(order.id, 'paid', paymentMethod: 'cash');
-                                    store.updateOrderStatus(order.id, 'completed');
+                                    store.completeOrderWithPayment(order.id, 'cash');
                                   },
                                   child: Container(
                                     height: 52,
@@ -1154,8 +1283,7 @@ class _OrderCardState extends State<_OrderCard> {
                                 child: GestureDetector(
                                   onTap: () {
                                     Navigator.pop(ctx);
-                                    store.updateOrderPaymentStatus(order.id, 'paid', paymentMethod: 'transfer');
-                                    store.updateOrderStatus(order.id, 'completed');
+                                    store.completeOrderWithPayment(order.id, 'transfer');
                                   },
                                   child: Container(
                                     height: 52,
@@ -1305,6 +1433,7 @@ class _OrderCardState extends State<_OrderCard> {
     // Temp cart for new items
     final Map<String, int> tempCart = {};
     final Map<String, String> tempNotes = {};
+    String searchQuery = '';
 
     showGeneralDialog(
       context: context,
@@ -1319,7 +1448,7 @@ class _OrderCardState extends State<_OrderCard> {
               child: GestureDetector(
                 onTap: () => Navigator.pop(ctx),
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                  filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
                   child: Container(color: const Color(0x66000000)),
                 ),
               ),
@@ -1329,12 +1458,13 @@ class _OrderCardState extends State<_OrderCard> {
                 color: Colors.transparent,
                 child: StatefulBuilder(
                   builder: (ctx2, setState2) {
-                    String selectedCat = 'all';
-                    // Filter products by category
-                    final filtered = selectedCat == 'all'
+                    // Filter products by search
+                    final filtered = searchQuery.isEmpty
                         ? allProducts
                         : allProducts
-                            .where((p) => p.category == selectedCat)
+                            .where((p) => p.name
+                                .toLowerCase()
+                                .contains(searchQuery.toLowerCase()))
                             .toList();
                     // Calculate temp cart total
                     double addedTotal = 0;
@@ -1389,7 +1519,7 @@ class _OrderCardState extends State<_OrderCard> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       const Text(
-                                        'Thêm món vào đơn',
+                                        'Thêm sản phẩm vào đơn',
                                         style: TextStyle(
                                           fontSize: 17,
                                           fontWeight: FontWeight.w800,
@@ -1427,237 +1557,266 @@ class _OrderCardState extends State<_OrderCard> {
                               ],
                             ),
                           ),
+
+                          // Search field
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                            child: TextField(
+                              onChanged: (v) => setState2(() => searchQuery = v),
+                              decoration: InputDecoration(
+                                hintText: 'Tìm sản phẩm...',
+                                hintStyle: TextStyle(
+                                  color: AppColors.slate400.withValues(alpha: 0.7),
+                                  fontSize: 14,
+                                ),
+                                prefixIcon: const Icon(Icons.search_rounded,
+                                    color: AppColors.slate400, size: 20),
+                                prefixIconConstraints:
+                                    const BoxConstraints(minWidth: 44),
+                                filled: true,
+                                fillColor: AppColors.slate50,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 10),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                      color: AppColors.slate200),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                      color: AppColors.emerald500, width: 1.5),
+                                ),
+                              ),
+                              style: const TextStyle(
+                                  fontSize: 14, color: AppColors.slate800),
+                            ),
+                          ),
+
                           Container(height: 1, color: AppColors.slate100),
 
-                          // Product list
+                          // Product grid (2 columns)
                           Flexible(
-                            child: allProducts.isEmpty
+                            child: filtered.isEmpty
                                 ? const Padding(
                                     padding: EdgeInsets.all(40),
                                     child: Center(
-                                      child: Text('Chưa có sản phẩm',
+                                      child: Text('Không tìm thấy sản phẩm',
                                           style: TextStyle(
                                               color: AppColors.slate400)),
                                     ),
                                   )
-                                : ListView.separated(
+                                : GridView.builder(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 12),
-                                    shrinkWrap: true,
-                                    itemCount: allProducts.length,
-                                    separatorBuilder: (_, __) =>
-                                        const SizedBox(height: 8),
+                                        horizontal: 12, vertical: 10),
+                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 10,
+                                      mainAxisSpacing: 10,
+                                      childAspectRatio: 0.72,
+                                    ),
+                                    itemCount: filtered.length,
                                     itemBuilder: (_, i) {
-                                      final p = allProducts[i];
+                                      final p = filtered[i];
                                       final qty = tempCart[p.id] ?? 0;
-                                      return Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 10),
-                                        decoration: BoxDecoration(
-                                          color: qty > 0
-                                              ? const Color(0xFFF0FDF4)
-                                              : AppColors.slate50,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          border: Border.all(
-                                            color: qty > 0
-                                                ? AppColors.emerald200
-                                                : AppColors.slate200,
-                                          ),
-                                        ),
-                                        child: Column(
-                                          children: [
-                                            Row(
-                                              children: [
-                                                // Product image
-                                                Container(
-                                                  width: 44,
-                                                  height: 44,
-                                                  decoration: BoxDecoration(
-                                                    color: AppColors.slate100,
-                                                    borderRadius:
-                                                        BorderRadius.circular(10),
-                                                    image: p.image.isNotEmpty
-                                                        ? DecorationImage(
-                                                            image: NetworkImage(
-                                                                p.image),
-                                                            fit: BoxFit.cover,
-                                                          )
-                                                        : null,
-                                                  ),
-                                                  child: p.image.isEmpty
-                                                      ? const Icon(
-                                                          Icons
-                                                              .restaurant_rounded,
-                                                          size: 20,
-                                                          color:
-                                                              AppColors.slate300)
-                                                      : null,
-                                                ),
-                                                const SizedBox(width: 10),
-                                                // Name + price
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(p.name,
-                                                          style: const TextStyle(
-                                                            fontSize: 14,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            color: AppColors
-                                                                .slate800,
-                                                          ),
-                                                          maxLines: 1,
-                                                          overflow: TextOverflow
-                                                              .ellipsis),
-                                                      Text(
-                                                          formatCurrency(p.price),
-                                                          style: const TextStyle(
-                                                            fontSize: 13,
-                                                            fontWeight:
-                                                                FontWeight.w700,
-                                                            color: AppColors
-                                                                .emerald500,
-                                                          )),
-                                                    ],
-                                                  ),
-                                                ),
-                                                // Qty controls
-                                                if (qty > 0)
-                                                  Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      _miniBtn(
-                                                        icon: qty == 1
-                                                            ? Icons
-                                                                .delete_outline_rounded
-                                                            : Icons
-                                                                .remove_rounded,
-                                                        color: qty == 1
-                                                            ? AppColors.red400
-                                                            : AppColors.slate600,
-                                                        onTap: () {
-                                                          setState2(() {
-                                                            if (qty <= 1) {
-                                                              tempCart
-                                                                  .remove(p.id);
-                                                              tempNotes
-                                                                  .remove(p.id);
-                                                            } else {
-                                                              tempCart[p.id] =
-                                                                  qty - 1;
-                                                            }
-                                                          });
-                                                        },
-                                                      ),
-                                                      Container(
-                                                        width: 32,
-                                                        alignment: Alignment.center,
-                                                        child: Text('$qty',
-                                                            style: const TextStyle(
-                                                              fontWeight:
-                                                                  FontWeight.w700,
-                                                              fontSize: 14,
-                                                              color: AppColors
-                                                                  .slate800,
-                                                            )),
-                                                      ),
-                                                      _miniBtn(
-                                                        icon: Icons.add_rounded,
-                                                        color:
-                                                            AppColors.emerald600,
-                                                        onTap: () {
-                                                          setState2(() {
-                                                            tempCart[p.id] =
-                                                                qty + 1;
-                                                          });
-                                                        },
-                                                      ),
-                                                    ],
-                                                  )
-                                                else
-                                                  GestureDetector(
-                                                    onTap: () {
-                                                      setState2(() {
-                                                        tempCart[p.id] = 1;
-                                                      });
-                                                    },
-                                                    child: Container(
-                                                      width: 34,
-                                                      height: 34,
-                                                      decoration: BoxDecoration(
-                                                        color:
-                                                            AppColors.emerald500,
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                                10),
-                                                      ),
-                                                      child: const Icon(
-                                                          Icons.add_rounded,
-                                                          color: Colors.white,
-                                                          size: 18),
-                                                    ),
-                                                  ),
-                                              ],
+                                      return GestureDetector(
+                                        onTap: () {
+                                          setState2(() {
+                                            tempCart[p.id] = (tempCart[p.id] ?? 0) + 1;
+                                          });
+                                        },
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 200),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(
+                                              color: qty > 0
+                                                  ? AppColors.emerald500
+                                                  : AppColors.slate100,
+                                              width: qty > 0 ? 2 : 1,
                                             ),
-                                            // Note input (visible when qty > 0)
-                                            if (qty > 0) ...[
-                                              const SizedBox(height: 8),
-                                              Container(
-                                                height: 36,
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  border: Border.all(
-                                                      color: AppColors.slate200),
-                                                ),
-                                                child: TextField(
-                                                  controller:
-                                                      TextEditingController(
-                                                          text: tempNotes[p.id] ?? ''),
-                                                  onChanged: (v) {
-                                                    tempNotes[p.id] = v;
-                                                  },
-                                                  style: const TextStyle(
-                                                      fontSize: 13,
-                                                      color: AppColors.slate600),
-                                                  decoration: InputDecoration(
-                                                    hintText:
-                                                        'Ghi chú (VD: ít đường)...',
-                                                    hintStyle: TextStyle(
-                                                      color: AppColors.slate400
-                                                          .withValues(
-                                                              alpha: 0.6),
-                                                      fontSize: 13,
-                                                    ),
-                                                    prefixIcon: const Padding(
-                                                      padding: EdgeInsets.only(
-                                                          left: 8, right: 4),
-                                                      child: Icon(
-                                                          Icons.edit_note_rounded,
-                                                          size: 18,
-                                                          color: AppColors
-                                                              .slate400),
-                                                    ),
-                                                    prefixIconConstraints:
-                                                        const BoxConstraints(
-                                                            minWidth: 0),
-                                                    border: InputBorder.none,
-                                                    isDense: true,
-                                                    contentPadding:
-                                                        const EdgeInsets
-                                                            .symmetric(
-                                                            horizontal: 10,
-                                                            vertical: 8),
-                                                  ),
-                                                ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(alpha: 0.04),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 3),
                                               ),
                                             ],
-                                          ],
+                                          ),
+                                          child: Stack(
+                                            children: [
+                                              Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  // Product image (fills top)
+                                                  Expanded(
+                                                    child: Container(
+                                                      width: double.infinity,
+                                                      decoration: const BoxDecoration(
+                                                        color: AppColors.slate50,
+                                                        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                                                      ),
+                                                      child: p.image.isNotEmpty
+                                                          ? ClipRRect(
+                                                              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                                                              child: p.image.startsWith('data:')
+                                                                  ? Image.memory(
+                                                                      base64Decode(p.image.split(',').last),
+                                                                      fit: BoxFit.cover,
+                                                                      cacheWidth: 300,
+                                                                      cacheHeight: 300,
+                                                                      errorBuilder: (_, __, ___) => Center(
+                                                                        child: Icon(Icons.restaurant_rounded,
+                                                                            color: AppColors.slate300.withValues(alpha: 0.6), size: 36),
+                                                                      ),
+                                                                    )
+                                                                  : Image.network(
+                                                                      p.image,
+                                                                      fit: BoxFit.cover,
+                                                                      cacheWidth: 300,
+                                                                      cacheHeight: 300,
+                                                                      errorBuilder: (_, __, ___) => Center(
+                                                                        child: Icon(Icons.restaurant_rounded,
+                                                                            color: AppColors.slate300.withValues(alpha: 0.6), size: 36),
+                                                                      ),
+                                                                    ),
+                                                            )
+                                                          : Center(
+                                                              child: Icon(Icons.restaurant_rounded,
+                                                                  color: AppColors.slate300.withValues(alpha: 0.6), size: 36),
+                                                            ),
+                                                    ),
+                                                  ),
+                                                  // Name
+                                                  Padding(
+                                                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 2),
+                                                    child: Text(p.name,
+                                                        style: const TextStyle(
+                                                          fontSize: 14,
+                                                          fontWeight: FontWeight.w700,
+                                                          color: AppColors.slate800,
+                                                          height: 1.3,
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis),
+                                                  ),
+                                                  // Price
+                                                  Padding(
+                                                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 6),
+                                                    child: Text(
+                                                        formatCurrency(p.price),
+                                                        style: const TextStyle(
+                                                          fontSize: 15,
+                                                          fontWeight: FontWeight.w800,
+                                                          color: AppColors.emerald500,
+                                                        )),
+                                                  ),
+                                                  // Qty stepper row
+                                                  if (qty > 0)
+                                                    GestureDetector(
+                                                      onTap: () {}, // absorb tap
+                                                      child: Container(
+                                                        height: 36,
+                                                        margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                                                        decoration: BoxDecoration(
+                                                          color: AppColors.slate50,
+                                                          borderRadius: BorderRadius.circular(10),
+                                                          border: Border.all(color: AppColors.slate200),
+                                                        ),
+                                                        child: Row(
+                                                          children: [
+                                                            Expanded(
+                                                              child: InkWell(
+                                                                onTap: () {
+                                                                  setState2(() {
+                                                                    if (qty <= 1) {
+                                                                      tempCart.remove(p.id);
+                                                                      tempNotes.remove(p.id);
+                                                                    } else {
+                                                                      tempCart[p.id] = qty - 1;
+                                                                    }
+                                                                  });
+                                                                },
+                                                                child: Center(
+                                                                  child: Icon(
+                                                                    qty <= 1 ? Icons.delete_outline_rounded : Icons.remove_rounded,
+                                                                    size: 18,
+                                                                    color: qty <= 1 ? AppColors.red400 : AppColors.slate600,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            Container(width: 1, height: 18, color: AppColors.slate200),
+                                                            Expanded(
+                                                              child: Center(
+                                                                child: Text('$qty',
+                                                                    style: const TextStyle(
+                                                                      fontWeight: FontWeight.w700,
+                                                                      fontSize: 15,
+                                                                      color: AppColors.slate800,
+                                                                    )),
+                                                              ),
+                                                            ),
+                                                            Container(width: 1, height: 18, color: AppColors.slate200),
+                                                            Expanded(
+                                                              child: InkWell(
+                                                                onTap: () {
+                                                                  setState2(() {
+                                                                    tempCart[p.id] = qty + 1;
+                                                                  });
+                                                                },
+                                                                child: const Center(
+                                                                  child: Icon(Icons.add_rounded,
+                                                                      size: 18, color: AppColors.slate600),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    )
+                                                  else
+                                                    Container(
+                                                      height: 36,
+                                                      margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                                                      decoration: BoxDecoration(
+                                                        color: AppColors.slate50,
+                                                        borderRadius: BorderRadius.circular(10),
+                                                        border: Border.all(color: AppColors.slate200),
+                                                      ),
+                                                      child: const Center(
+                                                        child: Icon(Icons.add_rounded, size: 20, color: AppColors.slate400),
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                              // Qty badge
+                                              if (qty > 0)
+                                                Positioned(
+                                                  top: 8,
+                                                  right: 8,
+                                                  child: Container(
+                                                    padding: const EdgeInsets.symmetric(
+                                                        horizontal: 7, vertical: 3),
+                                                    decoration: BoxDecoration(
+                                                      color: AppColors.emerald500,
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
+                                                    child: Text('x$qty',
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.w700,
+                                                        )),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
                                         ),
                                       );
                                     },

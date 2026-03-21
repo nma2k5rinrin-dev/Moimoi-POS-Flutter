@@ -142,7 +142,7 @@ class _AddProductPanelState extends State<AddProductPanel>
             child: GestureDetector(
               onTap: _closeWithAnimation,
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
                 child: Container(
                   color: Colors.black.withValues(alpha: 0.4),
                 ),
@@ -676,7 +676,7 @@ class _AddProductPanelState extends State<AddProductPanel>
             child: GestureDetector(
               onTap: () => Navigator.pop(ctx),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
                 child: Container(
                   color: Colors.black.withValues(alpha: 0.3),
                 ),
@@ -809,7 +809,7 @@ class _AddProductPanelState extends State<AddProductPanel>
       if (!mounted) return;
 
       // Auto-resize & compress if needed (max 1024px, under 1MB)
-      final prepared = prepareImageBytes(bytes);
+      final prepared = await prepareImageBytes(bytes);
 
       // Show square crop dialog
       final result = await showSquareCropDialog(

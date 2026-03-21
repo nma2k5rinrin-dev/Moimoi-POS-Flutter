@@ -5,7 +5,7 @@ import '../store/app_store.dart';
 import '../screens/auth/auth_page.dart';
 import '../screens/main_shell.dart';
 import '../screens/order/order_page.dart';
-import '../screens/kitchen/kitchen_page.dart';
+import '../screens/orders/orders_page.dart';
 import '../screens/dashboard/dashboard_page.dart';
 import '../screens/settings/settings_page.dart';
 import '../screens/premium/premium_page.dart';
@@ -68,10 +68,10 @@ GoRouter createRouter(AppStore store) {
             ),
           ),
           GoRoute(
-            path: '/kitchen',
+            path: '/orders',
             pageBuilder: (context, state) => _fadeTransitionPage(
               key: state.pageKey,
-              child: const KitchenPage(),
+              child: const OrdersPage(),
             ),
           ),
           GoRoute(

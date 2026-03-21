@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
@@ -662,9 +663,17 @@ class _ProductListTile extends StatelessWidget {
               ),
               clipBehavior: Clip.antiAlias,
               child: product.image.isNotEmpty
-                  ? Image.network(product.image, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.restaurant,
-                          size: 22, color: AppColors.slate300))
+                  ? (product.image.startsWith('data:')
+                      ? Image.memory(
+                          base64Decode(product.image.split(',').last),
+                          fit: BoxFit.cover,
+                          cacheWidth: 120, cacheHeight: 120,
+                          errorBuilder: (_, __, ___) => const Icon(Icons.restaurant,
+                              size: 22, color: AppColors.slate300))
+                      : Image.network(product.image, fit: BoxFit.cover,
+                          cacheWidth: 120, cacheHeight: 120,
+                          errorBuilder: (_, __, ___) => const Icon(Icons.restaurant,
+                              size: 22, color: AppColors.slate300)))
                   : const Icon(Icons.restaurant, size: 22, color: AppColors.slate300),
             ),
             const SizedBox(width: 14),
@@ -799,6 +808,26 @@ class _CategoriesTab extends StatelessWidget {
         final colorSet = isDefault
             ? (AppColors.slate100, AppColors.slate500, PhosphorIconsDuotone.question)
             : _catColors[(i - 1) % _catColors.length];
+
+        // Parse saved color from category, or fall back to colorSet
+        Color catColor = colorSet.$2;
+        Color catBg = colorSet.$1;
+        if (!isDefault && cat.color.isNotEmpty) {
+          try {
+            final hex = cat.color.replaceFirst('#', '');
+            catColor = Color(int.parse('FF$hex', radix: 16));
+            catBg = catColor.withValues(alpha: 0.1);
+          } catch (_) {}
+        }
+
+        // Determine icon widget: emoji from DB or fallback PhosphorIcon
+        Widget iconWidget;
+        if (!isDefault && cat.emoji.isNotEmpty) {
+          iconWidget = Center(child: Text(cat.emoji, style: const TextStyle(fontSize: 22)));
+        } else {
+          iconWidget = PhosphorIcon(colorSet.$3, color: catColor, size: 22);
+        }
+
         return GestureDetector(
           onTap: () => onEditCategory(cat),
           child: Container(
@@ -813,10 +842,10 @@ class _CategoriesTab extends StatelessWidget {
                 Container(
                   width: 44, height: 44,
                   decoration: BoxDecoration(
-                    color: colorSet.$1,
+                    color: catBg,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: PhosphorIcon(colorSet.$3, color: colorSet.$2, size: 22),
+                  child: iconWidget,
                 ),
                 const SizedBox(width: 14),
                 Expanded(

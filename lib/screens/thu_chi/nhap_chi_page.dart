@@ -20,15 +20,15 @@ class _NhapChiPageState extends State<NhapChiPage> {
   DateTime _selectedDate = DateTime.now();
 
   final List<_Cat> _categories = [
-    _Cat(icon: Icons.restaurant_rounded, label: 'Nguyên liệu', color: AppColors.red500),
-    _Cat(icon: Icons.build_rounded, label: 'Biên mức', color: AppColors.blue500),
-    _Cat(icon: Icons.alarm_rounded, label: 'Tiền thiết', color: AppColors.amber500),
-    _Cat(icon: Icons.local_shipping_rounded, label: 'Vận chuyển', color: AppColors.violet500),
-    _Cat(icon: Icons.handyman_rounded, label: 'Sửa chữa', color: AppColors.orange500),
-    _Cat(icon: Icons.people_rounded, label: 'Lương NV', color: const Color(0xFF9333EA)),
-    _Cat(icon: Icons.campaign_rounded, label: 'Marketing', color: AppColors.emerald500),
-    _Cat(icon: Icons.more_horiz_rounded, label: 'Khác', color: AppColors.slate500),
-    _Cat(icon: Icons.add_rounded, label: 'Thêm mới', color: AppColors.slate400),
+    _Cat(emoji: '🍽️', label: 'Nguyên liệu', color: AppColors.red500),
+    _Cat(emoji: '🔧', label: 'Biên mức', color: AppColors.blue500),
+    _Cat(emoji: '⏰', label: 'Tiền thiết', color: AppColors.amber500),
+    _Cat(emoji: '🚚', label: 'Vận chuyển', color: AppColors.violet500),
+    _Cat(emoji: '🛠', label: 'Sửa chữa', color: AppColors.orange500),
+    _Cat(emoji: '👥', label: 'Lương NV', color: const Color(0xFF9333EA)),
+    _Cat(emoji: '📢', label: 'Marketing', color: AppColors.emerald500),
+    _Cat(emoji: '📦', label: 'Khác', color: AppColors.slate500),
+    _Cat(emoji: '➕', label: 'Thêm mới', color: AppColors.slate400),
   ];
 
   @override
@@ -361,9 +361,11 @@ class _NhapChiPageState extends State<NhapChiPage> {
                           blurRadius: 12, offset: const Offset(0, 4))]
                       : null,
                 ),
-                child: Icon(cat.icon,
-                  color: isSelected ? Colors.white : isAdd ? AppColors.slate500 : cat.color,
-                  size: isSelected ? 24 : 20),
+                child: Center(
+                  child: Text(cat.emoji,
+                    style: TextStyle(fontSize: isSelected ? 24 : 20),
+                  ),
+                ),
               ),
               const SizedBox(height: 6),
               Text(cat.label,
@@ -388,10 +390,10 @@ class _NhapChiPageState extends State<NhapChiPage> {
     showAddCategoryDialog(
       context: context,
       type: 'chi',
-      onSave: (name, icon, color) {
+      onSave: (name, emoji, color) {
         setState(() {
           _categories.insert(_categories.length - 1,
-              _Cat(icon: icon, label: name, color: color));
+              _Cat(emoji: emoji, label: name, color: color));
           _selectedCategory = _categories.length - 2;
         });
       },
@@ -408,7 +410,7 @@ class _NhapChiPageState extends State<NhapChiPage> {
       return;
     }
     final store = context.read<AppStore>();
-    await store.addThuChiTransaction(
+    store.addThuChiTransaction(
       type: 'chi',
       amount: amount,
       category: _categories[_selectedCategory].label,
@@ -441,8 +443,8 @@ class _ThousandSeparatorFormatter extends TextInputFormatter {
 }
 
 class _Cat {
-  final IconData icon;
+  final String emoji;
   final String label;
   final Color color;
-  const _Cat({required this.icon, required this.label, required this.color});
+  const _Cat({required this.emoji, required this.label, required this.color});
 }

@@ -373,16 +373,27 @@ class _ThuChiPageState extends State<ThuChiPage> {
                           ? context.push('/nhap-thu')
                           : context.go('/nhap-thu'),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        height: 52,
                         decoration: BoxDecoration(
-                          color: AppColors.emerald500,
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [AppColors.emerald500, AppColors.emerald600],
+                          ),
                           borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.emerald500.withValues(alpha: 0.25),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.trending_up_rounded,
-                                size: 18, color: Colors.white),
+                                size: 20, color: Colors.white),
                             SizedBox(width: 8),
                             Text('Nhập thu',
                                 style: TextStyle(fontSize: 15,
@@ -400,16 +411,27 @@ class _ThuChiPageState extends State<ThuChiPage> {
                           ? context.push('/nhap-chi')
                           : context.go('/nhap-chi'),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        height: 52,
                         decoration: BoxDecoration(
-                          color: AppColors.red500,
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [AppColors.red500, AppColors.red600],
+                          ),
                           borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.red500.withValues(alpha: 0.25),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.trending_down_rounded,
-                                size: 18, color: Colors.white),
+                                size: 20, color: Colors.white),
                             SizedBox(width: 8),
                             Text('Nhập chi',
                                 style: TextStyle(fontSize: 15,

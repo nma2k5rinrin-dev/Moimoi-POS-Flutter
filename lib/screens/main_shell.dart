@@ -23,15 +23,15 @@ class _MainShellState extends State<MainShell> {
   static const List<_NavItem> _adminMenuItems = [
     _NavItem(icon: Icons.bar_chart, label: 'Báo Cáo', path: '/dashboard'),
     _NavItem(icon: PhosphorIconsBold.storefront, label: 'Bán hàng', path: '/'),
-    _NavItem(icon: PhosphorIconsBold.clipboardText, label: 'Đơn hàng', path: '/kitchen'),
+    _NavItem(icon: PhosphorIconsBold.clipboardText, label: 'Đơn hàng', path: '/orders'),
     _NavItem(icon: PhosphorIconsBold.package, label: 'Quản lý kho', path: '/inventory'),
     _NavItem(icon: Icons.settings_outlined, label: 'Cài đặt', path: '/settings'),
   ];
 
-  // Staff tabs: Order + Kitchen only
+  // Staff tabs: Order + Orders only
   static const List<_NavItem> _staffMenuItems = [
     _NavItem(icon: PhosphorIconsBold.storefront, label: 'Bán hàng', path: '/'),
-    _NavItem(icon: PhosphorIconsBold.clipboardText, label: 'Đơn hàng', path: '/kitchen'),
+    _NavItem(icon: PhosphorIconsBold.clipboardText, label: 'Đơn hàng', path: '/orders'),
   ];
 
   List<_NavItem> _getMenuItems(AppStore store) {
@@ -57,25 +57,38 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
-    final menuItems = _getMenuItems(store);
-    final currentIdx = _getCurrentIndex(menuItems);
-    final storeInfo = store.currentStoreInfo;
     final isWide = MediaQuery.of(context).size.width >= 768;
     final isOnOrderPage =
         GoRouterState.of(context).matchedLocation == '/';
+
+    return Selector<AppStore, ({String? role, dynamic storeInfo, bool hasCart, int cartLen, int cartItemCount, double cartTotal})>(
+      selector: (_, s) => (
+        role: s.currentUser?.role,
+        storeInfo: s.currentStoreInfo,
+        hasCart: s.cart.isNotEmpty,
+        cartLen: s.cart.length,
+        cartItemCount: s.cartItemCount,
+        cartTotal: s.getCartTotal(),
+      ),
+      builder: (context, data, child) {
+    final store = context.read<AppStore>();
+    final menuItems = _getMenuItems(store);
+    final currentIdx = _getCurrentIndex(menuItems);
+    final storeInfo = data.storeInfo;
 
     return Scaffold(
       body: Row(
         children: [
           // ── Sidebar (Desktop) ────────────────
           if (isWide)
-            _DesktopSidebar(
-              store: store,
-              menuItems: menuItems,
-              currentIndex: currentIdx,
-              storeInfo: storeInfo,
-              onTap: (i) => _onTabTapped(i, menuItems),
+            RepaintBoundary(
+              child: _DesktopSidebar(
+                store: store,
+                menuItems: menuItems,
+                currentIndex: currentIdx,
+                storeInfo: storeInfo,
+                onTap: (i) => _onTabTapped(i, menuItems),
+              ),
             ),
 
           // ── Main Content ────────────────────
@@ -101,17 +114,21 @@ class _MainShellState extends State<MainShell> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Gradient cart bar
-                if (!isWide && isOnOrderPage && store.cart.isNotEmpty)
+                if (!isWide && isOnOrderPage && data.hasCart)
                   _MobileCartBar(store: store),
                 // Bottom Navigation
-                _MobileBottomNav(
-                  menuItems: menuItems,
-                  currentIndex: currentIdx,
-                  store: store,
-                  onTap: (i) => _onTabTapped(i, menuItems),
+                RepaintBoundary(
+                  child: _MobileBottomNav(
+                    menuItems: menuItems,
+                    currentIndex: currentIdx,
+                    store: store,
+                    onTap: (i) => _onTabTapped(i, menuItems),
+                  ),
                 ),
               ],
             ),
+    );
+      },
     );
   }
 }
@@ -308,8 +325,8 @@ class _DesktopSidebar extends StatelessWidget {
                                     size: isActive ? 26 : 24,
                                   ),
                                   // Pending badge (red, top-left)
-                                  if (item.path == '/kitchen' &&
-                                      store.pendingKitchen > 0)
+                                  if (item.path == '/orders' &&
+                                      store.pendingProcessing > 0)
                                     Positioned(
                                       top: -6,
                                       left: -8,
@@ -331,7 +348,7 @@ class _DesktopSidebar extends StatelessWidget {
                                                 minWidth: 18,
                                                 minHeight: 18),
                                         child: Text(
-                                          '${store.pendingKitchen > 99 ? '99+' : store.pendingKitchen}',
+                                          '${store.pendingProcessing > 99 ? '99+' : store.pendingProcessing}',
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 9,
@@ -342,8 +359,8 @@ class _DesktopSidebar extends StatelessWidget {
                                       ),
                                     ),
                                   // Cooking badge (orange, top-right)
-                                  if (item.path == '/kitchen' &&
-                                      store.cookingKitchen > 0)
+                                  if (item.path == '/orders' &&
+                                      store.cookingProcessing > 0)
                                     Positioned(
                                       top: -6,
                                       right: -8,
@@ -365,7 +382,7 @@ class _DesktopSidebar extends StatelessWidget {
                                                 minWidth: 18,
                                                 minHeight: 18),
                                         child: Text(
-                                          '${store.cookingKitchen > 99 ? '99+' : store.cookingKitchen}',
+                                          '${store.cookingProcessing > 99 ? '99+' : store.cookingProcessing}',
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 9,
@@ -842,8 +859,8 @@ class _MobileBottomNav extends StatelessWidget {
                             ),
                           ),
                           // Pending badge (red, left)
-                          if (item.path == '/kitchen' &&
-                              store.pendingKitchen > 0)
+                          if (item.path == '/orders' &&
+                              store.pendingProcessing > 0)
                             Positioned(
                               top: -4,
                               left: -6,
@@ -865,7 +882,7 @@ class _MobileBottomNav extends StatelessWidget {
                                         minWidth: 17,
                                         minHeight: 17),
                                 child: Text(
-                                  '${store.pendingKitchen > 99 ? '99+' : store.pendingKitchen}',
+                                  '${store.pendingProcessing > 99 ? '99+' : store.pendingProcessing}',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 9,
@@ -876,8 +893,8 @@ class _MobileBottomNav extends StatelessWidget {
                               ),
                             ),
                           // Cooking badge (orange, right)
-                          if (item.path == '/kitchen' &&
-                              store.cookingKitchen > 0)
+                          if (item.path == '/orders' &&
+                              store.cookingProcessing > 0)
                             Positioned(
                               top: -4,
                               right: -6,
@@ -899,7 +916,7 @@ class _MobileBottomNav extends StatelessWidget {
                                         minWidth: 17,
                                         minHeight: 17),
                                 child: Text(
-                                  '${store.cookingKitchen > 99 ? '99+' : store.cookingKitchen}',
+                                  '${store.cookingProcessing > 99 ? '99+' : store.cookingProcessing}',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 9,

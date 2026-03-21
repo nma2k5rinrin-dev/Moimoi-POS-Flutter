@@ -1,11 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../store/app_store.dart';
 import '../../models/category_model.dart';
 import '../../utils/constants.dart';
-import '../../widgets/icon_picker_dialog.dart';
 
 class AddCategoryPanel extends StatefulWidget {
   final VoidCallback onClose;
@@ -26,7 +24,7 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
   final _nameCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   int _selectedColorIndex = 0;
-  PhosphorIconData _selectedIcon = PhosphorIconsDuotone.coffee;
+  String _selectedEmoji = '☕';
 
   late final AnimationController _animCtrl;
   late final Animation<double> _fadeAnim;
@@ -50,6 +48,15 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
     final cat = widget.existingCategory;
     if (cat != null) {
       _nameCtrl.text = cat.name;
+      if (cat.emoji.isNotEmpty) _selectedEmoji = cat.emoji;
+      if (cat.color.isNotEmpty) {
+        try {
+          final hex = cat.color.replaceFirst('#', '');
+          final savedColor = Color(int.parse('FF$hex', radix: 16));
+          final idx = _colorPalette.indexWhere((c) => c.value == savedColor.value);
+          if (idx >= 0) _selectedColorIndex = idx;
+        } catch (_) {}
+      }
     }
 
     _animCtrl = AnimationController(
@@ -90,7 +97,7 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
             child: GestureDetector(
               onTap: _closeWithAnimation,
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
                 child: Container(
                   color: Colors.black.withValues(alpha: 0.4),
                 ),
@@ -236,13 +243,9 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
         children: [
           GestureDetector(
             onTap: () async {
-              final result = await showIconPickerDialog(
-                context,
-                currentIcon: _selectedIcon,
-                accentColor: _colorPalette[_selectedColorIndex],
-              );
+              final result = await _showEmojiPickerDialog();
               if (result != null) {
-                setState(() => _selectedIcon = result);
+                setState(() => _selectedEmoji = result);
               }
             },
             child: Container(
@@ -256,10 +259,8 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
                   width: 2,
                 ),
               ),
-              child: PhosphorIcon(
-                _selectedIcon,
-                size: 36,
-                color: _colorPalette[_selectedColorIndex],
+              child: Center(
+                child: Text(_selectedEmoji, style: const TextStyle(fontSize: 36)),
               ),
             ),
           ),
@@ -274,6 +275,170 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
           ),
         ],
       ),
+    );
+  }
+
+  static const _emojis = [
+    '🔥','💛','💚','💙','💜','🖤','💔','❣','💕','💞',
+    '💓','💗','💖','💘','💝','💟','👏','🙏','🤝','👍',
+    '👎','👊','✊','🤛','🤜','🤞','✌','🤘','👌','👈',
+    '👉','👆','👇','☝','✋','🤚','🖐','🖖','👋','🤙',
+    '💪','🖕','✍','🤳','💅','💍','💄','💋','👄','👅',
+    '👂','👃','👣','👁','👀','🗣','👤','👥','👶','👦',
+    '👧','👨','👩','👱','👴','👵','👲','👳','👮','👷',
+    '💂','🕵','🤶','🎅','👸','🤴','👰','🤵','👼','🤰',
+    '🙇','💁','🙅','🙆','🙋','🙎','🙍','💇','💆','🕴',
+    '💃','🕺','👯','🚶','🏃','👫','👭','👬','💑','👪',
+    '👚','👕','👖','👔','👗','👙','👘','👠','👡','👢',
+    '👞','👟','👒','🎩','🎓','👑','⛑','🎒','👝','👛',
+    '👜','💼','👓','🕶','🌂','☂',
+    '⌚','📱','📲','💻','⌨','🖥','🖨','🖱','🖲','🕹',
+    '🗜','💽','💾','💿','📀','📼','📷','📸','📹','🎥',
+    '📽','🎞','📞','☎','📟','📠','📺','📻','🎙','🎚',
+    '🎛','⏱','⏲','⏰','🕰','⌛','⏳','📡','🔋','🔌',
+    '💡','🔦','🕯','🗑','🛢','💸','💵','💴','💶','💷',
+    '💰','💳','💎','⚖','🔧','🔨','⚒','🛠','⛏','🔩',
+    '🧱','⚙','⛓','🔫','💣','🔪','🗡','⚔','🛡','🚬',
+    '🏺','🔮','📿','💈','⚗','🔭','🔬','🕳','💊','💉',
+    '🌡','🚽','🚰','🚿','🛁','🛀','🛎','🔑','🗝','🚪',
+    '🛋','🛏','🛌','🖼','🛍','🛒','🎁','🎈','🎏','🎀',
+    '🎊','🎉','🎎','🏮','🎐',
+    '✉','📩','📨','📧','💌','📥','📤','📦','🏷','📪',
+    '📫','📬','📭','📮','📯','📜','📃','📄','📑','📊',
+    '📈','📉','🗒','🗓','📆','📅','📇','🗃','🗳','🗄',
+    '📋','📁','📂','🗂','🗞','📰','📓','📔','📒','📕',
+    '📗','📘','📙','📚','📖','🔖','🔗','📎','🖇','📐',
+    '📏','📌','📍','✂','🖊','🖋','✒','🖌','🖍','📝',
+    '✏','🔍','🔎','🔏','🔐','🔒','🔓',
+    '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯',
+    '🦁','🐮','🐷','🐽','🐸','🐵','🙊','🙉','🐒','🐔',
+    '🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🦇','🐺',
+    '🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐚','🐞','🐜',
+    '🕷','🕸','🐢','🐍','🦎','🦂','🦀','🦑','🐙','🦐',
+    '🐠','🐟','🐡','🐬','🦈','🐳','🐋','🐊','🐆','🐅',
+    '🐃','🐂','🐄','🦌','🐪','🐫','🐘','🦏','🦍','🐎',
+    '🐖','🐐','🐏','🐑','🐕','🐩','🐈','🐓','🦃','🕊',
+    '🐇','🐁','🐀','🐿','🐾','🐉','🐲',
+    '🌵','🎄','🌲','🌳','🌴','🌱','🌿','☘','🍀','🎍',
+    '🎋','🍃','🍂','🍁','🍄','🌾','💐','🌷','🌹','🥀',
+    '🌻','🌼','🌸','🌺','🌎','🌍','🌏','🌕','🌑','🌙',
+    '💫','⭐','🌟','✨','⚡','🔥','💥','☄','☀','🌤',
+    '⛅','🌈','☁','🌊','💧','💦','☔',
+    '🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🍈',
+    '🍒','🍑','🍍','🥝','🥑','🍅','🍆','🥒','🥕','🌽',
+    '🌶','🥔','🍠','🌰','🥜','🍯','🥐','🍞','🥖','🧀',
+    '🥚','🍳','🥓','🥞','🍤','🍗','🍖','🍕','🌭','🍔',
+    '🍟','🥙','🌮','🌯','🥗','🥘','🍝','🍜','🍲','🍥',
+    '🍣','🍱','🍛','🍚','🍙','🍘','🍢','🍡','🍧','🍨',
+    '🍦','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪',
+    '🥛','🍼','☕','🍵','🍶','🍺','🍻','🥂','🍷','🥃',
+    '🍸','🍹','🍾','🥄','🍴','🍽',
+    '⚽','🏀','🏈','⚾','🎾','🏐','🏉','🎱','🏓','🏸',
+    '🥅','🏒','🏑','🏏','⛳','🏹','🎣','🥊','🥋','⛸',
+    '🎿','⛷','🏂','🏋','🤺','🏌','🏄','🏊','🤽','🚣',
+    '🏇','🚴','🚵','🎽','🏅','🎖','🥇','🥈','🥉','🏆',
+    '🏵','🎗','🎫','🎟','🎪','🎭','🎨','🎬','🎤','🎧',
+    '🎼','🎹','🥁','🎷','🎺','🎸','🎻','🎲','🎯','🎳',
+    '🎮','🎰',
+    '🚗','🚕','🚙','🚌','🚎','🏎','🚓','🚑','🚒','🚐',
+    '🚚','🚛','🚜','🛴','🚲','🛵','🏍','🚨','🚔','🚍',
+    '🚘','🚖','🚡','🚠','🚟','🚃','🚋','🚞','🚝','🚄',
+    '🚅','🚈','🚂','🚆','🚇','🚊','🚉','🚁','🛩','✈',
+    '🛫','🛬','🚀','🛰','💺','🛶','⛵','🛥','🚤','🛳',
+    '⛴','🚢','⚓','🚧','⛽','🚏','🚦','🚥','🗺','🗿',
+    '🗽','⛲','🗼','🏰','🏯','🏟','🎡','🎢','🎠','⛱',
+    '🏖','🏝','⛰','🏔','🗻','🌋','🏜','🏕','⛺','🛤',
+    '🛣','🏗','🏭','🏠','🏡','🏘','🏚','🏢','🏬','🏣',
+    '🏤','🏥','🏦','🏨','🏪','🏫','🏩','💒','🏛','⛪',
+    '🕌','🕍','🕋','⛩','🗾','🎑','🏞','🌅','🌄','🌠',
+    '🎇','🎆','🌇','🌆','🏙','🌃','🌌','🌉','🌁',
+    '☮','✝','☪','🕉','☸','✡','🔯','🕎','☯','☦',
+    '🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏',
+    '♐','♑','♒','♓','🆔','⚛','☢','☣','🆚','💮',
+    '🅰','🅱','🆎','🆑','🅾','🆘','❌','⭕','🛑','⛔',
+    '📛','🚫','💯','💢','♨','🚷','🚯','🚳','🚱','🔞',
+    '📵','🚭','❗','❕','❓','❔','🔅','🔆','〽','⚠',
+    '🚸','🔱','⚜','🔰','♻','✅','💹','❇','✳','❎',
+    '🌐','💠','🌀','💤','🏧','🚾','♿','🅿','🈳','🛂',
+    '🛃','🛄','🛅','🚹','🚺','🚼','🚻','🚮','🎦','📶',
+    '🏳','🏴','🏁','🚩','🏳',
+  ];
+
+  Future<String?> _showEmojiPickerDialog() {
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: 400,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Chọn biểu tượng',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800,
+                              color: AppColors.slate800)),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(ctx),
+                        child: const Icon(Icons.close_rounded, color: AppColors.slate400, size: 22),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    height: 300,
+                    decoration: BoxDecoration(
+                      color: AppColors.slate50,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.slate200),
+                    ),
+                    child: GridView.builder(
+                      padding: const EdgeInsets.all(8),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 10,
+                        mainAxisSpacing: 4,
+                        crossAxisSpacing: 4,
+                      ),
+                      itemCount: _emojis.length,
+                      itemBuilder: (_, i) {
+                        return GestureDetector(
+                          onTap: () => Navigator.pop(ctx, _emojis[i]),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: Text(_emojis[i],
+                                style: const TextStyle(fontSize: 20)),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -436,15 +601,19 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
       return;
     }
 
+    final colorHex = '#${_colorPalette[_selectedColorIndex].value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
+
     if (_isEditMode) {
       store.updateCategory(CategoryModel(
         id: widget.existingCategory!.id,
         name: name,
         storeId: widget.existingCategory!.storeId,
+        emoji: _selectedEmoji,
+        color: colorHex,
       ));
       store.showToast('Đã cập nhật danh mục "$name"!');
     } else {
-      store.addCategory(name);
+      store.addCategory(name, emoji: _selectedEmoji, color: colorHex);
       store.showToast('Đã thêm danh mục "$name"!');
     }
     _closeWithAnimation();

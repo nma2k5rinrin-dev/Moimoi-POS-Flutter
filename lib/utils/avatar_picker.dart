@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
@@ -44,7 +45,13 @@ Future<String?> validateProductImage(Uint8List bytes) async {
 /// Returns processed bytes ready for crop dialog. Does NOT reject — always returns usable bytes.
 /// - Resizes to max 1024×1024 if larger
 /// - Compresses as JPEG to stay under 1MB
-Uint8List prepareImageBytes(Uint8List rawBytes) {
+/// Now runs in a background isolate to avoid UI freeze.
+Future<Uint8List> prepareImageBytes(Uint8List rawBytes) async {
+  return compute(_prepareImageBytesIsolate, rawBytes);
+}
+
+/// Top-level function for compute() isolate
+Uint8List _prepareImageBytesIsolate(Uint8List rawBytes) {
   final decoded = img.decodeImage(rawBytes);
   if (decoded == null) return rawBytes;
 
@@ -76,7 +83,13 @@ Uint8List prepareImageBytes(Uint8List rawBytes) {
 /// Converts PNG bytes (from crop dialogs) to compressed WebP-like base64 data URI.
 /// Uses JPEG encoding since Dart image package doesn't support WebP encoding.
 /// GIF bytes are returned as-is.
-String convertToWebpBase64(Uint8List pngBytes) {
+/// Now runs in a background isolate to avoid UI freeze.
+Future<String> convertToWebpBase64(Uint8List pngBytes) async {
+  return compute(_convertToWebpBase64Isolate, pngBytes);
+}
+
+/// Top-level function for compute() isolate
+String _convertToWebpBase64Isolate(Uint8List pngBytes) {
   final decoded = img.decodePng(pngBytes);
   if (decoded == null) {
     return 'data:image/png;base64,${base64Encode(pngBytes)}';
@@ -97,7 +110,13 @@ String convertToWebpBase64(Uint8List pngBytes) {
 
 /// Converts raw image bytes (any format) to compressed base64 data URI.
 /// Resizes if needed. For QR, logos, etc. that don't go through crop dialog.
-String convertRawToWebpBase64(Uint8List rawBytes) {
+/// Now runs in a background isolate to avoid UI freeze.
+Future<String> convertRawToWebpBase64(Uint8List rawBytes) async {
+  return compute(_convertRawToWebpBase64Isolate, rawBytes);
+}
+
+/// Top-level function for compute() isolate
+String _convertRawToWebpBase64Isolate(Uint8List rawBytes) {
   final decoded = img.decodeImage(rawBytes);
   if (decoded == null) {
     return 'data:image/jpeg;base64,${base64Encode(rawBytes)}';
@@ -146,7 +165,7 @@ Future<String?> pickAndCropAvatar(BuildContext context) async {
   }
 
   // Auto-resize & compress if needed (max 1024px, under 1MB)
-  final prepared = prepareImageBytes(bytes);
+  final prepared = await prepareImageBytes(bytes);
 
   if (!context.mounted) return null;
 
