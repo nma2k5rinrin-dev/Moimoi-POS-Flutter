@@ -71,17 +71,11 @@ class _AccountDialogContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isDesktop = screenWidth >= 768;
-    final sidebarWidth = screenWidth >= 1024 ? 250.0 : 80.0;
-
     return Stack(
       children: [
         Positioned(
-          left: isDesktop ? 8 : null,
-          right: isDesktop ? null : 16,
-          bottom: isDesktop ? 72 : null,
-          top: isDesktop ? null : MediaQuery.of(context).padding.top + 56,
+          right: 16,
+          top: MediaQuery.of(context).padding.top + 56,
           child: Material(
             color: Colors.transparent,
             child: Container(

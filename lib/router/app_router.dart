@@ -11,6 +11,7 @@ import '../screens/settings/settings_page.dart';
 import '../screens/premium/premium_page.dart';
 import '../screens/inventory/inventory_page.dart';
 import '../screens/settings/menu_management.dart';
+import '../screens/admin/admin_dashboard_page.dart';
 
 import '../screens/thu_chi/nhap_thu_page.dart';
 import '../screens/thu_chi/nhap_chi_page.dart';
@@ -32,9 +33,11 @@ GoRouter createRouter(AppStore store) {
       final isLoggingIn = state.matchedLocation == '/login';
       if (!isLoggedIn && !isLoggingIn) return '/login';
       if (isLoggedIn && isLoggingIn) {
-        // Admin → Dashboard, Staff → Order page
-        final isAdmin = ['admin', 'sadmin'].contains(store.currentUser?.role);
-        return isAdmin ? '/dashboard' : '/';
+        // Sadmin → Admin dashboard, Admin → Reports, Staff → Order page
+        final role = store.currentUser?.role;
+        if (role == 'sadmin') return '/admin';
+        if (role == 'admin') return '/dashboard';
+        return '/';
       }
       return null;
     },
@@ -93,6 +96,13 @@ GoRouter createRouter(AppStore store) {
             pageBuilder: (context, state) => _fadeTransitionPage(
               key: state.pageKey,
               child: const PremiumPage(),
+            ),
+          ),
+          GoRoute(
+            path: '/admin',
+            pageBuilder: (context, state) => _fadeTransitionPage(
+              key: state.pageKey,
+              child: const AdminDashboardPage(),
             ),
           ),
           GoRoute(

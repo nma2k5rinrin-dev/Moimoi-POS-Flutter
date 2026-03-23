@@ -27,7 +27,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final store = context.watch<AppStore>();
     final isLoading = store.isLoading;
     final completedPaidOrders =
-        allOrders.where((o) => o.paymentStatus == 'paid' || o.status == 'completed').toList();
+        allOrders.where((o) => o.status == 'completed' && o.paymentStatus == 'paid').toList();
     final filteredOrders = _filterByTime(completedPaidOrders);
     final cancelledOrders =
         _filterByTime(allOrders.where((o) => o.status == 'cancelled').toList());
@@ -51,7 +51,6 @@ class _DashboardPageState extends State<DashboardPage> {
         padding: const EdgeInsets.all(24),
         child: LayoutBuilder(
           builder: (context, outerConstraints) {
-            final isWide = outerConstraints.maxWidth >= 600;
             final dailyData = _getDailyData(filteredOrders);
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,103 +94,179 @@ class _DashboardPageState extends State<DashboardPage> {
 
                 const SizedBox(height: 20),
 
-                // ── Stats ────────────────────────
-                if (isWide)
-                  Row(
-                    children: [
-                      Expanded(child: _StatCard(label: 'Doanh thu', value: formatCurrency(totalRevenue),
-                          icon: Icons.trending_up_rounded, gradient: const [Color(0xFF10B981), Color(0xFF059669)], width: double.infinity)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _StatCard(label: 'Tổng đơn', value: '$totalOrders',
-                          icon: Icons.receipt_long_rounded, gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)], width: double.infinity)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _StatCard(label: 'DT tiền mặt', value: _formatShortCurrency(cashRevenue),
-                          icon: Icons.payments_rounded, gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)], width: double.infinity)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _StatCard(label: 'DT chuyển khoản', value: _formatShortCurrency(transferRevenue),
-                          icon: Icons.account_balance_rounded, gradient: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)], width: double.infinity)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _StatCard(label: 'Đơn hủy', value: '$totalCancelled',
-                          icon: Icons.cancel_outlined, gradient: const [Color(0xFFEF4444), Color(0xFFDC2626)], width: double.infinity)),
-                    ],
-                  )
-                else ...[
-                  // ── 2×2 Stats Grid ──
-                  Row(
-                    children: [
-                      // Column 1: Cash + Total Orders
-                      Expanded(
-                        child: Column(
-                          children: [
-                            _MobileMiniCard(
-                              icon: Icons.payments_rounded,
-                              label: 'Tiền mặt',
-                              value: formatCurrency(cashRevenue),
-                              gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
-                            ),
-                            const SizedBox(height: 12),
-                            _MobileMiniCard(
-                              icon: Icons.receipt_long_rounded,
-                              label: 'Tổng đơn',
-                              value: '$totalOrders',
-                              gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
-                              subtitle: totalCancelled > 0 ? 'Đơn hủy: $totalCancelled' : null,
-                              subtitleColor: const Color(0xFFEF4444),
-                            ),
-                          ],
+                // ── Stats Cards (responsive) ──
+                Builder(builder: (context) {
+                  final isLandscape = outerConstraints.maxWidth > 600;
+
+                  final cashCard = _MobileMiniCard(
+                    icon: Icons.payments_rounded,
+                    label: 'Tiền mặt',
+                    value: formatCurrency(cashRevenue),
+                    gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+                  );
+                  final transferCard = _MobileMiniCard(
+                    icon: Icons.account_balance_rounded,
+                    label: 'Chuyển khoản',
+                    value: formatCurrency(transferRevenue),
+                    gradient: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                  );
+                  final ordersCard = _MobileMiniCard(
+                    icon: Icons.receipt_long_rounded,
+                    label: 'Tổng đơn',
+                    value: '$totalOrders',
+                    gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                    subtitle: totalCancelled > 0 ? 'Đơn hủy: $totalCancelled' : null,
+                    subtitleColor: const Color(0xFFEF4444),
+                  );
+                  final avgCard = _MobileMiniCard(
+                    icon: Icons.analytics_rounded,
+                    label: 'TB/đơn',
+                    value: totalOrders > 0
+                        ? _formatShortCurrency(totalRevenue / totalOrders)
+                        : '0',
+                    gradient: const [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                  );
+
+                  if (isLandscape) {
+                    // Landscape: all 5 cards in one row
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: _MobileMiniCard(
+                            icon: Icons.trending_up_rounded,
+                            label: 'Tổng doanh thu',
+                            value: formatCurrency(totalRevenue),
+                            gradient: const [Color(0xFF10B981), Color(0xFF059669)],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Column 2: Transfer + Average/Order
-                      Expanded(
-                        child: Column(
-                          children: [
-                            _MobileMiniCard(
-                              icon: Icons.account_balance_rounded,
-                              label: 'Chuyển khoản',
-                              value: formatCurrency(transferRevenue),
-                              gradient: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-                            ),
-                            const SizedBox(height: 12),
-                            _MobileMiniCard(
-                              icon: Icons.analytics_rounded,
-                              label: 'TB/đơn',
-                              value: totalOrders > 0
-                                  ? _formatShortCurrency(totalRevenue / totalOrders)
-                                  : '0',
-                              gradient: const [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-                            ),
-                          ],
+                        const SizedBox(width: 10),
+                        Expanded(child: cashCard),
+                        const SizedBox(width: 10),
+                        Expanded(child: transferCard),
+                        const SizedBox(width: 10),
+                        Expanded(child: ordersCard),
+                        const SizedBox(width: 10),
+                        Expanded(child: avgCard),
+                      ],
+                    );
+                  }
+
+                  // Portrait: revenue banner + 2×2 grid
+                  return Column(children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF10B981), Color(0xFF059669)],
                         ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(Icons.trending_up_rounded,
+                                color: Colors.white, size: 26),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Tổng doanh thu',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white.withValues(alpha: 0.85),
+                                    )),
+                                const SizedBox(height: 4),
+                                Text(formatCurrency(totalRevenue),
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                      letterSpacing: -0.5,
+                                    )),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(children: [
+                            cashCard,
+                            const SizedBox(height: 12),
+                            ordersCard,
+                          ]),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(children: [
+                            transferCard,
+                            const SizedBox(height: 12),
+                            avgCard,
+                          ]),
+                        ),
+                      ],
+                    ),
+                  ]);
+                }),
 
                 const SizedBox(height: 24),
 
-                // ── Charts ──────────────────────
-                if (outerConstraints.maxWidth >= 900)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(flex: 2, child: Column(
-                        children: [
-                          _HourlyRevenueChart(hourlyData: hourlyData),
-                          const SizedBox(height: 14),
-                          _DailyRevenueChart(dailyData: dailyData),
-                        ],
-                      )),
-                      const SizedBox(width: 14),
-                      Expanded(flex: 1, child: Column(children: [
-                        _BestSellersCard(items: bestSellers),
-                        const SizedBox(height: 14),
-                        _StaffRankingCard(orders: filteredOrders),
-                      ])),
-                    ],
-                  )
-                else
-                  Column(children: [
+                // ── Charts (responsive) ──────────────────────
+                Builder(builder: (context) {
+                  final isLandscape = outerConstraints.maxWidth > 600;
+
+                  if (isLandscape) {
+                    return Column(children: [
+                      // Row 1: Hourly (left) + Daily (right)
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(child: _HourlyRevenueChart(hourlyData: hourlyData)),
+                            const SizedBox(width: 14),
+                            Expanded(child: _DailyRevenueChart(dailyData: dailyData)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      // Row 2: Best sellers + Staff ranking
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _BestSellersCard(items: bestSellers)),
+                            const SizedBox(width: 14),
+                            Expanded(child: _StaffRankingCard(orders: filteredOrders)),
+                          ],
+                        ),
+                      ),
+                    ]);
+                  }
+
+                  // Portrait: stacked vertical
+                  return Column(children: [
                     _HourlyRevenueChart(hourlyData: hourlyData),
                     const SizedBox(height: 14),
                     _DailyRevenueChart(dailyData: dailyData),
@@ -199,7 +274,8 @@ class _DashboardPageState extends State<DashboardPage> {
                     _BestSellersCard(items: bestSellers),
                     const SizedBox(height: 14),
                     _StaffRankingCard(orders: filteredOrders),
-                  ]),
+                  ]);
+                }),
               ],
             );
           },
@@ -263,8 +339,12 @@ class _DashboardPageState extends State<DashboardPage> {
 
   List<OrderModel> _filterByTime(List<OrderModel> orders) {
     return orders.where((o) {
-      final dt = DateTime.tryParse(o.time);
-      if (dt == null) return false;
+      final parsed = DateTime.tryParse(o.time);
+      if (parsed == null) return false;
+      // Reconstruct as local — timestamps stored as local values
+      // but Supabase may return with +00:00 suffix
+      final dt = DateTime(parsed.year, parsed.month, parsed.day,
+          parsed.hour, parsed.minute, parsed.second);
       final from =
           DateTime(_dateFrom.year, _dateFrom.month, _dateFrom.day);
       final to = DateTime(

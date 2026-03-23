@@ -20,6 +20,7 @@ class _OrdersPageState extends State<OrdersPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _statusFilter = 'pending';
+  bool _sortNewestFirst = false;
 
   @override
   void initState() {
@@ -53,7 +54,10 @@ class _OrdersPageState extends State<OrdersPage>
         return o.time.startsWith(todayStr);
       }
       return true;
-    }).toList();
+    }).toList()
+      ..sort((a, b) => _sortNewestFirst
+          ? b.time.compareTo(a.time)  // newest first
+          : a.time.compareTo(b.time)); // oldest first
     final pendingCount =
         allOrders.where((o) => o.status == 'pending').length;
     final cookingCount =
@@ -183,6 +187,39 @@ class _OrdersPageState extends State<OrdersPage>
                     color: AppColors.slate500,
                   ),
                 ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => setState(() => _sortNewestFirst = !_sortNewestFirst),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.slate50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.slate200),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _sortNewestFirst
+                              ? Icons.arrow_downward_rounded
+                              : Icons.arrow_upward_rounded,
+                          size: 14,
+                          color: AppColors.slate600,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _sortNewestFirst ? 'Mới nhất' : 'Cũ nhất',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.slate600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -195,11 +232,9 @@ class _OrdersPageState extends State<OrdersPage>
                     builder: (context, constraints) {
                       final width = constraints.maxWidth;
                       int crossAxisCount;
-                      if (width >= 1400) {
-                        crossAxisCount = 4;
-                      } else if (width >= 1000) {
+                      if (width >= 1200) {
                         crossAxisCount = 3;
-                      } else if (width >= 768) {
+                      } else if (width >= 700) {
                         crossAxisCount = 2;
                       } else {
                         crossAxisCount = 1;
@@ -210,7 +245,7 @@ class _OrdersPageState extends State<OrdersPage>
                           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                           itemCount: filteredOrders.length,
                           itemBuilder: (ctx, i) {
-                            return _OrderCard(order: filteredOrders[i]);
+                            return _OrderCard(key: ValueKey(filteredOrders[i].id), order: filteredOrders[i]);
                           },
                         );
                       }
@@ -226,7 +261,7 @@ class _OrdersPageState extends State<OrdersPage>
                           children: filteredOrders.map((order) {
                             return SizedBox(
                               width: cardWidth,
-                              child: _OrderCard(order: order),
+                              child: _OrderCard(key: ValueKey(order.id), order: order),
                             );
                           }).toList(),
                         ),
@@ -343,14 +378,14 @@ class _StatusBar extends StatelessWidget {
 // ─── Order Card (collapsible, matching Pencil design 65Kok) ──
 class _OrderCard extends StatefulWidget {
   final OrderModel order;
-  const _OrderCard({required this.order});
+  const _OrderCard({super.key, required this.order});
 
   @override
   State<_OrderCard> createState() => _OrderCardState();
 }
 
 class _OrderCardState extends State<_OrderCard> {
-  bool _isExpanded = false;
+  bool _isExpanded = true;
   // Track which item is being edited (null = none)
   String? _editingItemId;
   final TextEditingController _noteController = TextEditingController();
@@ -711,55 +746,80 @@ class _OrderCardState extends State<_OrderCard> {
                                   decorationColor: AppColors.emerald500)),
                         ),
                       ),
-                      // Price
-                      Text(
-                        formatCurrency(item.price * item.quantity),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.emerald600,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      // Status badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: item.isDone
-                              ? AppColors.emerald50
-                              : AppColors.red50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: item.isDone
-                                  ? AppColors.emerald200
-                                  : Colors.transparent),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                      // Price + Status wrapped
+                      Flexible(
+                        child: Wrap(
+                          alignment: WrapAlignment.end,
+                          spacing: 6,
+                          runSpacing: 4,
                           children: [
-                            Icon(
-                                item.isDone
-                                    ? Icons.check_circle_rounded
-                                    : Icons.pending_rounded,
-                                size: 12,
-                                color: item.isDone
-                                    ? AppColors.emerald600
-                                    : AppColors.red500),
-                            const SizedBox(width: 3),
                             Text(
-                                item.isDone ? 'Đã xong' : 'Chưa xong',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: item.isDone
-                                        ? FontWeight.w700
-                                        : FontWeight.w600,
+                              formatCurrency(item.price * item.quantity),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.emerald600,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: item.isDone
+                                    ? AppColors.emerald50
+                                    : AppColors.red50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
                                     color: item.isDone
-                                        ? AppColors.emerald600
-                                        : AppColors.red500)),
+                                        ? AppColors.emerald200
+                                        : Colors.transparent),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                      item.isDone
+                                          ? Icons.check_circle_rounded
+                                          : Icons.pending_rounded,
+                                      size: 12,
+                                      color: item.isDone
+                                          ? AppColors.emerald600
+                                          : AppColors.red500),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                      item.isDone ? 'Đã xong' : 'Chưa xong',
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: item.isDone
+                                              ? FontWeight.w700
+                                              : FontWeight.w600,
+                                          color: item.isDone
+                                              ? AppColors.emerald600
+                                              : AppColors.red500)),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ),
+                      // Delete item button
+                      if ((order.status == 'pending' || order.status == 'cooking') && order.items.length > 1)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: GestureDetector(
+                            onTap: () => store.removeOrderItem(order.id, item.id),
+                            child: Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: AppColors.red50,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(Icons.close_rounded,
+                                  size: 14, color: AppColors.red500),
+                            ),
+                          ),
+                        ),
                     ]),
                     // Note display (when not editing)
                     if (item.note.isNotEmpty && !isEditing)
@@ -898,17 +958,20 @@ class _OrderCardState extends State<_OrderCard> {
                         color: AppColors.amber500,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.play_circle_outline_rounded,
                               size: 14, color: Colors.white),
                           SizedBox(width: 4),
-                          Text('Xác nhận đơn hàng',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 13)),
+                          Flexible(
+                            child: Text('Xác nhận đơn hàng',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13)),
+                          ),
                         ],
                       ),
                     ),
@@ -918,11 +981,7 @@ class _OrderCardState extends State<_OrderCard> {
                 Expanded(
                   child: GestureDetector(
                     onTap: () {
-                      if (order.paymentStatus != 'paid') {
-                        _showPaymentQR(context, order, store);
-                      } else {
-                        store.updateOrderStatus(order.id, 'completed');
-                      }
+                      store.updateOrderStatus(order.id, 'completed');
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -994,7 +1053,7 @@ class _OrderCardState extends State<_OrderCard> {
                       Icon(Icons.payments_rounded,
                           size: 16, color: Colors.white),
                       SizedBox(width: 4),
-                      Text('Thu tiền ngay',
+                      Text('Thanh toán trước',
                           style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
@@ -1257,7 +1316,8 @@ class _OrderCardState extends State<_OrderCard> {
                                 child: GestureDetector(
                                   onTap: () {
                                     Navigator.pop(ctx);
-                                    store.completeOrderWithPayment(order.id, 'cash');
+                                    store.updateOrderPaymentStatus(order.id, 'paid', paymentMethod: 'cash');
+                                    store.showToast('Đã thanh toán trước (tiền mặt)');
                                   },
                                   child: Container(
                                     height: 52,
@@ -1282,7 +1342,8 @@ class _OrderCardState extends State<_OrderCard> {
                                 child: GestureDetector(
                                   onTap: () {
                                     Navigator.pop(ctx);
-                                    store.completeOrderWithPayment(order.id, 'transfer');
+                                    store.updateOrderPaymentStatus(order.id, 'paid', paymentMethod: 'transfer');
+                                    store.showToast('Đã thanh toán trước (chuyển khoản)');
                                   },
                                   child: Container(
                                     height: 52,
@@ -1425,14 +1486,21 @@ class _OrderCardState extends State<_OrderCard> {
   // ── Add Items Dialog ────────────────────────────────
   void _showAddItemsDialog(
       BuildContext context, OrderModel order, AppStore store) {
-    final allProducts = store.currentProducts
+    // Get products from the order's store specifically
+    final allProducts = (store.products[order.storeId] ?? store.currentProducts)
         .where((p) => !p.isOutOfStock)
         .toList();
-    final allCategories = store.currentCategories;
+    // Extract unique categories from available products
+    final allCategoryNames = allProducts
+        .map((p) => p.category)
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
     // Temp cart for new items
     final Map<String, int> tempCart = {};
     final Map<String, String> tempNotes = {};
-    String searchQuery = '';
+    String selectedCategory = '';
 
     showGeneralDialog(
       context: context,
@@ -1457,13 +1525,13 @@ class _OrderCardState extends State<_OrderCard> {
                 color: Colors.transparent,
                 child: StatefulBuilder(
                   builder: (ctx2, setState2) {
-                    // Filter products by search
-                    final filtered = searchQuery.isEmpty
+                    final screenWidth = MediaQuery.of(context).size.width;
+                    final isLandscape = screenWidth > 600;
+                    // Filter products by category
+                    final filtered = selectedCategory.isEmpty
                         ? allProducts
                         : allProducts
-                            .where((p) => p.name
-                                .toLowerCase()
-                                .contains(searchQuery.toLowerCase()))
+                            .where((p) => p.category == selectedCategory)
                             .toList();
                     // Calculate temp cart total
                     double addedTotal = 0;
@@ -1476,10 +1544,12 @@ class _OrderCardState extends State<_OrderCard> {
                       }
                     });
 
+                    final crossAxisCount = isLandscape ? 4 : 2;
+
                     return Container(
-                      width: MediaQuery.of(context).size.width > 600 ? 420 : MediaQuery.of(context).size.width - 32,
+                      width: isLandscape ? screenWidth * 0.85 : screenWidth - 32,
                       constraints: BoxConstraints(
-                        maxHeight: MediaQuery.of(context).size.height * 0.75,
+                        maxHeight: MediaQuery.of(context).size.height * 0.85,
                       ),
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -1557,54 +1627,38 @@ class _OrderCardState extends State<_OrderCard> {
                             ),
                           ),
 
-                          // Search field
+                          // Category chips
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                            child: TextField(
-                              onChanged: (v) => setState2(() => searchQuery = v),
-                              decoration: InputDecoration(
-                                hintText: 'Tìm sản phẩm...',
-                                hintStyle: TextStyle(
-                                  color: AppColors.slate400.withValues(alpha: 0.7),
-                                  fontSize: 14,
-                                ),
-                                prefixIcon: const Icon(Icons.search_rounded,
-                                    color: AppColors.slate400, size: 20),
-                                prefixIconConstraints:
-                                    const BoxConstraints(minWidth: 44),
-                                filled: true,
-                                fillColor: AppColors.slate50,
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 10),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                      color: AppColors.slate200),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                      color: AppColors.emerald500, width: 1.5),
-                                ),
+                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                            child: SizedBox(
+                              height: 34,
+                              child: ListView(
+                                scrollDirection: Axis.horizontal,
+                                children: [
+                                  _buildCategoryChip(
+                                    label: 'Tất cả',
+                                    isSelected: selectedCategory.isEmpty,
+                                    onTap: () => setState2(() => selectedCategory = ''),
+                                  ),
+                                  ...allCategoryNames.map((catName) => _buildCategoryChip(
+                                    label: catName,
+                                    isSelected: selectedCategory == catName,
+                                    onTap: () => setState2(() => selectedCategory = catName),
+                                  )),
+                                ],
                               ),
-                              style: const TextStyle(
-                                  fontSize: 14, color: AppColors.slate800),
                             ),
                           ),
 
                           Container(height: 1, color: AppColors.slate100),
 
-                          // Product grid (2 columns)
+                          // Product grid (responsive)
                           Flexible(
                             child: filtered.isEmpty
                                 ? const Padding(
                                     padding: EdgeInsets.all(40),
                                     child: Center(
-                                      child: Text('Không tìm thấy sản phẩm',
+                                      child: Text('Không có sản phẩm',
                                           style: TextStyle(
                                               color: AppColors.slate400)),
                                     ),
@@ -1612,8 +1666,8 @@ class _OrderCardState extends State<_OrderCard> {
                                 : GridView.builder(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 12, vertical: 10),
-                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
+                                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: crossAxisCount,
                                       crossAxisSpacing: 10,
                                       mainAxisSpacing: 10,
                                       childAspectRatio: 0.72,
@@ -1947,10 +2001,50 @@ class _OrderCardState extends State<_OrderCard> {
       ),
     );
   }
+  Widget _buildCategoryChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.emerald500 : AppColors.slate50,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected ? AppColors.emerald500 : AppColors.slate200,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: isSelected ? Colors.white : AppColors.slate600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Timestamps stored as local values but Supabase may return with +00:00,
+  /// so DateTime.tryParse treats them as UTC epoch. Reconstruct as local
+  /// DateTime for correct difference/comparison calculations.
+  DateTime? _parseAsLocal(String time) {
+    final dt = DateTime.tryParse(time);
+    if (dt == null) return null;
+    return DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second);
+  }
 
   bool _isLate(String time) {
     if (time.isEmpty) return false;
-    final orderTime = DateTime.tryParse(time);
+    final orderTime = _parseAsLocal(time);
     if (orderTime == null) return false;
     return DateTime.now().difference(orderTime).inMinutes > 15;
   }
@@ -1979,9 +2073,10 @@ class _OrderCardState extends State<_OrderCard> {
   /// Elapsed minutes badge (e.g. " · 25 phút")
   String _elapsedBadge(String time) {
     if (time.isEmpty) return '';
-    final dt = DateTime.tryParse(time);
+    final dt = _parseAsLocal(time);
     if (dt == null) return '';
     final diff = DateTime.now().difference(dt);
+    if (diff.isNegative) return '';
     if (diff.inMinutes < 1) return ' · < 1 phút';
     if (diff.inMinutes < 60) return ' · ${diff.inMinutes} phút';
     return ' · ${diff.inHours} giờ ${diff.inMinutes % 60} phút';

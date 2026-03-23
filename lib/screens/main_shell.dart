@@ -20,12 +20,21 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
+  // Sadmin: has admin dashboard tab
+  static const List<_NavItem> _sadminMenuItems = [
+    _NavItem(icon: Icons.bar_chart, label: 'Báo Cáo', path: '/dashboard'),
+    _NavItem(icon: PhosphorIconsBold.storefront, label: 'Bán hàng', path: '/'),
+    _NavItem(icon: PhosphorIconsBold.clipboardText, label: 'Đơn hàng', path: '/orders'),
+    _NavItem(icon: PhosphorIconsBold.package, label: 'Quản lý kho', path: '/inventory'),
+    _NavItem(icon: PhosphorIconsBold.shieldCheck, label: 'Quản lý', path: '/admin'),
+  ];
+
+  // Admin: no settings, no admin dashboard
   static const List<_NavItem> _adminMenuItems = [
     _NavItem(icon: Icons.bar_chart, label: 'Báo Cáo', path: '/dashboard'),
     _NavItem(icon: PhosphorIconsBold.storefront, label: 'Bán hàng', path: '/'),
     _NavItem(icon: PhosphorIconsBold.clipboardText, label: 'Đơn hàng', path: '/orders'),
     _NavItem(icon: PhosphorIconsBold.package, label: 'Quản lý kho', path: '/inventory'),
-    _NavItem(icon: Icons.settings_outlined, label: 'Cài đặt', path: '/settings'),
   ];
 
   // Staff tabs: Order + Orders only
@@ -35,8 +44,10 @@ class _MainShellState extends State<MainShell> {
   ];
 
   List<_NavItem> _getMenuItems(AppStore store) {
-    final isAdmin = ['admin', 'sadmin'].contains(store.currentUser?.role);
-    return isAdmin ? _adminMenuItems : _staffMenuItems;
+    final role = store.currentUser?.role;
+    if (role == 'sadmin') return _sadminMenuItems;
+    if (role == 'admin') return _adminMenuItems;
+    return _staffMenuItems;
   }
 
   void _onTabTapped(int index, List<_NavItem> items) {
@@ -46,8 +57,8 @@ class _MainShellState extends State<MainShell> {
   int _getCurrentIndex(List<_NavItem> items) {
     var location = GoRouterState.of(context).matchedLocation;
     // Settings sub-routes → map to /settings
-    if (location == '/nhap-thu' || location == '/nhap-chi' || location == '/premium') {
-      location = '/settings';
+    if (location == '/nhap-thu' || location == '/nhap-chi' || location == '/premium' || location == '/settings') {
+      location = '/admin';
     }
     for (int i = 0; i < items.length; i++) {
       if (items[i].path == location) return i;
@@ -57,11 +68,10 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width >= 768;
     final isOnOrderPage =
         GoRouterState.of(context).matchedLocation == '/';
 
-    return Selector<AppStore, ({String? role, dynamic storeInfo, bool hasCart, int cartLen, int cartItemCount, double cartTotal})>(
+    return Selector<AppStore, ({String? role, dynamic storeInfo, bool hasCart, int cartLen, int cartItemCount, double cartTotal, int pendingCount, int cookingCount})>(
       selector: (_, s) => (
         role: s.currentUser?.role,
         storeInfo: s.currentStoreInfo,
@@ -69,6 +79,8 @@ class _MainShellState extends State<MainShell> {
         cartLen: s.cart.length,
         cartItemCount: s.cartItemCount,
         cartTotal: s.getCartTotal(),
+        pendingCount: s.pendingProcessing,
+        cookingCount: s.cookingProcessing,
       ),
       builder: (context, data, child) {
     final store = context.read<AppStore>();
@@ -77,56 +89,28 @@ class _MainShellState extends State<MainShell> {
     final storeInfo = data.storeInfo;
 
     return Scaffold(
-      body: Row(
+      body: Column(
         children: [
-          // ── Sidebar (Desktop) ────────────────
-          if (isWide)
-            RepaintBoundary(
-              child: _DesktopSidebar(
-                store: store,
-                menuItems: menuItems,
-                currentIndex: currentIdx,
-                storeInfo: storeInfo,
-                onTap: (i) => _onTabTapped(i, menuItems),
-              ),
-            ),
+          _MobileHeader(store: store, storeInfo: storeInfo),
+          Expanded(child: widget.child),
+        ],
+      ),
 
-          // ── Main Content ────────────────────
-          Expanded(
-            child: Column(
-              children: [
-                // Mobile header
-                if (!isWide)
-                  _MobileHeader(store: store, storeInfo: storeInfo),
-
-
-                Expanded(child: widget.child),
-              ],
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isOnOrderPage && data.hasCart && MediaQuery.of(context).size.width < 600)
+            _MobileCartBar(store: store),
+          RepaintBoundary(
+            child: _MobileBottomNav(
+              menuItems: menuItems,
+              currentIndex: currentIdx,
+              store: store,
+              onTap: (i) => _onTabTapped(i, menuItems),
             ),
           ),
         ],
       ),
-
-      // ── Cart Bar (Mobile) ──────────────────
-      bottomNavigationBar: isWide
-          ? null
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Gradient cart bar
-                if (!isWide && isOnOrderPage && data.hasCart)
-                  _MobileCartBar(store: store),
-                // Bottom Navigation
-                RepaintBoundary(
-                  child: _MobileBottomNav(
-                    menuItems: menuItems,
-                    currentIndex: currentIdx,
-                    store: store,
-                    onTap: (i) => _onTabTapped(i, menuItems),
-                  ),
-                ),
-              ],
-            ),
     );
       },
     );
@@ -142,481 +126,6 @@ class _NavItem {
       {required this.icon, required this.label, required this.path});
 }
 
-// ─── Desktop Sidebar ──────────────────────────────────
-class _DesktopSidebar extends StatelessWidget {
-  final AppStore store;
-  final List<_NavItem> menuItems;
-  final int currentIndex;
-  final dynamic storeInfo;
-  final ValueChanged<int> onTap;
-
-  const _DesktopSidebar({
-    required this.store,
-    required this.menuItems,
-    required this.currentIndex,
-    required this.storeInfo,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isExpanded = MediaQuery.of(context).size.width >= 1024;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      width: isExpanded ? 250 : 80,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border:
-            Border(right: BorderSide(color: AppColors.slate200, width: 1)),
-      ),
-      child: Column(
-        children: [
-          // Logo / Store Name
-          Container(
-            height: 80,
-            padding:
-                EdgeInsets.symmetric(horizontal: isExpanded ? 20 : 12),
-            alignment:
-                isExpanded ? Alignment.centerLeft : Alignment.center,
-            decoration: const BoxDecoration(
-              border: Border(
-                  bottom:
-                      BorderSide(color: AppColors.slate100, width: 1)),
-            ),
-            child: Row(
-              mainAxisSize:
-                  isExpanded ? MainAxisSize.max : MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        AppColors.emerald500,
-                        AppColors.emerald600
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color:
-                            AppColors.emerald500.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  alignment: Alignment.center,
-                  child: storeInfo.logoUrl.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: storeInfo.logoUrl.startsWith('data:')
-                              ? Image.memory(
-                                  _decodeAvatar(storeInfo.logoUrl),
-                                  fit: BoxFit.cover,
-                                  width: 40,
-                                  height: 40,
-                                  errorBuilder: (_, __, ___) => const Text(
-                                    'POS',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                )
-                              : Image.network(
-                                  storeInfo.logoUrl,
-                                  fit: BoxFit.cover,
-                                  width: 40,
-                                  height: 40,
-                                  errorBuilder: (_, __, ___) => const Text(
-                                    'POS',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                        )
-                      : const Text(
-                          'POS',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                ),
-                if (isExpanded) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      storeInfo.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                        color: AppColors.slate800,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          // Navigation Items
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  vertical: 24, horizontal: 12),
-              child: Column(
-                children: List.generate(menuItems.length, (i) {
-                  final item = menuItems[i];
-                  final isActive = i == currentIndex;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Material(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () => onTap(i),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: EdgeInsets.symmetric(
-                            vertical: 14,
-                            horizontal: isExpanded ? 16 : 0,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? AppColors.emerald50
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: isExpanded
-                                ? MainAxisAlignment.start
-                                : MainAxisAlignment.center,
-                            children: [
-                              if (isActive)
-                                Container(
-                                  width: 3,
-                                  height: 24,
-                                  margin:
-                                      const EdgeInsets.only(right: 8),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.emerald500,
-                                    borderRadius:
-                                        BorderRadius.circular(4),
-                                  ),
-                                ),
-                              Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  Icon(
-                                    item.icon,
-                                    color: isActive
-                                        ? AppColors.emerald600
-                                        : AppColors.slate500,
-                                    size: isActive ? 26 : 24,
-                                  ),
-                                  // Pending badge (red, top-left)
-                                  if (item.path == '/orders' &&
-                                      store.pendingProcessing > 0)
-                                    Positioned(
-                                      top: -6,
-                                      left: -8,
-                                      child: Container(
-                                        padding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 4,
-                                                vertical: 1),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.red500,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          border: Border.all(
-                                              color: Colors.white,
-                                              width: 2),
-                                        ),
-                                        constraints:
-                                            const BoxConstraints(
-                                                minWidth: 18,
-                                                minHeight: 18),
-                                        child: Text(
-                                          '${store.pendingProcessing > 99 ? '99+' : store.pendingProcessing}',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                    ),
-                                  // Cooking badge (orange, top-right)
-                                  if (item.path == '/orders' &&
-                                      store.cookingProcessing > 0)
-                                    Positioned(
-                                      top: -6,
-                                      right: -8,
-                                      child: Container(
-                                        padding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 4,
-                                                vertical: 1),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.amber500,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          border: Border.all(
-                                              color: Colors.white,
-                                              width: 2),
-                                        ),
-                                        constraints:
-                                            const BoxConstraints(
-                                                minWidth: 18,
-                                                minHeight: 18),
-                                        child: Text(
-                                          '${store.cookingProcessing > 99 ? '99+' : store.cookingProcessing}',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              if (isExpanded) ...[
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Text(
-                                    item.label,
-                                    style: TextStyle(
-                                      fontWeight: isActive
-                                          ? FontWeight.w600
-                                          : FontWeight.w500,
-                                      color: isActive
-                                          ? AppColors.emerald600
-                                          : AppColors.slate500,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
-          ),
-
-          // Notification bell (desktop)
-          if (store.notifications.isNotEmpty ||
-              store.notifications.any((n) => !n.read))
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: NotificationBell(),
-            ),
-
-          // User Profile
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              border: Border(
-                  top: BorderSide(color: AppColors.slate100, width: 1)),
-            ),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () {
-                context.go('/settings?tab=account');
-              },
-              child: Row(
-                mainAxisAlignment: isExpanded
-                    ? MainAxisAlignment.start
-                    : MainAxisAlignment.center,
-                children: [
-                  _buildAvatarWidget(store, 20),
-                  if (isExpanded) ...[
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            store.currentUser?.fullname.isNotEmpty ==
-                                    true
-                                ? store.currentUser!.fullname
-                                : store.currentUser?.username ?? '',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                              color: AppColors.slate800,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            store.currentUser?.role == 'sadmin'
-                                ? 'Super Admin 👑'
-                                : store.currentUser?.isPremium == true
-                                    ? 'Premium 💎'
-                                    : 'Gói Basic',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color:
-                                  store.currentUser?.isPremium == true
-                                      ? AppColors.amber500
-                                      : AppColors.slate500,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showUserMenu(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    _buildAvatarWidget(store, 24),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            store.currentUser?.fullname.isNotEmpty ==
-                                    true
-                                ? store.currentUser!.fullname
-                                : store.currentUser?.username ?? '',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                              color: AppColors.slate800,
-                            ),
-                          ),
-                          Text(
-                            '@${store.currentUser?.username ?? ''}',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: AppColors.slate500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Role badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: store.currentUser?.role == 'sadmin'
-                            ? AppColors.violet100
-                            : store.currentUser?.role == 'admin'
-                                ? AppColors.emerald50
-                                : AppColors.slate100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        store.currentUser?.role == 'sadmin'
-                            ? '👑 SA'
-                            : store.currentUser?.role == 'admin'
-                                ? 'Admin'
-                                : 'Staff',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: store.currentUser?.role == 'sadmin'
-                              ? AppColors.violet600
-                              : store.currentUser?.role == 'admin'
-                                  ? AppColors.emerald600
-                                  : AppColors.slate600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const Divider(height: 1),
-                // Upgrade option for non-premium
-                if (store.currentUser?.role == 'admin' &&
-                    store.currentUser?.isPremium != true)
-                  ListTile(
-                    leading: const Icon(Icons.diamond,
-                        color: AppColors.amber500),
-                    title: const Text(
-                      'Nâng cấp VIP',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.amber600,
-                      ),
-                    ),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      store.setUpgradeModalOpen(true);
-                    },
-                  ),
-                ListTile(
-                  leading: const Icon(Icons.logout,
-                      color: AppColors.red500),
-                  title: const Text(
-                    'Đăng xuất',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.red500,
-                    ),
-                  ),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    store.logout();
-                    context.go('/login');
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
 
 // ─── Mobile Header ────────────────────────────────────
 class _MobileHeader extends StatelessWidget {
@@ -638,35 +147,9 @@ class _MobileHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Logo
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: AppColors.emerald500,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            alignment: Alignment.center,
-            child: const Text(
-              'POS',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 10,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
+          // Logo + Store name (tappable for sadmin to switch stores)
           Expanded(
-            child: Text(
-              storeInfo.name,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                color: AppColors.slate800,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
+            child: _buildStoreSelectorArea(context),
           ),
 
           // Notification Bell
@@ -681,9 +164,133 @@ class _MobileHeader extends StatelessWidget {
       ),
     );
   }
-}
 
-// ─── Mobile Cart Bar ──────────────────────────────────
+  Widget _buildStoreSelectorArea(BuildContext context) {
+    final isSadmin = store.currentUser?.role == 'sadmin';
+    final fieldKey = GlobalKey();
+
+    // Current display name
+    String displayName = storeInfo.name;
+    if (isSadmin) {
+      final viewId = store.sadminViewStoreId;
+      if (viewId == 'all') {
+        displayName = 'Tất cả cửa hàng';
+      } else {
+        displayName = store.storeInfos[viewId]?.name ?? viewId;
+      }
+    }
+
+    final content = Row(
+      key: fieldKey,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 32, height: 32,
+          decoration: BoxDecoration(
+            color: AppColors.emerald500,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          alignment: Alignment.center,
+          child: const Text('POS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            displayName,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.slate800),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        if (isSadmin) ...[
+          const SizedBox(width: 4),
+          const Icon(Icons.unfold_more, size: 16, color: AppColors.slate400),
+        ],
+      ],
+    );
+
+    if (!isSadmin) return content;
+
+    return GestureDetector(
+      onTap: () {
+        final renderBox = fieldKey.currentContext?.findRenderObject() as RenderBox?;
+        if (renderBox == null) return;
+        final position = renderBox.localToGlobal(Offset.zero);
+        final fieldSize = renderBox.size;
+
+        final storeEntries = store.storeInfos.entries.where((e) => e.key != 'sadmin').toList();
+        final currentViewId = store.sadminViewStoreId;
+
+        final items = <PopupMenuEntry<String>>[
+          PopupMenuItem<String>(
+            value: 'all',
+            height: 44,
+            child: Row(
+              children: [
+                const Icon(Icons.all_inclusive, size: 16, color: AppColors.violet500),
+                const SizedBox(width: 8),
+                const Text('Tất cả cửa hàng', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                if (currentViewId == 'all') ...[
+                  const Spacer(),
+                  const Icon(Icons.check_circle, size: 16, color: AppColors.emerald500),
+                ],
+              ],
+            ),
+          ),
+          ...storeEntries.map((entry) {
+            final sid = entry.key;
+            final info = entry.value;
+            final name = info.name.isNotEmpty ? info.name : sid;
+            return PopupMenuItem<String>(
+              value: sid,
+              height: 44,
+              child: Row(
+                children: [
+                  const Icon(Icons.store, size: 16, color: AppColors.emerald500),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(name, style: TextStyle(
+                    fontWeight: sid == currentViewId ? FontWeight.w700 : FontWeight.w500,
+                    fontSize: 13,
+                    color: sid == currentViewId ? AppColors.emerald600 : AppColors.slate800,
+                  ), overflow: TextOverflow.ellipsis)),
+                  if (info.isPremium)
+                    Container(
+                      margin: const EdgeInsets.only(left: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [AppColors.amber500, AppColors.orange500]),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text('VIP', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800)),
+                    ),
+                  if (sid == currentViewId) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.check_circle, size: 16, color: AppColors.emerald500),
+                  ],
+                ],
+              ),
+            );
+          }),
+        ];
+
+        showMenu<String>(
+          context: context,
+          position: RelativeRect.fromLTRB(
+            position.dx,
+            position.dy + fieldSize.height + 4,
+            position.dx + fieldSize.width,
+            position.dy + fieldSize.height + 300,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          elevation: 8,
+          items: items,
+        ).then((v) {
+          if (v != null) store.setSadminViewStoreId(v);
+        });
+      },
+      child: content,
+    );
+  }
+}
 class _MobileCartBar extends StatelessWidget {
   final AppStore store;
   const _MobileCartBar({required this.store});

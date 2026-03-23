@@ -149,51 +149,11 @@ class AppStore extends ChangeNotifier {
               ? user.createdBy
               : user.username;
 
-      // Load users
-      final usersData = await _supabase.from('users').select();
-      users = (usersData as List).map((u) => UserModel.fromMap(u)).toList();
-
-      // Load storeInfos
-      final storeInfosData = await _supabase.from('store_infos').select();
-      storeInfos = {'sadmin': const StoreInfoModel(name: 'Nhà Hàng Của Tôi', isPremium: true)};
-      for (final s in storeInfosData) {
-        storeInfos[s['store_id']] = StoreInfoModel.fromMap(s);
-      }
-
-      // Load storeTables
-      final tablesData = await _supabase
-          .from('store_tables')
-          .select()
-          .order('sort_order');
-      storeTables = {};
-      for (final t in tablesData) {
-        final sid = t['store_id'] as String;
-        storeTables.putIfAbsent(sid, () => []);
-        storeTables[sid]!.add(t['table_name'] as String);
-      }
-
-      // Load categories
-      final catsData = await _supabase.from('categories').select();
-      categories = {};
-      for (final c in catsData) {
-        final sid = c['store_id'] as String;
-        categories.putIfAbsent(sid, () => []);
-        categories[sid]!.add(CategoryModel.fromMap(c));
-      }
-
-      // Load products
-      final prodsData = await _supabase.from('products').select();
-      products = {};
-      for (final p in prodsData) {
-        final sid = p['store_id'] as String;
-        products.putIfAbsent(sid, () => []);
-        products[sid]!.add(ProductModel.fromMap(p));
-      }
-
-      // Load orders
       final isPremium = user.isPremium || user.role == 'sadmin';
       final daysToKeep = isPremium ? 365 : 3;
       final cutoff = DateTime.now().subtract(Duration(days: daysToKeep));
+
+      // Build orders query
       PostgrestFilterBuilder ordersQuery = _supabase
           .from('orders')
           .select()
@@ -201,29 +161,72 @@ class AppStore extends ChangeNotifier {
       if (storeId != null) {
         ordersQuery = ordersQuery.eq('store_id', storeId);
       }
-      final ordersData = await ordersQuery.order('time', ascending: false);
-      orders = (ordersData as List).map((o) => OrderModel.fromMap(o)).toList();
 
-      // Load notifications
-      final notiData = await _supabase
-          .from('notifications')
-          .select()
-          .eq('user_id', user.username)
-          .order('time', ascending: false);
+      // Build thu_chi query
+      PostgrestFilterBuilder thuChiQuery = _supabase
+          .from('thu_chi_transactions')
+          .select();
+      if (storeId != null) {
+        thuChiQuery = thuChiQuery.eq('store_id', storeId);
+      }
+
+      // Run ALL queries in parallel instead of sequentially
+      final results = await Future.wait([
+        _supabase.from('users').select(),                         // 0
+        _supabase.from('store_infos').select(),                   // 1
+        _supabase.from('store_tables').select().order('sort_order'), // 2
+        _supabase.from('categories').select(),                    // 3
+        _supabase.from('products').select(),                      // 4
+        ordersQuery.order('time', ascending: false),              // 5
+        _supabase.from('notifications').select()
+            .eq('user_id', user.username)
+            .order('time', ascending: false),                     // 6
+        _supabase.from('upgrade_requests').select()
+            .order('time', ascending: false),                     // 7
+        thuChiQuery.order('time', ascending: false),              // 8
+      ]);
+
+      // Process results
+      users = (results[0] as List).map((u) => UserModel.fromMap(u)).toList();
+
+      storeInfos = {'sadmin': const StoreInfoModel(name: 'Nhà Hàng Của Tôi', isPremium: true)};
+      for (final s in results[1]) {
+        storeInfos[s['store_id']] = StoreInfoModel.fromMap(s);
+      }
+
+      storeTables = {};
+      for (final t in results[2]) {
+        final sid = t['store_id'] as String;
+        storeTables.putIfAbsent(sid, () => []);
+        storeTables[sid]!.add(t['table_name'] as String);
+      }
+
+      categories = {};
+      for (final c in results[3]) {
+        final sid = c['store_id'] as String;
+        categories.putIfAbsent(sid, () => []);
+        categories[sid]!.add(CategoryModel.fromMap(c));
+      }
+
+      products = {};
+      for (final p in results[4]) {
+        final sid = p['store_id'] as String;
+        products.putIfAbsent(sid, () => []);
+        products[sid]!.add(ProductModel.fromMap(p));
+      }
+
+      orders = (results[5] as List).map((o) => OrderModel.fromMap(o)).toList();
+
       notifications =
-          (notiData as List).map((n) => NotificationModel.fromMap(n)).toList();
+          (results[6] as List).map((n) => NotificationModel.fromMap(n)).toList();
 
-      // Load upgrade requests
-      final upgradeData = await _supabase
-          .from('upgrade_requests')
-          .select()
-          .order('time', ascending: false);
-      upgradeRequests = (upgradeData as List)
+      upgradeRequests = (results[7] as List)
           .map((r) => UpgradeRequestModel.fromMap(r))
           .toList();
 
-      // Load thu chi transactions
-      await loadThuChiTransactions(storeId);
+      thuChiTransactions = (results[8] as List)
+          .map((r) => ThuChiTransaction.fromMap(r))
+          .toList();
 
       isLoading = false;
       notifyListeners();
@@ -912,6 +915,14 @@ class AppStore extends ChangeNotifier {
     );
   }
 
+  void removeOrderItem(String orderId, String itemId) {
+    final order = orders.firstWhere((o) => o.id == orderId, orElse: () => orders.first);
+    if (order.items.length <= 1) return; // Don't remove last item
+    final newItems = order.items.where((i) => i.id != itemId).toList();
+    final newTotal = newItems.fold(0.0, (acc, i) => acc + i.price * i.quantity);
+    updateOrderItems(orderId, newItems, newTotal);
+  }
+
   void cancelOrder(String orderId) {
     final oldOrders = List<OrderModel>.from(orders);
     _optimistic(
@@ -957,7 +968,7 @@ class AppStore extends ChangeNotifier {
     try {
       await _supabase.from('orders').insert(newOrder);
       orders.insert(0, OrderModel.fromMap(newOrder));
-      cart.clear();
+      cart = [];
       notifyListeners();
     } catch (e) {
       showToast('Tạo đơn thất bại', 'error');
@@ -1021,23 +1032,31 @@ class AppStore extends ChangeNotifier {
   void addToCart(ProductModel product) {
     final existingIdx = cart.indexWhere((item) => item.id == product.id);
     if (existingIdx >= 0) {
-      cart[existingIdx] =
-          cart[existingIdx].copyWith(quantity: cart[existingIdx].quantity + 1);
+      cart = [
+        for (int i = 0; i < cart.length; i++)
+          if (i == existingIdx)
+            cart[i].copyWith(quantity: cart[i].quantity + 1)
+          else
+            cart[i],
+      ];
     } else {
-      cart.add(OrderItemModel(
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        quantity: 1,
-        note: '',
-        image: product.image,
-      ));
+      cart = [
+        ...cart,
+        OrderItemModel(
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: 1,
+          note: '',
+          image: product.image,
+        ),
+      ];
     }
     notifyListeners();
   }
 
   void removeFromCart(String productId) {
-    cart.removeWhere((item) => item.id == productId);
+    cart = cart.where((item) => item.id != productId).toList();
     notifyListeners();
   }
 
@@ -1046,9 +1065,12 @@ class AppStore extends ChangeNotifier {
     if (idx >= 0) {
       final newQty = cart[idx].quantity + amount;
       if (newQty <= 0) {
-        cart.removeAt(idx);
+        cart = [...cart.sublist(0, idx), ...cart.sublist(idx + 1)];
       } else {
-        cart[idx] = cart[idx].copyWith(quantity: newQty);
+        cart = [
+          for (int i = 0; i < cart.length; i++)
+            if (i == idx) cart[i].copyWith(quantity: newQty) else cart[i],
+        ];
       }
       notifyListeners();
     }
@@ -1062,7 +1084,7 @@ class AppStore extends ChangeNotifier {
   }
 
   void clearCart() {
-    cart.clear();
+    cart = [];
     notifyListeners();
   }
 

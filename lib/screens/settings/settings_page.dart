@@ -71,6 +71,12 @@ class _SettingsPageState extends State<SettingsPage> {
       icon: Icons.grid_view_outlined,
     ),
     _SettingMenu(
+      id: 'qr-menu',
+      name: 'Menu QR & Order',
+      desc: 'Quản lý menu QR, đặt hàng online',
+      icon: Icons.qr_code_2,
+    ),
+    _SettingMenu(
       id: 'users',
       name: 'Quản Lý Nhân Sự',
       desc: 'Quản lý nhân viên, phân quyền vai trò',
@@ -100,46 +106,9 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
-    final isWide = MediaQuery.of(context).size.width >= 768;
     final isAdmin = ['admin', 'sadmin'].contains(store.currentUser?.role);
 
     final menus = _menus.where((m) => !m.adminOnly || isAdmin).toList();
-
-    if (isWide) {
-      return Row(
-        children: [
-          SizedBox(
-            width: 300,
-            child: _SettingsMenuList(
-              menus: menus,
-              selected: _selectedSection,
-              onSelect: (id) => setState(() => _selectedSection = id),
-            ),
-          ),
-          Expanded(
-            child: _selectedSection != null
-                ? _buildSection(_selectedSection!)
-                : Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.settings,
-                            size: 64, color: AppColors.slate300),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Chọn mục cài đặt',
-                          style: TextStyle(
-                            color: AppColors.slate400,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-          ),
-        ],
-      );
-    }
 
     if (_selectedSection != null) {
       return _buildSection(_selectedSection!,
@@ -152,6 +121,7 @@ class _SettingsPageState extends State<SettingsPage> {
       onSelect: (id) => setState(() => _selectedSection = id),
     );
   }
+
 
   Widget _buildSection(String id, {VoidCallback? onBack}) {
     final menu = _menus.firstWhere((m) => m.id == id, orElse: () => _menus.first);
@@ -215,6 +185,8 @@ class _SettingsPageState extends State<SettingsPage> {
         return const MenuManagementSection();
       case 'tables':
         return const _TablesSection();
+      case 'qr-menu':
+        return const _QrMenuSection();
       case 'users':
         return const _UsersSection();
       case 'printer':
@@ -4012,3 +3984,57 @@ class _BackupSection extends StatelessWidget {
   }
 }
 
+// ─── QR Menu & Order Section ─────────────────────────
+class _QrMenuSection extends StatelessWidget {
+  const _QrMenuSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80, height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.emerald50,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(Icons.qr_code_2, size: 40, color: AppColors.emerald500),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Menu QR & Order',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.slate800),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Tính năng đang phát triển.\nSẽ hỗ trợ tạo menu QR cho khách hàng quét mã\nđặt món trực tiếp từ bàn.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: AppColors.slate400, height: 1.5),
+            ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.amber50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.amber200),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.construction, size: 18, color: AppColors.amber500),
+                  SizedBox(width: 8),
+                  Text('Sắp ra mắt', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.amber600)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

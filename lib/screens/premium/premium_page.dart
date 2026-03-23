@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../store/app_store.dart';
 import '../../utils/constants.dart';
 
 class PremiumPage extends StatefulWidget {
@@ -92,7 +94,6 @@ class _PremiumPageState extends State<PremiumPage>
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width >= 768;
     final plan = _plans[_selectedPlan];
 
     return Scaffold(
@@ -100,33 +101,22 @@ class _PremiumPageState extends State<PremiumPage>
       body: CustomScrollView(
         slivers: [
           // ── Gradient Header ──
-          SliverToBoxAdapter(child: _buildHeader(isWide)),
+          SliverToBoxAdapter(child: _buildHeader()),
 
           // ── Content ──
           SliverPadding(
-            padding: EdgeInsets.symmetric(
-              horizontal: isWide ? 40 : 16,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
               vertical: 24,
             ),
             sliver: SliverToBoxAdapter(
-              child: isWide
-                  ? Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Left: Features
-                        Expanded(flex: 4, child: _buildFeatureCard()),
-                        const SizedBox(width: 24),
-                        // Right: Plans + CTA
-                        Expanded(flex: 6, child: _buildPlansSection(plan)),
-                      ],
-                    )
-                  : Column(
-                      children: [
-                        _buildFeatureCard(),
-                        const SizedBox(height: 20),
-                        _buildPlansSection(plan),
-                      ],
-                    ),
+              child: Column(
+                children: [
+                  _buildFeatureCard(),
+                  const SizedBox(height: 20),
+                  _buildPlansSection(plan),
+                ],
+              ),
             ),
           ),
         ],
@@ -135,15 +125,10 @@ class _PremiumPageState extends State<PremiumPage>
   }
 
   // ── Header ──
-  Widget _buildHeader(bool isWide) {
+  Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
-        isWide ? 40 : 20,
-        isWide ? 40 : 24,
-        isWide ? 40 : 20,
-        isWide ? 36 : 24,
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -190,7 +175,7 @@ class _PremiumPageState extends State<PremiumPage>
                           Text(
                             'Moimoi Premium',
                             style: TextStyle(
-                              fontSize: isWide ? 26 : 22,
+                              fontSize: 22,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
                               letterSpacing: -0.5,
@@ -202,7 +187,7 @@ class _PremiumPageState extends State<PremiumPage>
                       Text(
                         'Mở khóa toàn bộ tính năng, phát triển cửa hàng không giới hạn',
                         style: TextStyle(
-                          fontSize: isWide ? 15 : 13,
+                          fontSize: 13,
                           color: Colors.white.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w500,
                         ),
@@ -336,7 +321,43 @@ class _PremiumPageState extends State<PremiumPage>
                 child: InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () {
-                    // TODO: Integrate payment
+                    final store = context.read<AppStore>();
+                    final user = store.currentUser;
+                    if (user == null) return;
+                    // Map plan index to months
+                    const planMonths = [1, 3, 6, 12];
+                    store.requestUpgrade(
+                      user.username,
+                      _selectedPlan,
+                      plan.name,
+                      planMonths[_selectedPlan],
+                    );
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: const Row(
+                          children: [
+                            Icon(Icons.check_circle, color: AppColors.emerald500, size: 28),
+                            SizedBox(width: 10),
+                            Text('Đã gửi yêu cầu!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                        content: Text(
+                          'Yêu cầu đăng ký gói ${plan.name} đã được gửi.\nVui lòng chờ Super Admin duyệt.',
+                          style: const TextStyle(fontSize: 14, color: AppColors.slate600),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              Navigator.of(context).maybePop();
+                            },
+                            child: const Text('OK', style: TextStyle(color: AppColors.emerald600, fontWeight: FontWeight.w700)),
+                          ),
+                        ],
+                      ),
+                    );
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 18),

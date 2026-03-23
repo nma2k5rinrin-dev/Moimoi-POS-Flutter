@@ -14,18 +14,18 @@ class StoreSelector extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final adminUsers =
-        store.users.where((u) => u.role == 'admin').toList();
+    // Get all stores from storeInfos (excluding 'sadmin' default entry)
+    final storeEntries = store.storeInfos.entries
+        .where((e) => e.key != 'sadmin')
+        .toList();
     final currentStoreId = store.sadminViewStoreId;
     final fieldKey = GlobalKey();
 
     // Get display text for current selection
     String displayText = '👑 Tất cả cửa hàng';
     if (currentStoreId != 'all') {
-      final admin = adminUsers.where((u) => u.username == currentStoreId).firstOrNull;
-      if (admin != null) {
-        displayText = store.storeInfos[admin.username]?.name ?? admin.fullname;
-      }
+      final info = store.storeInfos[currentStoreId];
+      displayText = info?.name ?? currentStoreId;
     }
 
     return GestureDetector(
@@ -49,10 +49,13 @@ class StoreSelector extends StatelessWidget {
               ],
             ),
           ),
-          ...adminUsers.map((admin) {
-            final storeName = store.storeInfos[admin.username]?.name ?? admin.fullname;
+          ...storeEntries.map((entry) {
+            final storeId = entry.key;
+            final info = entry.value;
+            final storeName = info.name.isNotEmpty ? info.name : storeId;
+            final isPremium = info.isPremium;
             return PopupMenuItem<String>(
-              value: admin.username,
+              value: storeId,
               height: 48,
               child: Row(
                 children: [
@@ -63,12 +66,12 @@ class StoreSelector extends StatelessWidget {
                       storeName,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontWeight: admin.username == currentStoreId ? FontWeight.w700 : FontWeight.w500,
-                        color: admin.username == currentStoreId ? AppColors.emerald600 : AppColors.slate800,
+                        fontWeight: storeId == currentStoreId ? FontWeight.w700 : FontWeight.w500,
+                        color: storeId == currentStoreId ? AppColors.emerald600 : AppColors.slate800,
                       ),
                     ),
                   ),
-                  if (admin.isPremium)
+                  if (isPremium)
                     Container(
                       margin: const EdgeInsets.only(left: 6),
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -87,7 +90,7 @@ class StoreSelector extends StatelessWidget {
                         ),
                       ),
                     ),
-                  if (admin.username == currentStoreId)
+                  if (storeId == currentStoreId)
                     const Padding(
                       padding: EdgeInsets.only(left: 6),
                       child: Icon(Icons.check_circle, size: 18, color: AppColors.emerald600),

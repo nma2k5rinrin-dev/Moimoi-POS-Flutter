@@ -10,22 +10,36 @@ import '../../models/order_model.dart';
 import '../../models/store_info_model.dart';
 import '../../models/category_model.dart';
 import '../../widgets/payment_confirmation_dialog.dart';
+import '../../widgets/mobile_cart_sheet.dart';
 
 class OrderPage extends StatelessWidget {
   const OrderPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width >= 768;
-    return Row(
-      children: [
-        const Expanded(child: _ProductGrid()),
-        if (isWide)
-          const SizedBox(
-            width: 380,
-            child: _CartPanel(),
-          ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final showSideCart = constraints.maxWidth >= 600;
+        if (showSideCart) {
+          return Row(
+            children: [
+              const Expanded(child: _ProductGrid()),
+              SizedBox(
+                width: 340,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      left: BorderSide(color: AppColors.slate100, width: 1),
+                    ),
+                  ),
+                  child: const MobileCartSheet(embedded: true),
+                ),
+              ),
+            ],
+          );
+        }
+        return const _ProductGrid();
+      },
     );
   }
 }
@@ -764,239 +778,6 @@ class _ProductCard extends StatelessWidget {
   }
 }
 
-// ─── Cart Panel (desktop side panel) ──────────────────
-class _CartPanel extends StatelessWidget {
-  const _CartPanel();
-
-  @override
-  Widget build(BuildContext context) {
-    return Selector<AppStore, List<OrderItemModel>>(
-      selector: (_, s) => s.cart,
-      builder: (context, cart, _) {
-    final store = context.read<AppStore>();
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border:
-            const Border(left: BorderSide(color: AppColors.slate100, width: 1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 20,
-            offset: const Offset(-4, 0),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Header
-          _buildCartHeader(store, cart),
-          Container(height: 1, color: AppColors.slate100),
-
-          // Cart Items
-          Expanded(
-            child: cart.isEmpty
-                ? _buildEmptyCart()
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    itemCount: cart.length,
-                    itemBuilder: (ctx, i) {
-                      return _CartItemCard(item: cart[i], index: i);
-                    },
-                  ),
-          ),
-
-          // Footer
-          if (cart.isNotEmpty) _buildCheckoutFooter(context, store),
-        ],
-      ),
-    );
-      },
-    );
-  }
-
-  static Widget _buildCartHeader(AppStore store, List<OrderItemModel> cart) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.shopping_bag_rounded,
-                  color: AppColors.emerald500, size: 24),
-              const SizedBox(width: 10),
-              Text(
-                'Giỏ hàng (${cart.length})',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18,
-                  color: AppColors.slate800,
-                ),
-              ),
-            ],
-          ),
-          if (cart.isNotEmpty)
-            InkWell(
-              onTap: () => store.clearCart(),
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.slate100,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.delete_outline_rounded,
-                    size: 18, color: AppColors.slate500),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  static Widget _buildEmptyCart() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: AppColors.slate50,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Icon(Icons.shopping_bag_outlined,
-                size: 32, color: AppColors.slate300),
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            'Chưa có sản phẩm nào',
-            style: TextStyle(
-              color: AppColors.slate500,
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Chạm vào sản phẩm để thêm vào đơn',
-            style: TextStyle(
-              color: AppColors.slate400,
-              fontSize: 13,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCheckoutFooter(BuildContext context, AppStore store) {
-    final tables = store.currentTables;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border:
-            const Border(top: BorderSide(color: AppColors.slate100, width: 1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, -6),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Total row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Tổng thanh toán',
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 15,
-                  color: AppColors.slate500,
-                ),
-              ),
-              Text(
-                formatCurrency(store.getCartTotal()),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 26,
-                  color: AppColors.emerald500,
-                  letterSpacing: -0.5,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Table selector button
-          _TableSelectorBtn(
-            store: store,
-            tables: tables,
-          ),
-          const SizedBox(height: 10),
-
-          // Pay button (gradient emerald)
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: () => _showPaymentConfirmation(context, store),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.zero,
-                backgroundColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
-              child: Ink(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xFF10B981), Color(0xFF059669)],
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Container(
-                  alignment: Alignment.center,
-                  height: 50,
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.check_circle_outline_rounded,
-                          size: 18, color: Colors.white),
-                      SizedBox(width: 8),
-                      Text(
-                        'Thanh toán thôi',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ─── Table Selector Button ────────────────────────────
 class _TableSelectorBtn extends StatelessWidget {
@@ -1023,7 +804,7 @@ class _TableSelectorBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selected = store.selectedTable;
+    final selected = context.select<AppStore, String>((s) => s.selectedTable);
     return InkWell(
       onTap: () => _showTablePicker(context),
       borderRadius: BorderRadius.circular(14),
@@ -1084,152 +865,6 @@ class _TableSelectorBtn extends StatelessWidget {
       if (o.table.isNotEmpty) occupiedTables.add(o.table);
     }
 
-    final isWide = MediaQuery.of(context).size.width >= 768;
-
-    if (isWide) {
-      // ── Positioned dropdown for tablet / PC ──
-      final renderBox = context.findRenderObject() as RenderBox?;
-      if (renderBox == null) return;
-      final buttonPos = renderBox.localToGlobal(Offset.zero);
-      final buttonSize = renderBox.size;
-      final screenHeight = MediaQuery.of(context).size.height;
-
-      // Estimate dropdown height (capped)
-      const double dropdownMaxH = 360;
-      final double spaceBelow =
-          screenHeight - buttonPos.dy - buttonSize.height - 8;
-      final double spaceAbove = buttonPos.dy - 8;
-      final bool dropDown = spaceBelow >= 200 || spaceBelow >= spaceAbove;
-
-      showDialog(
-        context: context,
-        barrierColor: Colors.transparent,
-        builder: (ctx) => Stack(
-          children: [
-            // Transparent tap-to-dismiss
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () => Navigator.pop(ctx),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-                  child: Container(
-                      color: Colors.black.withValues(alpha: 0.08)),
-                ),
-              ),
-            ),
-            // Dropdown panel
-            Positioned(
-              left: buttonPos.dx,
-              right: MediaQuery.of(context).size.width -
-                  buttonPos.dx -
-                  buttonSize.width,
-              top: dropDown ? buttonPos.dy + buttonSize.height + 6 : null,
-              bottom: dropDown
-                  ? null
-                  : screenHeight - buttonPos.dy + 6,
-              child: Material(
-                color: Colors.transparent,
-                child: Container(
-                  constraints: BoxConstraints(
-                    maxHeight: dropDown
-                        ? spaceBelow.clamp(0, dropdownMaxH)
-                        : spaceAbove.clamp(0, dropdownMaxH),
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 24,
-                        offset: Offset(0, dropDown ? 8 : -8),
-                      ),
-                    ],
-                    border: Border.all(color: AppColors.slate100),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Text('Chọn bàn',
-                                style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.slate800)),
-                          ),
-                          // Mang về
-                          _tableOption(
-                            ctx,
-                            icon: Icons.shopping_bag_outlined,
-                            iconColor: AppColors.orange500,
-                            label: 'Mang về',
-                            isSelected: store.selectedTable == 'Mang về',
-                            onTap: () {
-                              store.setSelectedTable('Mang về');
-                              Navigator.pop(ctx);
-                            },
-                          ),
-                          // Groups
-                          ...areaGroups.entries.expand((entry) {
-                            final areaName = entry.key;
-                            final areaTables = entry.value;
-                            return [
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                    16, 10, 16, 2),
-                                child: Text(
-                                  areaName.toUpperCase(),
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.slate400,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                              ...areaTables.map((t) {
-                                final tableName = _nameOf(t);
-                                final isBusy = occupiedTables.contains(t);
-                                return _tableOption(
-                                  ctx,
-                                  icon: Icons.table_restaurant_outlined,
-                                  iconColor: isBusy ? AppColors.slate400 : AppColors.emerald500,
-                                  label: tableName,
-                                  isSelected: store.selectedTable == t,
-                                  isBusy: isBusy,
-                                  onTap: () {
-                                    if (isBusy) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Bàn đang có đơn xử lý'),
-                                          duration: Duration(seconds: 2),
-                                        ),
-                                      );
-                                      return;
-                                    }
-                                    store.setSelectedTable(t);
-                                    Navigator.pop(ctx);
-                                  },
-                                );
-                              }),
-                            ];
-                          }),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    } else {
       // ── Bottom sheet for mobile ──
       showModalBottomSheet(
         context: context,
@@ -1359,8 +994,8 @@ class _TableSelectorBtn extends StatelessWidget {
           );
         },
       );
-    }
   }
+
 
   static Widget _tableOption(
     BuildContext context, {
@@ -1422,7 +1057,8 @@ class _TableSelectorBtn extends StatelessWidget {
 
 }
 
-// ─── Cart Item Card (redesigned with thumbnail + note) ──
+
+// ─── Cart Item Card (used by mobile cart sheet) ──────
 class _CartItemCard extends StatelessWidget {
   final OrderItemModel item;
   final int index;
@@ -1433,46 +1069,40 @@ class _CartItemCard extends StatelessWidget {
     final store = context.read<AppStore>();
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.slate100),
+        color: AppColors.slate50,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Thumbnail
           ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             child: Container(
               width: 56,
               height: 56,
               color: AppColors.slate100,
-              child: item.image != null && item.image!.isNotEmpty
+              child: (item.image != null && item.image!.isNotEmpty)
                   ? (item.image!.startsWith('data:')
                       ? Image.memory(
                           base64Decode(item.image!.split(',').last),
                           fit: BoxFit.cover,
-                          cacheWidth: 112,
-                          errorBuilder: (_, __, ___) => const Icon(
-                                Icons.restaurant_rounded,
-                                color: AppColors.slate300,
-                                size: 24,
-                              ))
-                      : Image.network(item.image!, fit: BoxFit.cover,
-                          cacheWidth: 112,
-                          errorBuilder: (_, __, ___) => const Icon(
-                                Icons.restaurant_rounded,
-                                color: AppColors.slate300,
-                                size: 24,
-                              )))
-                  : const Icon(Icons.restaurant_rounded,
-                      color: AppColors.slate300, size: 24),
+                          errorBuilder: (_, __, ___) =>
+                              const Icon(Icons.fastfood, color: AppColors.slate400),
+                        )
+                      : Image.network(
+                          item.image!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              const Icon(Icons.fastfood, color: AppColors.slate400),
+                        ))
+                  : const Icon(Icons.fastfood, color: AppColors.slate400),
             ),
           ),
           const SizedBox(width: 12),
-          // Info column
+          // Info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1480,95 +1110,57 @@ class _CartItemCard extends StatelessWidget {
                 Text(
                   item.name,
                   style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
                     color: AppColors.slate800,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
-                  formatCurrency(item.price),
+                  formatCurrency(item.price * item.quantity),
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: AppColors.emerald500,
+                    fontSize: 14,
+                    color: AppColors.emerald600,
                   ),
                 ),
-                const SizedBox(height: 6),
-                // Note input
-                Container(
-                  height: 36,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.slate200),
-                  ),
-                  child: TextField(
-                    controller: TextEditingController(text: item.note),
-                    onChanged: (v) => store.addNote(item.id, v),
-                    style: const TextStyle(fontSize: 13, color: AppColors.slate600),
-                    decoration: InputDecoration(
-                      hintText: 'Ghi chú (Ví dụ: ít đường)...',
-                      hintStyle: TextStyle(
-                        color: AppColors.slate400.withValues(alpha: 0.6),
-                        fontSize: 13,
-                      ),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                if (item.note.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.sticky_note_2_outlined,
+                            size: 12, color: AppColors.amber500),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            item.note,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.slate500,
+                              fontStyle: FontStyle.italic,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                // Quantity controls
-                Row(
-                  children: [
-                    _buildQtyRow(store),
-                  ],
-                ),
               ],
             ),
           ),
           const SizedBox(width: 8),
-          // Action buttons (edit/delete)
-          Column(
-            children: [
-              // Edit (pencil) button
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.slate50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.edit_outlined,
-                    size: 16, color: AppColors.slate500),
-              ),
-              const SizedBox(height: 8),
-              // Delete button
-              InkWell(
-                onTap: () => store.removeFromCart(item.id),
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.delete_outline_rounded,
-                      size: 16, color: AppColors.red400),
-                ),
-              ),
-            ],
-          ),
+          // Qty controls
+          _buildQtyControls(store),
         ],
       ),
     );
   }
 
-  Widget _buildQtyRow(AppStore store) {
+  Widget _buildQtyControls(AppStore store) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1582,9 +1174,7 @@ class _CartItemCard extends StatelessWidget {
             icon: item.quantity <= 1
                 ? Icons.delete_outline_rounded
                 : Icons.remove_rounded,
-            color: item.quantity <= 1
-                ? AppColors.red400
-                : AppColors.slate600,
+            color: item.quantity <= 1 ? AppColors.red500 : AppColors.slate600,
             onTap: () {
               if (item.quantity <= 1) {
                 store.removeFromCart(item.id);

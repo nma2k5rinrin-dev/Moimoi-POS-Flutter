@@ -10,7 +10,8 @@ import 'payment_confirmation_dialog.dart';
 
 /// Mobile cart bottom sheet matching Pencil design
 class MobileCartSheet extends StatelessWidget {
-  const MobileCartSheet({super.key});
+  final bool embedded;
+  const MobileCartSheet({super.key, this.embedded = false});
 
   static void show(BuildContext context) {
     showModalBottomSheet(
@@ -50,16 +51,16 @@ class MobileCartSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     final cart = store.cart;
-    final maxHeight = MediaQuery.of(context).size.height * 0.7;
+    final maxHeight = embedded ? double.infinity : MediaQuery.of(context).size.height * 0.7;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(embedded ? 0 : 24),
       child: Container(
-        constraints: BoxConstraints(maxHeight: maxHeight),
-        decoration: const BoxDecoration(
+        constraints: embedded ? null : BoxConstraints(maxHeight: maxHeight),
+        decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.all(Radius.circular(24)),
-          boxShadow: [
+          borderRadius: BorderRadius.all(Radius.circular(embedded ? 0 : 24)),
+          boxShadow: embedded ? [] : const [
             BoxShadow(
               color: Color(0x33000000),
               blurRadius: 32,
@@ -68,7 +69,7 @@ class MobileCartSheet extends StatelessWidget {
           ],
         ),
         child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: embedded ? MainAxisSize.max : MainAxisSize.min,
         children: [
           // Header
           Padding(
@@ -91,6 +92,7 @@ class MobileCartSheet extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (!embedded)
                 InkWell(
                   onTap: () => Navigator.pop(context),
                   borderRadius: BorderRadius.circular(16),
@@ -110,7 +112,7 @@ class MobileCartSheet extends StatelessWidget {
           ),
 
           // Cart Items
-          Flexible(
+          Expanded(
             child: cart.isEmpty
                 ? Padding(
                     padding: const EdgeInsets.all(40),
@@ -138,7 +140,7 @@ class MobileCartSheet extends StatelessWidget {
                     ),
                   )
                 : ListView.builder(
-                    shrinkWrap: true,
+                    shrinkWrap: !embedded,
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     itemCount: cart.length,
                     itemBuilder: (_, i) =>
@@ -198,7 +200,7 @@ class MobileCartSheet extends StatelessWidget {
                             height: 50,
                             child: ElevatedButton(
                               onPressed: () {
-                                _showPaymentConfirmation(context, store);
+                                _showPaymentConfirmation(context, store, embedded: embedded);
                               },
                               style: ElevatedButton.styleFrom(
                                 padding: EdgeInsets.zero,
@@ -635,7 +637,8 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
   void _closeDropdown() {
     _overlayEntry?.remove();
     _overlayEntry = null;
-    if (mounted) setState(() => _isOpen = false);
+    _isOpen = false;
+    if (mounted) setState(() {});
   }
 
   Widget _buildDropItem(String label, IconData icon,
@@ -718,7 +721,8 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
 
   @override
   void dispose() {
-    _closeDropdown();
+    _overlayEntry?.remove();
+    _overlayEntry = null;
     super.dispose();
   }
 
@@ -791,17 +795,17 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
 
 
 // ─── Payment Confirmation Dialog ──────────────────────
-void _showPaymentConfirmation(BuildContext context, AppStore store) {
+void _showPaymentConfirmation(BuildContext context, AppStore store, {bool embedded = false}) {
   showPaymentConfirmation(
     context,
     amount: store.getCartTotal(),
     onPaid: (method) {
-      Navigator.pop(context); // close cart sheet
+      if (!embedded) Navigator.pop(context); // close cart sheet (only if bottom sheet)
       store.checkoutOrder(paymentStatus: 'paid', paymentMethod: method);
       store.showToast('Thanh toán thành công!');
     },
     onUnpaid: () {
-      Navigator.pop(context); // close cart sheet
+      if (!embedded) Navigator.pop(context); // close cart sheet (only if bottom sheet)
       store.checkoutOrder(paymentStatus: 'unpaid');
       store.showToast('Đơn đã tạo, chưa thu tiền');
     },
