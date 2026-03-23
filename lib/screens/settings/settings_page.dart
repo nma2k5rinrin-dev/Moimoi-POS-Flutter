@@ -16,6 +16,7 @@ import '../../models/store_info_model.dart';
 import '../../widgets/date_range_picker_dialog.dart';
 import '../thu_chi/thu_chi_page.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Uint8List _decodeAvatar(String dataUri) {
@@ -371,12 +372,86 @@ class _AccountSection extends StatefulWidget {
 
 class _AccountSectionState extends State<_AccountSection> {
   final _phoneController = TextEditingController();
+  bool _biometricAvailable = false;
+  bool _biometricEnabled = false;
 
   @override
   void initState() {
     super.initState();
     final store = context.read<AppStore>();
     _phoneController.text = store.currentUser?.phone ?? '';
+    _initBiometricState();
+  }
+
+  Future<void> _initBiometricState() async {
+    try {
+      final localAuth = LocalAuthentication();
+      final canCheck = await localAuth.canCheckBiometrics;
+      final isSupported = await localAuth.isDeviceSupported();
+      final available = canCheck && isSupported;
+
+      bool enabled = false;
+      if (available) {
+        final store = context.read<AppStore>();
+        enabled = await store.hasSavedCredentials();
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _biometricAvailable = available;
+        _biometricEnabled = enabled;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _toggleBiometric(bool enable) async {
+    final store = context.read<AppStore>();
+    final user = store.currentUser;
+
+    if (enable) {
+      // Authenticate first before enabling
+      try {
+        final localAuth = LocalAuthentication();
+        final didAuthenticate = await localAuth.authenticate(
+          localizedReason: 'Xác thực để bật đăng nhập sinh trắc học',
+        );
+        if (!didAuthenticate) {
+          if (mounted) store.showToast('Xác thực thất bại', 'error');
+          return;
+        }
+      } catch (e) {
+        if (mounted) store.showToast('Lỗi xác thực sinh trắc học', 'error');
+        return;
+      }
+
+      // Get current credentials to save
+      final creds = await store.getSavedCredentials();
+      if (creds != null) {
+        // Credentials already saved from login, just update state
+        if (mounted) {
+          setState(() => _biometricEnabled = true);
+          store.showToast('Đã bật đăng nhập sinh trắc học');
+        }
+      } else {
+        // No credentials saved yet - user needs to have logged in with password first
+        if (user != null) {
+          // Re-save credentials using current session
+          // Since we can't retrieve the password from session, prompt user
+          if (mounted) {
+            store.showToast(
+                'Vui lòng đăng xuất và đăng nhập lại bằng mật khẩu để kích hoạt',
+                'error');
+          }
+        }
+      }
+    } else {
+      // Disable: clear saved credentials
+      await store.clearSavedCredentials();
+      if (mounted) {
+        setState(() => _biometricEnabled = false);
+        store.showToast('Đã tắt đăng nhập sinh trắc học');
+      }
+    }
   }
 
   @override
@@ -707,14 +782,19 @@ class _AccountSectionState extends State<_AccountSection> {
                         _SecurityRow(
                           icon: Icons.fingerprint_rounded,
                           label: 'Vân tay / FaceID',
-                          trailing: Switch(
-                            value: false,
-                            activeTrackColor: AppColors.emerald500,
-                            onChanged: (v) {
-                              store.showToast(
-                                  'Tính năng đang phát triển', 'error');
-                            },
-                          ),
+                          trailing: _biometricAvailable
+                              ? Switch(
+                                  value: _biometricEnabled,
+                                  activeTrackColor: AppColors.emerald500,
+                                  onChanged: _toggleBiometric,
+                                )
+                              : Text(
+                                  'Không hỗ trợ',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.slate400,
+                                  ),
+                                ),
                         ),
 
                         const SizedBox(height: 24),
@@ -874,7 +954,10 @@ class _AccountSectionState extends State<_AccountSection> {
       barrierColor: Colors.black.withValues(alpha: 0.5),
       transitionDuration: const Duration(milliseconds: 250),
       pageBuilder: (ctx, a1, a2) {
-        return Center(
+        final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
+        return SingleChildScrollView(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: Center(
           child: Material(
             color: Colors.transparent,
             child: Container(
@@ -1060,6 +1143,7 @@ class _AccountSectionState extends State<_AccountSection> {
               ),
             ),
           ),
+        ),
         );
       },
       transitionBuilder: (ctx, a1, a2, child) {
@@ -2384,7 +2468,9 @@ class _TablesSectionState extends State<_TablesSection> {
             filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
             child: GestureDetector(
             onTap: () {}, // prevent close on panel tap
-            child: Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: Center(
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 24),
                 padding: const EdgeInsets.all(24),
@@ -2649,11 +2735,12 @@ class _TablesSectionState extends State<_TablesSection> {
                     ),
                   ],
                 ),
-              ),
-            ),
-            ),
-          ),
-        ),
+              ),  // Container
+            ),  // Center
+            ),  // SingleChildScrollView
+            ),  // GestureDetector (prevent close)
+          ),  // BackdropFilter
+        ),  // Container (backdrop color)
       ),
     ),
     );
@@ -3215,7 +3302,9 @@ class _UsersSectionState extends State<_UsersSection> {
           filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
           child: GestureDetector(
             onTap: () {}, // prevent close on panel tap
-            child: Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: Center(
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 60),
                 decoration: BoxDecoration(
@@ -3433,11 +3522,12 @@ class _UsersSectionState extends State<_UsersSection> {
                     ),
                   ],
                 ),
-              ),
-            ),
-          ),
-        ),
-      ),
+              ),  // Container
+            ),  // Center
+            ),  // SingleChildScrollView
+          ),  // GestureDetector (prevent close)
+        ),  // BackdropFilter
+      ),  // Container (backdrop color)
     ),
     );
   }

@@ -20,7 +20,7 @@ class QuotaHelper {
   int get currentStaffCount {
     final storeId = store.getStoreId();
     return store.users
-        .where((u) => u.role == 'staff' && u.createdBy == storeId)
+        .where((u) => u.role != 'admin' && u.role != 'sadmin' && u.createdBy == storeId)
         .length;
   }
 

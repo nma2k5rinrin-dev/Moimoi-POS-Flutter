@@ -155,13 +155,14 @@ class _AddProductPanelState extends State<AddProductPanel>
             left: 0,
             right: 0,
             top: MediaQuery.of(context).padding.top + 40,
+            bottom: MediaQuery.of(context).viewInsets.bottom,
             child: Center(
             child: SlideTransition(
               position: _slideAnim,
               child: Container(
                 constraints: BoxConstraints(
                   maxWidth: 480,
-                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+                  maxHeight: MediaQuery.of(context).size.height * 0.85 - MediaQuery.of(context).viewInsets.bottom,
                 ),
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(

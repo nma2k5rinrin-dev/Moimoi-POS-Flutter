@@ -264,7 +264,7 @@ class _AuthPageState extends State<AuthPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
+        body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -277,58 +277,72 @@ class _AuthPageState extends State<AuthPage>
             ],
           ),
         ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: SlideTransition(
-              position: _slideAnim,
-              child: FadeTransition(
-                opacity: _fadeAnim,
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+              return SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomInset),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 440),
-                  child: Column(
-                    children: [
-                      // Brand header
-                      _buildBrandHeader(),
-                      const SizedBox(height: 28),
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - bottomInset,
+                    maxWidth: double.infinity,
+                  ),
+                  child: Center(
+                    child: SlideTransition(
+                      position: _slideAnim,
+                      child: FadeTransition(
+                        opacity: _fadeAnim,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 440),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // Brand header
+                              _buildBrandHeader(),
+                              const SizedBox(height: 28),
 
-                      // Main card
-                      Container(
-                        padding: const EdgeInsets.all(28),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(28),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF10B981)
-                                  .withValues(alpha: 0.07),
-                              blurRadius: 60,
-                              offset: const Offset(0, 20),
-                            ),
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 20,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: _buildPasswordCard(),
-                      ),
+                              // Main card
+                              Container(
+                                padding: const EdgeInsets.all(28),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(28),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF10B981)
+                                          .withValues(alpha: 0.07),
+                                      blurRadius: 60,
+                                      offset: const Offset(0, 20),
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.04),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: _buildPasswordCard(),
+                              ),
 
-                      const SizedBox(height: 20),
-                      // Footer
-                      Text(
-                        '© 2024 MoiMoi POS · Phần mềm quản lý bán hàng',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.slate400.withValues(alpha: 0.8),
+                              const SizedBox(height: 20),
+                              // Footer
+                              Text(
+                                '© 2024 MoiMoi POS · Phần mềm quản lý bán hàng',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.slate400.withValues(alpha: 0.8),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),

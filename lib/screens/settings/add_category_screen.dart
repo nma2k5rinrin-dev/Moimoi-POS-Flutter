@@ -110,11 +110,12 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
             left: 16,
             right: 16,
             top: MediaQuery.of(context).padding.top + 80,
+            bottom: MediaQuery.of(context).viewInsets.bottom,
             child: SlideTransition(
               position: _slideAnim,
               child: Container(
                 constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.75,
+                  maxHeight: MediaQuery.of(context).size.height * 0.75 - MediaQuery.of(context).viewInsets.bottom,
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white,

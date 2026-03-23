@@ -71,37 +71,40 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> {
         routerConfig: _router,
         builder: (context, child) {
           _store.rootContext = context;
-          return Stack(
-            children: [
-              child ?? const SizedBox.shrink(),
-              // Overlay: only rebuilds when toast/confirm state changes
-              Consumer<AppStore>(
-                builder: (context, store, _) {
-                  final hasToast = store.toastMessage != null;
-                  final hasConfirm = store.confirmDialog != null;
+          return GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: Stack(
+              children: [
+                child ?? const SizedBox.shrink(),
+                // Overlay: only rebuilds when toast/confirm state changes
+                Consumer<AppStore>(
+                  builder: (context, store, _) {
+                    final hasToast = store.toastMessage != null;
+                    final hasConfirm = store.confirmDialog != null;
 
-                  // Nothing to show — return invisible widget that doesn't block touches
-                  if (!hasToast && !hasConfirm) {
-                    return const SizedBox.shrink();
-                  }
+                    // Nothing to show — return invisible widget that doesn't block touches
+                    if (!hasToast && !hasConfirm) {
+                      return const SizedBox.shrink();
+                    }
 
-                  return Stack(
-                    children: [
-                      if (hasToast)
-                        ToastOverlay(
-                          message: store.toastMessage!,
-                          type: store.toastType,
-                        ),
-                      if (hasConfirm)
-                        ConfirmModal(
-                          data: store.confirmDialog!,
-                          onCancel: () => store.closeConfirm(),
-                        ),
-                    ],
-                  );
-                },
-              ),
-            ],
+                    return Stack(
+                      children: [
+                        if (hasToast)
+                          ToastOverlay(
+                            message: store.toastMessage!,
+                            type: store.toastType,
+                          ),
+                        if (hasConfirm)
+                          ConfirmModal(
+                            data: store.confirmDialog!,
+                            onCancel: () => store.closeConfirm(),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
           );
         },
       ),
