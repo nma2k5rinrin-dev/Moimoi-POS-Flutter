@@ -240,12 +240,22 @@ class _OrdersPageState extends State<OrdersPage>
                         crossAxisCount = 1;
                       }
 
+                      // Check if summary panel is needed (only for cooking tab)
+                      final showSummary = _statusFilter == 'cooking';
+
                       if (crossAxisCount == 1) {
                         return ListView.builder(
                           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                          itemCount: filteredOrders.length,
+                          itemCount: filteredOrders.length + (showSummary ? 1 : 0),
                           itemBuilder: (ctx, i) {
-                            return _OrderCard(key: ValueKey(filteredOrders[i].id), order: filteredOrders[i]);
+                            if (showSummary && i == 0) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _SummaryPanel(cookingOrders: filteredOrders),
+                              );
+                            }
+                            final orderIdx = showSummary ? i - 1 : i;
+                            return _OrderCard(key: ValueKey(filteredOrders[orderIdx].id), order: filteredOrders[orderIdx]);
                           },
                         );
                       }
@@ -258,12 +268,19 @@ class _OrdersPageState extends State<OrdersPage>
                         child: Wrap(
                           spacing: 12,
                           runSpacing: 0,
-                          children: filteredOrders.map((order) {
-                            return SizedBox(
-                              width: cardWidth,
-                              child: _OrderCard(key: ValueKey(order.id), order: order),
-                            );
-                          }).toList(),
+                          children: [
+                            if (showSummary)
+                              SizedBox(
+                                width: cardWidth,
+                                child: _SummaryPanel(cookingOrders: filteredOrders),
+                              ),
+                            ...filteredOrders.map((order) {
+                              return SizedBox(
+                                width: cardWidth,
+                                child: _OrderCard(key: ValueKey(order.id), order: order),
+                              );
+                            }),
+                          ],
                         ),
                       );
                     },
@@ -576,63 +593,65 @@ class _OrderCardState extends State<_OrderCard> {
                                   color: AppColors.emerald600)),
                         ),
                         const SizedBox(height: 2),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: order.paymentStatus == 'paid'
-                                      ? AppColors.emerald50
-                                      : AppColors.orange50,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
                                     color: order.paymentStatus == 'paid'
-                                        ? AppColors.emerald200
-                                        : const Color(0xFFFED7AA),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      order.paymentStatus == 'paid'
-                                          ? Icons.check_circle_rounded
-                                          : Icons.schedule_rounded,
-                                      size: 10,
+                                        ? AppColors.emerald50
+                                        : AppColors.orange50,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
                                       color: order.paymentStatus == 'paid'
-                                          ? AppColors.emerald600
-                                          : const Color(0xFFEA580C),
+                                          ? AppColors.emerald200
+                                          : const Color(0xFFFED7AA),
                                     ),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      order.paymentStatus == 'paid'
-                                          ? 'Đã thanh toán'
-                                          : 'Chưa thanh toán',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        order.paymentStatus == 'paid'
+                                            ? Icons.check_circle_rounded
+                                            : Icons.schedule_rounded,
+                                        size: 10,
                                         color: order.paymentStatus == 'paid'
                                             ? AppColors.emerald600
                                             : const Color(0xFFEA580C),
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        order.paymentStatus == 'paid'
+                                            ? 'Đã thanh toán'
+                                            : 'Chưa thanh toán',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: order.paymentStatus == 'paid'
+                                              ? AppColors.emerald600
+                                              : const Color(0xFFEA580C),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                _isExpanded
-                                    ? Icons.keyboard_arrow_up_rounded
-                                    : Icons.keyboard_arrow_down_rounded,
-                                color: AppColors.slate400,
-                                size: 18,
-                              ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              _isExpanded
+                                  ? Icons.keyboard_arrow_up_rounded
+                                  : Icons.keyboard_arrow_down_rounded,
+                              color: AppColors.slate400,
+                              size: 18,
+                            ),
+                          ],
                         ),
                     ],
                   ),
@@ -747,60 +766,58 @@ class _OrderCardState extends State<_OrderCard> {
                         ),
                       ),
                       // Price + Status wrapped
-                      Flexible(
-                        child: Wrap(
-                          alignment: WrapAlignment.end,
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: [
-                            Text(
-                              formatCurrency(item.price * item.quantity),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.emerald600,
-                              ),
+                      Wrap(
+                        alignment: WrapAlignment.end,
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          Text(
+                            formatCurrency(item.price * item.quantity),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.emerald600,
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: item.isDone
-                                    ? AppColors.emerald50
-                                    : AppColors.red50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: item.isDone
+                                  ? AppColors.emerald50
+                                  : AppColors.red50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                  color: item.isDone
+                                      ? AppColors.emerald200
+                                      : Colors.transparent),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                    item.isDone
+                                        ? Icons.check_circle_rounded
+                                        : Icons.pending_rounded,
+                                    size: 12,
                                     color: item.isDone
-                                        ? AppColors.emerald200
-                                        : Colors.transparent),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                      item.isDone
-                                          ? Icons.check_circle_rounded
-                                          : Icons.pending_rounded,
-                                      size: 12,
-                                      color: item.isDone
-                                          ? AppColors.emerald600
-                                          : AppColors.red500),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                      item.isDone ? 'Đã xong' : 'Chưa xong',
-                                      style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: item.isDone
-                                              ? FontWeight.w700
-                                              : FontWeight.w600,
-                                          color: item.isDone
-                                              ? AppColors.emerald600
-                                              : AppColors.red500)),
-                                ],
-                              ),
+                                        ? AppColors.emerald600
+                                        : AppColors.red500),
+                                const SizedBox(width: 3),
+                                Text(
+                                    item.isDone ? 'Đã xong' : 'Chưa xong',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: item.isDone
+                                            ? FontWeight.w700
+                                            : FontWeight.w600,
+                                        color: item.isDone
+                                            ? AppColors.emerald600
+                                            : AppColors.red500)),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                       // Delete item button
                       if ((order.status == 'pending' || order.status == 'cooking') && order.items.length > 1)
@@ -981,7 +998,11 @@ class _OrderCardState extends State<_OrderCard> {
                 Expanded(
                   child: GestureDetector(
                     onTap: () {
-                      store.updateOrderStatus(order.id, 'completed');
+                      if (order.paymentStatus == 'paid') {
+                        store.updateOrderStatus(order.id, 'completed');
+                      } else {
+                        _showPaymentToComplete(context, order, store);
+                      }
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1081,107 +1102,496 @@ class _OrderCardState extends State<_OrderCard> {
       areaGroups[area]!.add(t);
     }
 
-    showDialog(
+    // Compute occupied tables (by other orders)
+    final activeOrders = store.visibleOrders.where(
+      (o) => (o.status == 'pending' || o.status == 'cooking') && o.id != order.id,
+    );
+    final occupiedTables = <String>{};
+    for (final o in activeOrders) {
+      if (o.table.isNotEmpty) occupiedTables.add(o.table);
+    }
+
+    showGeneralDialog(
       context: context,
-      builder: (dialogCtx) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          clipBehavior: Clip.antiAlias,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 400,
-              maxHeight: MediaQuery.of(context).size.height * 0.6,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.swap_horiz_rounded, color: AppColors.emerald500),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Đổi bàn',
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (dialogCtx, _, __) {
+        return Material(
+          type: MaterialType.transparency,
+          child: GestureDetector(
+            onTap: () => Navigator.of(dialogCtx).pop(),
+            child: Container(
+              color: Colors.black.withValues(alpha: 0.4),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () {},
+                    child: Container(
+                      constraints: BoxConstraints(
+                        maxWidth: 480,
+                        maxHeight: MediaQuery.of(context).size.height * 0.75,
                       ),
-                      const Spacer(),
-                      Text(
-                        'Hiện tại: ${order.table.isNotEmpty ? order.table.replaceAll('::', ' · ') : 'Mang về'}',
-                        style: const TextStyle(fontSize: 12, color: AppColors.slate500),
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 40,
+                            offset: const Offset(0, 12),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Flexible(
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.shopping_bag_outlined,
-                            color: AppColors.orange500),
-                        title: const Text('Mang về',
-                            style: TextStyle(fontWeight: FontWeight.w600)),
-                        trailing: order.table == 'Mang về' || order.table.isEmpty
-                            ? const Icon(Icons.check_circle, color: AppColors.emerald500)
-                            : null,
-                        onTap: () {
-                          Navigator.of(dialogCtx, rootNavigator: true).pop();
-                          store.updateOrderTable(order.id, 'Mang về');
-                        },
-                      ),
-                      ...areaGroups.entries.map((entry) {
-                        final areaName = entry.key;
-                        final areaTables = entry.value;
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                              child: Text(
-                                areaName.toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.slate400,
-                                  letterSpacing: 0.5,
-                                ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // ── Header ──
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [AppColors.emerald50, Colors.white],
                               ),
                             ),
-                            ...areaTables.map((t) {
-                              final parts = t.split('::');
-                              final tableName = parts.length > 1 ? parts.sublist(1).join('::') : t;
-                              final isCurrent = order.table == t;
-                              return ListTile(
-                                leading: Icon(
-                                    Icons.table_restaurant_outlined,
-                                    color: isCurrent ? AppColors.emerald500 : AppColors.slate500),
-                                title: Text(tableName,
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        color: isCurrent ? AppColors.emerald600 : AppColors.slate800)),
-                                trailing: isCurrent
-                                    ? const Icon(Icons.check_circle, color: AppColors.emerald500)
-                                    : null,
-                                onTap: () {
-                                  Navigator.of(dialogCtx, rootNavigator: true).pop();
-                                  store.updateOrderTable(order.id, t);
-                                },
-                              );
-                            }),
-                          ],
-                        );
-                      }),
-                      const SizedBox(height: 16),
-                    ],
+                            child: Row(
+                              children: [
+                                const Icon(Icons.swap_horiz_rounded, color: AppColors.emerald600, size: 22),
+                                const SizedBox(width: 10),
+                                const Expanded(
+                                  child: Text('Đổi bàn',
+                                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.slate800)),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.emerald50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.emerald200),
+                                  ),
+                                  child: Text(
+                                    order.table.isNotEmpty ? order.table.replaceAll('::', ' · ') : 'Mang về',
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.emerald600),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                GestureDetector(
+                                  onTap: () => Navigator.of(dialogCtx).pop(),
+                                  child: Container(
+                                    width: 32, height: 32,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.slate100,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: const Icon(Icons.close, size: 18, color: AppColors.slate500),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // ── Table List ──
+                          Flexible(
+                            child: ListView(
+                              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                              shrinkWrap: true,
+                              children: [
+                                // Mang về option (full width)
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.of(dialogCtx).pop();
+                                    store.updateOrderTable(order.id, 'Mang về');
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: (order.table == 'Mang về' || order.table.isEmpty)
+                                          ? AppColors.emerald50 : AppColors.slate50,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: (order.table == 'Mang về' || order.table.isEmpty)
+                                          ? Border.all(color: AppColors.emerald200) : null,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.shopping_bag_outlined, size: 18,
+                                            color: (order.table == 'Mang về' || order.table.isEmpty) ? AppColors.emerald600 : AppColors.orange500),
+                                        const SizedBox(width: 8),
+                                        Text('Mang về',
+                                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
+                                                color: (order.table == 'Mang về' || order.table.isEmpty) ? AppColors.emerald600 : AppColors.slate800)),
+                                        if (order.table == 'Mang về' || order.table.isEmpty) ...[
+                                          const SizedBox(width: 8),
+                                          const Icon(Icons.check_circle, size: 16, color: AppColors.emerald500),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+
+                                // Area groups with 3-column grid
+                                ...areaGroups.entries.map((entry) {
+                                  final areaName = entry.key;
+                                  final areaTables = entry.value;
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.only(bottom: 8, top: 4),
+                                        child: Row(
+                                          children: [
+                                            const Icon(Icons.location_on_rounded, size: 14, color: AppColors.emerald600),
+                                            const SizedBox(width: 6),
+                                            Text(areaName,
+                                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate500)),
+                                            const SizedBox(width: 6),
+                                            Text('${areaTables.length} bàn',
+                                                style: const TextStyle(fontSize: 11, color: AppColors.slate400)),
+                                          ],
+                                        ),
+                                      ),
+                                      // 2-column grid
+                                      LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          const crossAxisCount = 2;
+                                          const spacing = 8.0;
+                                          final itemWidth = (constraints.maxWidth - spacing * (crossAxisCount - 1)) / crossAxisCount;
+                                          return Wrap(
+                                            spacing: spacing,
+                                            runSpacing: spacing,
+                                            children: areaTables.map((t) {
+                                              final parts = t.split('::');
+                                              final tableName = parts.length > 1 ? parts.sublist(1).join('::') : t;
+                                              final isCurrent = order.table == t;
+                                              final isBusy = occupiedTables.contains(t);
+                                              return SizedBox(
+                                                width: itemWidth,
+                                                child: GestureDetector(
+                                                  onTap: () {
+                                                    Navigator.of(dialogCtx).pop();
+                                                    store.updateOrderTable(order.id, t);
+                                                  },
+                                                  child: Container(
+                                                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                                                    decoration: BoxDecoration(
+                                                      color: isCurrent ? AppColors.emerald50 : (isBusy ? AppColors.slate100 : AppColors.slate50),
+                                                      borderRadius: BorderRadius.circular(14),
+                                                      border: isCurrent ? Border.all(color: AppColors.emerald200, width: 1.5) : null,
+                                                    ),
+                                                    child: Row(
+                                                      children: [
+                                                        Container(
+                                                          width: 36, height: 36,
+                                                          decoration: BoxDecoration(
+                                                            color: (isCurrent ? AppColors.emerald500 : AppColors.slate400).withValues(alpha: 0.15),
+                                                            borderRadius: BorderRadius.circular(18),
+                                                          ),
+                                                          child: Icon(Icons.table_restaurant_outlined,
+                                                              size: 18,
+                                                              color: isBusy ? AppColors.slate400 : isCurrent ? AppColors.emerald500 : AppColors.slate400),
+                                                        ),
+                                                        const SizedBox(width: 8),
+                                                        Expanded(
+                                                          child: Column(
+                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: [
+                                                              Text(tableName,
+                                                                  maxLines: 1,
+                                                                  overflow: TextOverflow.ellipsis,
+                                                                  style: TextStyle(
+                                                                    fontSize: 13,
+                                                                    fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w600,
+                                                                    color: isBusy ? AppColors.slate400 : isCurrent ? AppColors.emerald600 : AppColors.slate800,
+                                                                  )),
+                                                              const SizedBox(height: 2),
+                                                              if (isBusy)
+                                                                Container(
+                                                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                                  decoration: BoxDecoration(
+                                                                    color: AppColors.red50,
+                                                                    borderRadius: BorderRadius.circular(4),
+                                                                  ),
+                                                                  child: const Text('Đang dùng',
+                                                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.red500)),
+                                                                )
+                                                              else if (isCurrent)
+                                                                const Text('Bàn hiện tại',
+                                                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.emerald500))
+                                                              else
+                                                                const Text('Trống',
+                                                                    style: TextStyle(fontSize: 10, color: AppColors.slate400)),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        if (isCurrent)
+                                                          const Icon(Icons.check_circle, size: 16, color: AppColors.emerald500),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            }).toList(),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 12),
+                                    ],
+                                  );
+                                }),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         );
       },
+    );
+  }
+
+  /// Show payment dialog that REQUIRES payment before completing the order.
+  /// Cash: always allowed → completes order immediately.
+  /// Transfer: only if QR or bank info configured → completes order.
+  void _showPaymentToComplete(BuildContext context, OrderModel order, AppStore store) {
+    final storeInfo = store.currentStoreInfo;
+    final hasQr = storeInfo.qrImageUrl.isNotEmpty;
+    final hasBank = storeInfo.bankId.isNotEmpty &&
+        storeInfo.bankAccount.isNotEmpty &&
+        storeInfo.bankOwner.isNotEmpty;
+    final canTransfer = hasQr || hasBank;
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'payment-complete',
+      barrierColor: Colors.transparent,
+      pageBuilder: (ctx, _, __) => Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(ctx),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                child: Container(color: const Color(0x66000000)),
+              ),
+            ),
+          ),
+          Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 480),
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x33000000),
+                    blurRadius: 32,
+                    offset: Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Thanh toán để hoàn tất',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 18,
+                                    color: AppColors.slate800,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  order.table.isNotEmpty && order.table != 'Mang về'
+                                      ? order.table.replaceAll('::', ' · ')
+                                      : 'Mang về',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.slate400,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () => Navigator.pop(ctx),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: AppColors.slate100,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Icon(Icons.close,
+                                  size: 18, color: AppColors.slate500),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(height: 1, color: AppColors.slate100),
+
+                    // Warning notice
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF7ED),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFFF59E0B)),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Vui lòng chọn phương thức thanh toán trước khi hoàn tất đơn hàng',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFFB45309)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // QR / bank info
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                      child: Column(
+                        children: [
+                          _buildPaymentQRContent(storeInfo),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Cần thanh toán',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.slate500),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            formatCurrency(order.calculatedTotal),
+                            style: const TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0F766E),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Action buttons
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              // Cash — always works
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    store.completeOrderWithPayment(order.id, 'cash');
+                                    store.showToast('Đã hoàn tất đơn (tiền mặt)');
+                                  },
+                                  child: Container(
+                                    height: 52,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
+                                      borderRadius: BorderRadius.circular(14),
+                                      boxShadow: [BoxShadow(color: const Color(0xFF10B981).withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.payments_rounded, size: 20, color: Colors.white),
+                                        SizedBox(width: 8),
+                                        Text('Tiền mặt', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Colors.white)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              // Transfer — only if QR/bank configured
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: canTransfer
+                                      ? () {
+                                          Navigator.pop(ctx);
+                                          store.completeOrderWithPayment(order.id, 'transfer');
+                                          store.showToast('Đã hoàn tất đơn (chuyển khoản)');
+                                        }
+                                      : () {
+                                          store.showToast('Chưa có thông tin QR/STK. Vào Cài đặt để thêm.', 'error');
+                                        },
+                                  child: Container(
+                                    height: 52,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: canTransfer
+                                            ? [const Color(0xFF3B82F6), const Color(0xFF2563EB)]
+                                            : [AppColors.slate300, AppColors.slate400],
+                                      ),
+                                      borderRadius: BorderRadius.circular(14),
+                                      boxShadow: canTransfer
+                                          ? [BoxShadow(color: const Color(0xFF3B82F6).withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))]
+                                          : [],
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.account_balance_rounded, size: 20, color: canTransfer ? Colors.white : AppColors.slate100),
+                                        const SizedBox(width: 8),
+                                        Text('Chuyển khoản',
+                                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: canTransfer ? Colors.white : AppColors.slate100)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1490,13 +1900,18 @@ class _OrderCardState extends State<_OrderCard> {
     final allProducts = (store.products[order.storeId] ?? store.currentProducts)
         .where((p) => !p.isOutOfStock)
         .toList();
-    // Extract unique categories from available products
-    final allCategoryNames = allProducts
+    // Extract unique category IDs from available products
+    final allCategoryIds = allProducts
         .map((p) => p.category)
         .where((c) => c.isNotEmpty)
         .toSet()
         .toList()
       ..sort();
+    // Build category ID → name map from store categories
+    final storeCategories = store.categories[order.storeId] ?? store.currentCategories;
+    final catNameMap = <String, String>{
+      for (final cat in storeCategories) cat.id: cat.name,
+    };
     // Temp cart for new items
     final Map<String, int> tempCart = {};
     final Map<String, String> tempNotes = {};
@@ -1640,10 +2055,10 @@ class _OrderCardState extends State<_OrderCard> {
                                     isSelected: selectedCategory.isEmpty,
                                     onTap: () => setState2(() => selectedCategory = ''),
                                   ),
-                                  ...allCategoryNames.map((catName) => _buildCategoryChip(
-                                    label: catName,
-                                    isSelected: selectedCategory == catName,
-                                    onTap: () => setState2(() => selectedCategory = catName),
+                                  ...allCategoryIds.map((catId) => _buildCategoryChip(
+                                    label: catNameMap[catId] ?? catId,
+                                    isSelected: selectedCategory == catId,
+                                    onTap: () => setState2(() => selectedCategory = catId),
                                   )),
                                 ],
                               ),
@@ -2114,4 +2529,371 @@ class _ActionButton extends StatelessWidget {
       ),
     );
   }
+}
+
+// ─── Summary Panel (aggregated product list for cooking tab) ──
+class _SummaryPanel extends StatefulWidget {
+  final List<OrderModel> cookingOrders;
+  const _SummaryPanel({required this.cookingOrders});
+
+  @override
+  State<_SummaryPanel> createState() => _SummaryPanelState();
+}
+
+class _SummaryPanelState extends State<_SummaryPanel> {
+  bool _isExpanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.read<AppStore>();
+
+    // Aggregate items by product name
+    final Map<String, _AggregatedProduct> aggregated = {};
+    for (final order in widget.cookingOrders) {
+      for (final item in order.items) {
+        final existing = aggregated[item.name];
+        if (existing != null) {
+          existing.totalQty += item.quantity;
+          existing.doneQty += item.isDone ? item.quantity : 0;
+          existing.orderRefs.add(_OrderItemRef(
+            orderId: order.id,
+            itemId: item.id,
+            isDone: item.isDone,
+          ));
+        } else {
+          aggregated[item.name] = _AggregatedProduct(
+            name: item.name,
+            totalQty: item.quantity,
+            doneQty: item.isDone ? item.quantity : 0,
+            orderRefs: [
+              _OrderItemRef(
+                orderId: order.id,
+                itemId: item.id,
+                isDone: item.isDone,
+              ),
+            ],
+          );
+        }
+      }
+    }
+
+    final products = aggregated.values.toList()
+      ..sort((a, b) {
+        // Undone first, then by name
+        final aDone = a.isAllDone ? 1 : 0;
+        final bDone = b.isAllDone ? 1 : 0;
+        if (aDone != bDone) return aDone - bDone;
+        return a.name.compareTo(b.name);
+      });
+
+    final totalItems = products.fold<int>(0, (s, p) => s + p.totalQty);
+    final doneItems = products.fold<int>(0, (s, p) => s + p.doneQty);
+    final progress = totalItems > 0 ? doneItems / totalItems : 0.0;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: progress >= 1.0
+              ? AppColors.emerald200
+              : const Color(0xFF3B82F6).withValues(alpha: 0.4),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF3B82F6).withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header
+          GestureDetector(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: progress >= 1.0
+                    ? AppColors.emerald50
+                    : const Color(0xFFEFF6FF),
+                borderRadius: _isExpanded
+                    ? const BorderRadius.vertical(top: Radius.circular(20))
+                    : BorderRadius.circular(20),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: progress >= 1.0
+                              ? AppColors.emerald100
+                              : const Color(0xFFDBEAFE),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          progress >= 1.0
+                              ? Icons.check_circle_rounded
+                              : Icons.playlist_add_check_rounded,
+                          size: 18,
+                          color: progress >= 1.0
+                              ? AppColors.emerald600
+                              : const Color(0xFF3B82F6),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              progress >= 1.0
+                                  ? 'Đã hoàn tất tất cả!'
+                                  : 'Tổng sản phẩm cần xử lý',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: progress >= 1.0
+                                    ? AppColors.emerald700
+                                    : AppColors.slate800,
+                              ),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              '$doneItems/$totalItems sản phẩm đã xong',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: progress >= 1.0
+                                    ? AppColors.emerald500
+                                    : AppColors.slate400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Progress percentage
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: progress >= 1.0
+                              ? AppColors.emerald500
+                              : progress >= 0.5
+                                  ? AppColors.amber500
+                                  : AppColors.slate200,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${(progress * 100).toInt()}%',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: progress >= 0.5 || progress >= 1.0
+                                ? Colors.white
+                                : AppColors.slate600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Icon(
+                        _isExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.slate400,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Progress bar
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 4,
+                      backgroundColor: AppColors.slate100,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        progress >= 1.0
+                            ? AppColors.emerald500
+                            : const Color(0xFF3B82F6),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Expandable product list
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Column(
+              children: [
+                Container(height: 1, color: AppColors.slate100),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    children: products.map((product) {
+                      final allDone = product.isAllDone;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: GestureDetector(
+                          onTap: () {
+                            if (allDone) {
+                              store.resetAllProductDoneAcrossOrders(product.name);
+                            } else {
+                              store.markProductDoneAcrossOrders(product.name, true);
+                            }
+                          },
+                          onLongPress: product.doneQty <= 0
+                              ? null
+                              : () => store.markProductDoneAcrossOrders(
+                                  product.name, false),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: allDone
+                                  ? AppColors.emerald50
+                                  : AppColors.slate50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: allDone
+                                    ? AppColors.emerald200
+                                    : AppColors.slate200,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                // Checkbox
+                                AnimatedContainer(
+                                  duration:
+                                      const Duration(milliseconds: 200),
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    color: allDone
+                                        ? AppColors.emerald500
+                                        : Colors.white,
+                                    borderRadius:
+                                        BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: allDone
+                                          ? AppColors.emerald500
+                                          : AppColors.slate300,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: allDone
+                                      ? const Icon(Icons.check_rounded,
+                                          color: Colors.white, size: 14)
+                                      : null,
+                                ),
+                                const SizedBox(width: 10),
+                                // Product name
+                                Expanded(
+                                  child: Text(
+                                    product.name,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: allDone
+                                          ? AppColors.slate400
+                                          : AppColors.slate800,
+                                      decoration: allDone
+                                          ? TextDecoration.lineThrough
+                                          : null,
+                                      decorationColor:
+                                          AppColors.slate400,
+                                    ),
+                                  ),
+                                ),
+                                // Quantity badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: allDone
+                                        ? AppColors.emerald100
+                                        : const Color(0xFFDBEAFE),
+                                    borderRadius:
+                                        BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '${product.doneQty}/${product.totalQty}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: allDone
+                                          ? AppColors.emerald600
+                                          : const Color(0xFF3B82F6),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                // Status
+                                Icon(
+                                  allDone
+                                      ? Icons.check_circle_rounded
+                                      : Icons.radio_button_unchecked_rounded,
+                                  size: 18,
+                                  color: allDone
+                                      ? AppColors.emerald500
+                                      : AppColors.slate300,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+            crossFadeState: _isExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 250),
+            sizeCurve: Curves.easeInOut,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Helper data classes for aggregation
+class _AggregatedProduct {
+  final String name;
+  int totalQty;
+  int doneQty;
+  final List<_OrderItemRef> orderRefs;
+
+  _AggregatedProduct({
+    required this.name,
+    required this.totalQty,
+    required this.doneQty,
+    required this.orderRefs,
+  });
+
+  bool get isAllDone => totalQty > 0 && doneQty >= totalQty;
+}
+
+class _OrderItemRef {
+  final String orderId;
+  final String itemId;
+  final bool isDone;
+
+  const _OrderItemRef({
+    required this.orderId,
+    required this.itemId,
+    required this.isDone,
+  });
 }

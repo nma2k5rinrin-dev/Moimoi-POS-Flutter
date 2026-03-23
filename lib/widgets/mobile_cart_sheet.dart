@@ -575,48 +575,61 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
                       ),
                     ],
                   ),
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(10),
                   child: SingleChildScrollView(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Mang về
+                        // Mang về (full width)
                         _buildDropItem(
                           'Mang về',
                           Icons.shopping_bag_rounded,
                           isSelected: widget.store.selectedTable == 'Mang về',
                           isBusy: false,
                         ),
-                        // Grouped tables
+                        const SizedBox(height: 8),
+                        // Grouped tables in 2-column grid
                         ...areaGroups.entries.expand((entry) {
                           final areaName = entry.key;
                           final areaTables = entry.value;
                           return [
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
-                              child: Text(
-                                areaName.toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.slate400,
-                                  letterSpacing: 0.5,
-                                ),
+                              padding: const EdgeInsets.fromLTRB(4, 4, 4, 6),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.location_on_rounded, size: 12, color: AppColors.emerald600),
+                                  const SizedBox(width: 4),
+                                  Text(areaName,
+                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.slate500)),
+                                  const SizedBox(width: 4),
+                                  Text('${areaTables.length} bàn',
+                                      style: const TextStyle(fontSize: 10, color: AppColors.slate400)),
+                                ],
                               ),
                             ),
-                            ...areaTables.map((t) {
-                              final parts = t.split('::');
-                              final tableName = parts.length > 1 ? parts.sublist(1).join('::') : t;
-                              final isBusy = occupiedTables.contains(t);
-                              return _buildDropItem(
-                                tableName,
-                                Icons.table_restaurant_rounded,
-                                isSelected: widget.store.selectedTable == t,
-                                isBusy: isBusy,
-                                rawValue: t,
-                              );
-                            }),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                const crossAxisCount = 2;
+                                const spacing = 6.0;
+                                final itemWidth = (constraints.maxWidth - spacing * (crossAxisCount - 1)) / crossAxisCount;
+                                return Wrap(
+                                  spacing: spacing,
+                                  runSpacing: spacing,
+                                  children: areaTables.map((t) {
+                                    final parts = t.split('::');
+                                    final tableName = parts.length > 1 ? parts.sublist(1).join('::') : t;
+                                    final isBusy = occupiedTables.contains(t);
+                                    final isSelected = widget.store.selectedTable == t;
+                                    return SizedBox(
+                                      width: itemWidth,
+                                      child: _buildGridItem(tableName, isSelected: isSelected, isBusy: isBusy, rawValue: t),
+                                    );
+                                  }).toList(),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 8),
                           ];
                         }),
                       ],
@@ -713,6 +726,82 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
             if (isSelected)
               const Icon(Icons.check_circle_rounded,
                   size: 20, color: AppColors.emerald500),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGridItem(String label, {required bool isSelected, bool isBusy = false, String? rawValue}) {
+    return GestureDetector(
+      onTap: () {
+        if (isBusy) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Bàn đang có đơn xử lý'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+        widget.store.setSelectedTable(rawValue ?? label);
+        _closeDropdown();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.emerald50 : (isBusy ? AppColors.slate100 : AppColors.slate50),
+          borderRadius: BorderRadius.circular(12),
+          border: isSelected ? Border.all(color: AppColors.emerald200, width: 1.5) : null,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 32, height: 32,
+              decoration: BoxDecoration(
+                color: (isSelected ? AppColors.emerald500 : AppColors.slate400).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(Icons.table_restaurant_outlined,
+                  size: 16,
+                  color: isBusy ? AppColors.slate400 : isSelected ? AppColors.emerald500 : AppColors.slate400),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                        color: isBusy ? AppColors.slate400 : isSelected ? AppColors.emerald600 : AppColors.slate800,
+                      )),
+                  const SizedBox(height: 2),
+                  if (isBusy)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: AppColors.red50,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text('Đang dùng',
+                          style: TextStyle(fontSize: 8, fontWeight: FontWeight.w700, color: AppColors.red500)),
+                    )
+                  else if (isSelected)
+                    const Text('Đã chọn',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.emerald500))
+                  else
+                    const Text('Trống',
+                        style: TextStyle(fontSize: 10, color: AppColors.slate400)),
+                ],
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle, size: 14, color: AppColors.emerald500),
           ],
         ),
       ),

@@ -57,24 +57,28 @@ class _SettingsPageState extends State<SettingsPage> {
       name: 'Thông Tin Cửa Hàng',
       desc: 'Tên quán, địa chỉ, số điện thoại',
       icon: Icons.storefront_outlined,
+      requiresStore: true,
     ),
     _SettingMenu(
       id: 'management',
       name: 'Danh Mục & Kho Hàng',
       desc: 'Quản lý danh mục, sản phẩm, kho hàng',
       icon: Icons.restaurant_menu,
+      requiresStore: true,
     ),
     _SettingMenu(
       id: 'tables',
       name: 'Quản Lý Bàn & Khu Vực',
       desc: 'Thiết lập danh sách bàn Order',
       icon: Icons.grid_view_outlined,
+      requiresStore: true,
     ),
     _SettingMenu(
       id: 'qr-menu',
       name: 'Menu QR & Order',
       desc: 'Quản lý menu QR, đặt hàng online',
       icon: Icons.qr_code_2,
+      requiresStore: true,
     ),
     _SettingMenu(
       id: 'users',
@@ -88,12 +92,14 @@ class _SettingsPageState extends State<SettingsPage> {
       name: 'Thu Chi',
       desc: 'Quản lý dòng tiền thu chi',
       icon: Icons.account_balance_wallet_outlined,
+      requiresStore: true,
     ),
     _SettingMenu(
       id: 'printer',
       name: 'Máy In & Hoá Đơn',
       desc: 'Kết nối máy in bill, in bếp',
       icon: Icons.print_outlined,
+      requiresStore: true,
     ),
     _SettingMenu(
       id: 'backup',
@@ -107,8 +113,14 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     final isAdmin = ['admin', 'sadmin'].contains(store.currentUser?.role);
+    final isSadmin = store.currentUser?.role == 'sadmin';
+    final hasStoreSelected = !isSadmin || store.sadminViewStoreId != 'all';
 
-    final menus = _menus.where((m) => !m.adminOnly || isAdmin).toList();
+    final menus = _menus.where((m) {
+      if (m.adminOnly && !isAdmin) return false;
+      if (m.requiresStore && !hasStoreSelected) return false;
+      return true;
+    }).toList();
 
     if (_selectedSection != null) {
       return _buildSection(_selectedSection!,
@@ -207,12 +219,14 @@ class _SettingMenu {
   final String desc;
   final IconData icon;
   final bool adminOnly;
+  final bool requiresStore;
   const _SettingMenu({
     required this.id,
     required this.name,
     required this.desc,
     required this.icon,
     this.adminOnly = false,
+    this.requiresStore = false,
   });
 }
 
@@ -2219,63 +2233,68 @@ class _TablesSectionState extends State<_TablesSection> {
                                           final color = _avatarColor(idx);
                                           return Padding(
                                             padding: const EdgeInsets.only(top: 10),
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.slate50,
-                                                borderRadius: BorderRadius.circular(14),
-                                              ),
-                                              child: Row(
-                                                children: [
-                                                  // Avatar
-                                                  Container(
-                                                    width: 40, height: 40,
-                                                    decoration: BoxDecoration(
-                                                      color: color.withValues(alpha: 0.15),
-                                                      borderRadius: BorderRadius.circular(20),
+                                            child: GestureDetector(
+                                              onTap: () => _openEditPanel(raw),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.slate50,
+                                                  borderRadius: BorderRadius.circular(14),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    // Avatar
+                                                    Container(
+                                                      width: 40, height: 40,
+                                                      decoration: BoxDecoration(
+                                                        color: color.withValues(alpha: 0.15),
+                                                        borderRadius: BorderRadius.circular(20),
+                                                      ),
+                                                      child: Center(
+                                                        child: Text(initials,
+                                                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color)),
+                                                      ),
                                                     ),
-                                                    child: Center(
-                                                      child: Text(initials,
-                                                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color)),
+                                                    const SizedBox(width: 12),
+                                                    // Info
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          Text(displayName,
+                                                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate800)),
+                                                          const SizedBox(height: 2),
+                                                          Text(areaName,
+                                                              style: const TextStyle(fontSize: 12, color: AppColors.slate500)),
+                                                        ],
+                                                      ),
                                                     ),
-                                                  ),
-                                                  const SizedBox(width: 12),
-                                                  // Info
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text(displayName,
-                                                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate800)),
-                                                        const SizedBox(height: 2),
-                                                        Text(areaName,
-                                                            style: const TextStyle(fontSize: 12, color: AppColors.slate500)),
-                                                      ],
+                                                    // Delete action
+                                                    GestureDetector(
+                                                      onTap: () {
+                                                        store.showConfirm(
+                                                          'Xóa bàn "$displayName"?',
+                                                          () => store.removeTable(raw),
+                                                          title: 'Xóa bàn?',
+                                                          description: 'Bạn có chắc muốn xóa bàn này? Hành động này không thể hoàn tác.',
+                                                          icon: Icons.table_restaurant_outlined,
+                                                          itemName: displayName,
+                                                          itemSubtitle: areaName,
+                                                          avatarInitials: initials,
+                                                          avatarColor: color,
+                                                        );
+                                                      },
+                                                      child: Container(
+                                                        width: 36, height: 36,
+                                                        decoration: BoxDecoration(
+                                                          color: const Color(0xFFFEF2F2),
+                                                          borderRadius: BorderRadius.circular(10),
+                                                        ),
+                                                        child: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFEF4444)),
+                                                      ),
                                                     ),
-                                                  ),
-                                                  // Actions
-                                                  GestureDetector(
-                                                    onTap: () => _openEditPanel(raw),
-                                                    child: const Icon(Icons.edit, size: 18, color: AppColors.emerald500),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  GestureDetector(
-                                                    onTap: () {
-                                                      store.showConfirm(
-                                                        'Xóa bàn "$displayName"?',
-                                                        () => store.removeTable(raw),
-                                                        title: 'Xóa bàn?',
-                                                        description: 'Bạn có chắc muốn xóa bàn này? Hành động này không thể hoàn tác.',
-                                                        icon: Icons.table_restaurant_outlined,
-                                                        itemName: displayName,
-                                                        itemSubtitle: areaName,
-                                                        avatarInitials: initials,
-                                                        avatarColor: color,
-                                                      );
-                                                    },
-                                                    child: const Icon(Icons.delete, size: 18, color: Color(0xFFEF4444)),
-                                                  ),
-                                                ],
+                                                  ],
+                                                ),
                                               ),
                                             ),
                                           );
@@ -2340,19 +2359,22 @@ class _TablesSectionState extends State<_TablesSection> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text('Sửa khu vực', style: TextStyle(fontWeight: FontWeight.w700)),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'Nhập tên khu vực mới...',
-            filled: true,
-            fillColor: AppColors.slate50,
-            prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.emerald500, size: 18),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.slate200)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.slate200)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.emerald400)),
+        content: SizedBox(
+          width: 400,
+          child: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'Nhập tên khu vực mới...',
+              filled: true,
+              fillColor: AppColors.slate50,
+              prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.emerald500, size: 18),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.slate200)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.slate200)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.emerald400)),
+            ),
           ),
         ),
         actions: [
@@ -2440,10 +2462,14 @@ class _TablesSectionState extends State<_TablesSection> {
             filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
             child: GestureDetector(
             onTap: () {}, // prevent close on panel tap
-            child: SingleChildScrollView(
+            child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
               padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
               child: Center(
               child: Container(
+                constraints: const BoxConstraints(maxWidth: 480),
                 margin: const EdgeInsets.symmetric(horizontal: 24),
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -2709,7 +2735,9 @@ class _TablesSectionState extends State<_TablesSection> {
                 ),
               ),  // Container
             ),  // Center
+            ),  // ConstrainedBox
             ),  // SingleChildScrollView
+            ),  // LayoutBuilder
             ),  // GestureDetector (prevent close)
           ),  // BackdropFilter
         ),  // Container (backdrop color)
@@ -3278,6 +3306,7 @@ class _UsersSectionState extends State<_UsersSection> {
               padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
               child: Center(
               child: Container(
+                constraints: const BoxConstraints(maxWidth: 480),
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 60),
                 decoration: BoxDecoration(
                   color: Colors.white,

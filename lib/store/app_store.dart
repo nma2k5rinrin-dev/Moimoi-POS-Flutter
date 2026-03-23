@@ -548,6 +548,65 @@ class AppStore extends ChangeNotifier {
     );
   }
 
+  /// Update store info for a specific store by ID (used by sadmin).
+  void updateStoreInfoById(String storeId, StoreInfoModel info) {
+    final oldInfo = storeInfos[storeId];
+    final dbData = {
+      'name': info.name,
+      'phone': info.phone,
+      'address': info.address,
+      'logo_url': info.logoUrl,
+      'tax_id': info.taxId,
+      'open_hours': info.openHours,
+      'bank_id': info.bankId,
+      'bank_account': info.bankAccount,
+      'bank_owner': info.bankOwner,
+      'qr_image_url': info.qrImageUrl,
+    };
+    dbData.removeWhere((k, v) => v.toString().isEmpty);
+    _optimistic(
+      apply: () { storeInfos[storeId] = info; },
+      remote: () => _supabase.from('store_infos').upsert({'store_id': storeId, ...dbData}),
+      rollback: () {
+        if (oldInfo != null) {
+          storeInfos[storeId] = oldInfo;
+        } else {
+          storeInfos.remove(storeId);
+        }
+      },
+      errorMsg: 'Cập nhật thông tin cửa hàng thất bại, đã hoàn tác',
+    );
+  }
+
+  /// Delete a store and its admin user + all staff users created by that admin.
+  void deleteStore(String storeId) {
+    final oldStoreInfos = Map<String, StoreInfoModel>.from(storeInfos);
+    final oldUsers = List<UserModel>.from(users);
+    final staffToDelete = users.where((u) => u.createdBy == storeId).map((u) => u.username).toList();
+
+    _optimistic(
+      apply: () {
+        storeInfos.remove(storeId);
+        users.removeWhere((u) => u.username == storeId || u.createdBy == storeId);
+      },
+      remote: () async {
+        // Delete staff users first
+        for (final staffUsername in staffToDelete) {
+          await _supabase.from('users').delete().eq('username', staffUsername);
+        }
+        // Delete admin user
+        await _supabase.from('users').delete().eq('username', storeId);
+        // Delete store info
+        await _supabase.from('store_infos').delete().eq('store_id', storeId);
+      },
+      rollback: () {
+        storeInfos = oldStoreInfos;
+        users = oldUsers;
+      },
+      errorMsg: 'Xoá cửa hàng thất bại, đã hoàn tác',
+    );
+  }
+
   // ── Tables ──────────────────────────────────────────────
   Future<void> addTable(String tableName) async {
     // Quota check for Basic tier
@@ -878,6 +937,83 @@ class AppStore extends ChangeNotifier {
     );
   }
 
+  /// Mark ONE item matching [productName] as done (or undone) across cooking orders.
+  /// Each call increments/decrements by one: 0/5 → 1/5 → 2/5 ... → 5/5
+  void markProductDoneAcrossOrders(String productName, bool isDone) {
+    final cookingOrders = orders.where((o) => o.status == 'cooking').toList();
+    final oldOrders = List<OrderModel>.from(orders);
+
+    // Find the first matching item that needs to change
+    String? targetOrderId;
+    String? targetItemId;
+
+    for (final order in cookingOrders) {
+      for (final item in order.items) {
+        if (item.name == productName && item.isDone != isDone) {
+          targetOrderId = order.id;
+          targetItemId = item.id;
+          break;
+        }
+      }
+      if (targetOrderId != null) break;
+    }
+    if (targetOrderId == null || targetItemId == null) return;
+
+    // Build updated items for the target order only
+    final targetOrder = cookingOrders.firstWhere((o) => o.id == targetOrderId);
+    final updatedItems = targetOrder.items
+        .map((i) => i.id == targetItemId ? i.copyWith(isDone: isDone) : i)
+        .toList();
+
+    _optimistic(
+      apply: () {
+        orders = orders.map((o) =>
+            o.id == targetOrderId ? o.copyWith(items: updatedItems) : o).toList();
+      },
+      remote: () => _supabase.from('orders').update({
+        'items': updatedItems.map((i) => i.toMap()).toList(),
+      }).eq('id', targetOrderId!),
+      rollback: () { orders = oldOrders; },
+      errorMsg: 'Cập nhật trạng thái sản phẩm thất bại, đã hoàn tác',
+    );
+  }
+
+  /// Reset ALL items matching [productName] to undone across cooking orders.
+  /// Used when a fully-completed product is tapped again.
+  void resetAllProductDoneAcrossOrders(String productName) {
+    final cookingOrders = orders.where((o) => o.status == 'cooking').toList();
+    final oldOrders = List<OrderModel>.from(orders);
+
+    final updatedOrderMap = <String, List<OrderItemModel>>{};
+    for (final order in cookingOrders) {
+      final hasMatch = order.items.any((i) => i.name == productName && i.isDone);
+      if (hasMatch) {
+        updatedOrderMap[order.id] = order.items
+            .map((i) => i.name == productName ? i.copyWith(isDone: false) : i)
+            .toList();
+      }
+    }
+    if (updatedOrderMap.isEmpty) return;
+
+    _optimistic(
+      apply: () {
+        orders = orders.map((o) {
+          final updated = updatedOrderMap[o.id];
+          return updated != null ? o.copyWith(items: updated) : o;
+        }).toList();
+      },
+      remote: () async {
+        for (final entry in updatedOrderMap.entries) {
+          await _supabase.from('orders').update({
+            'items': entry.value.map((i) => i.toMap()).toList(),
+          }).eq('id', entry.key);
+        }
+      },
+      rollback: () { orders = oldOrders; },
+      errorMsg: 'Cập nhật trạng thái sản phẩm thất bại, đã hoàn tác',
+    );
+  }
+
   void updateOrderItemNote(
       String orderId, String itemId, String note) {
     final order = orders.firstWhere((o) => o.id == orderId,
@@ -969,6 +1105,7 @@ class AppStore extends ChangeNotifier {
       await _supabase.from('orders').insert(newOrder);
       orders.insert(0, OrderModel.fromMap(newOrder));
       cart = [];
+      selectedTable = '';
       notifyListeners();
     } catch (e) {
       showToast('Tạo đơn thất bại', 'error');
@@ -1110,6 +1247,9 @@ class AppStore extends ChangeNotifier {
 
   void setSearchQuery(String query) {
     searchQuery = query;
+    if (query.isNotEmpty && selectedCategory != 'all') {
+      selectedCategory = 'all';
+    }
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 200), () {
       notifyListeners();

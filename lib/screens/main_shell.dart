@@ -20,13 +20,12 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  // Sadmin: has admin dashboard tab
+  // Sadmin: SaaS admin tabs
   static const List<_NavItem> _sadminMenuItems = [
-    _NavItem(icon: Icons.bar_chart, label: 'Báo Cáo', path: '/dashboard'),
-    _NavItem(icon: PhosphorIconsBold.storefront, label: 'Bán hàng', path: '/'),
-    _NavItem(icon: PhosphorIconsBold.clipboardText, label: 'Đơn hàng', path: '/orders'),
-    _NavItem(icon: PhosphorIconsBold.package, label: 'Quản lý kho', path: '/inventory'),
-    _NavItem(icon: PhosphorIconsBold.shieldCheck, label: 'Quản lý', path: '/admin'),
+    _NavItem(icon: Icons.dashboard_rounded, label: 'Tổng quan', path: '/admin'),
+    _NavItem(icon: PhosphorIconsBold.storefront, label: 'Cửa hàng', path: '/'),
+    _NavItem(icon: Icons.verified_rounded, label: 'Phê duyệt', path: '/orders'),
+    _NavItem(icon: Icons.settings_rounded, label: 'Cài đặt', path: '/settings'),
   ];
 
   // Admin: no settings, no admin dashboard
@@ -56,9 +55,14 @@ class _MainShellState extends State<MainShell> {
 
   int _getCurrentIndex(List<_NavItem> items) {
     var location = GoRouterState.of(context).matchedLocation;
-    // Settings sub-routes → map to /settings
-    if (location == '/nhap-thu' || location == '/nhap-chi' || location == '/premium' || location == '/settings') {
-      location = '/admin';
+    // Settings sub-routes → map to /settings for sadmin, /admin for others
+    if (location == '/nhap-thu' || location == '/nhap-chi' || location == '/premium') {
+      location = '/settings';
+    }
+    // For non-sadmin, /settings maps to /admin
+    if (location == '/settings') {
+      final role = context.read<AppStore>().currentUser?.role;
+      if (role != 'sadmin') location = '/admin';
     }
     for (int i = 0; i < items.length; i++) {
       if (items[i].path == location) return i;

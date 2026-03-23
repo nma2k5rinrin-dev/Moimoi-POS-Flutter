@@ -107,16 +107,19 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
 
           // ── Panel ───────────────────────────
           Positioned(
-            left: 16,
-            right: 16,
-            top: MediaQuery.of(context).padding.top + 80,
+            left: 0,
+            right: 0,
+            top: MediaQuery.of(context).padding.top + 40,
             bottom: MediaQuery.of(context).viewInsets.bottom,
+            child: Center(
             child: SlideTransition(
               position: _slideAnim,
               child: Container(
                 constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.75 - MediaQuery.of(context).viewInsets.bottom,
+                  maxWidth: 480,
+                  maxHeight: MediaQuery.of(context).size.height * 0.85 - MediaQuery.of(context).viewInsets.bottom,
                 ),
+                margin: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
@@ -186,6 +189,7 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
                   ],
                 ),
               ),
+            ),
             ),
           ),
         ],

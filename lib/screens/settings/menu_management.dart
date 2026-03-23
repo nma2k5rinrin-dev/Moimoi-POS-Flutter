@@ -411,21 +411,24 @@ class _MenuManagementSectionState extends State<MenuManagementSection>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
           existing != null ? 'Sửa Danh Mục' : 'Thêm Danh Mục',
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'VD: Đồ uống, Cơm, Phở...',
-            filled: true,
-            fillColor: AppColors.slate50,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.slate200),
+        content: SizedBox(
+          width: 400,
+          child: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'VD: Đồ uống, Cơm, Phở...',
+              filled: true,
+              fillColor: AppColors.slate50,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.slate200),
+              ),
             ),
           ),
         ),
@@ -893,17 +896,20 @@ class _CategoriesTab extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(existing != null ? 'Sửa Danh Mục' : 'Thêm Danh Mục',
             style: const TextStyle(fontWeight: FontWeight.w700)),
-        content: TextField(
-          controller: controller, autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'VD: Đồ uống, Cơm, Phở...',
-            filled: true, fillColor: AppColors.slate50,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.slate200)),
+        content: SizedBox(
+          width: 400,
+          child: TextField(
+            controller: controller, autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'VD: Đồ uống, Cơm, Phở...',
+              filled: true, fillColor: AppColors.slate50,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.slate200)),
+            ),
           ),
         ),
         actions: [

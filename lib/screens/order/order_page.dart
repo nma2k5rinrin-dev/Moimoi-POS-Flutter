@@ -159,44 +159,6 @@ class _ProductGridState extends State<_ProductGrid> {
             ),
           ),
 
-          // Store Selector Row (chip style matching Pencil)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-            child: GestureDetector(
-              onTap: store.currentUser?.role == 'sadmin'
-                  ? () => _showStoreSelector(context, store)
-                  : null,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.slate200),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.home_rounded,
-                        size: 20, color: AppColors.emerald500),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        storeInfo.name.isNotEmpty
-                            ? storeInfo.name
-                            : 'Tất cả Cửa hàng',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.slate800,
-                        ),
-                      ),
-                    ),
-                    const Icon(Icons.keyboard_arrow_down_rounded,
-                        size: 22, color: AppColors.slate500),
-                  ],
-                ),
-              ),
-            ),
-          ),
 
           // Category Chips
           Padding(
