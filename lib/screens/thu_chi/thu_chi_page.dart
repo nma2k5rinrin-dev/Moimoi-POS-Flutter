@@ -3,7 +3,11 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../store/app_store.dart';
 import '../../utils/constants.dart';
+import '../../utils/quota_helper.dart';
+import '../../widgets/upgrade_dialog.dart';
 import '../../widgets/date_range_picker_dialog.dart';
+import 'nhap_thu_page.dart';
+import 'nhap_chi_page.dart';
 
 class ThuChiPage extends StatefulWidget {
   final bool embedded;
@@ -17,10 +21,27 @@ class _ThuChiPageState extends State<ThuChiPage> {
   int _tabIndex = 0; // 0 = Tất cả, 1 = Thu, 2 = Chi
   DateTime _dateFrom = DateTime(DateTime.now().year, DateTime.now().month, 1);
   DateTime _dateTo = DateTime.now();
+  // Sub-view: null = main list, 'thu' = nhập thu, 'chi' = nhập chi
+  String? _subView;
 
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
+
+    // If embedded and showing a sub-view, render inline
+    if (widget.embedded && _subView != null) {
+      if (_subView == 'thu') {
+        return NhapThuPage(
+          embedded: true,
+          onBack: () => setState(() => _subView = null),
+        );
+      } else {
+        return NhapChiPage(
+          embedded: true,
+          onBack: () => setState(() => _subView = null),
+        );
+      }
+    }
 
     // ── Build unified transaction list ───────────────────
     final List<_DisplayTxn> allTxns = [];
@@ -69,16 +90,14 @@ class _ThuChiPageState extends State<ThuChiPage> {
     // Filter by tab
     final List<_DisplayTxn> filteredTxns;
     if (_tabIndex == 1) {
-      // Thu: orders + manual thu
       filteredTxns = allTxns.where((t) => t.isIncome).toList();
     } else if (_tabIndex == 2) {
-      // Chi: manual chi only
       filteredTxns = allTxns.where((t) => !t.isIncome).toList();
     } else {
       filteredTxns = allTxns;
     }
 
-    // Calculate totals from filtered-by-date (all tabs) data
+    // Calculate totals
     final totalIncome =
         allTxns.where((t) => t.isIncome).fold(0.0, (s, t) => s + t.amount);
     final totalExpense =
@@ -89,7 +108,7 @@ class _ThuChiPageState extends State<ThuChiPage> {
       color: widget.embedded ? Colors.transparent : AppColors.slate50,
       child: Column(
         children: [
-          // ── Header (only when not embedded in Settings) ───────────────────────────
+          // ── Header (only when not embedded) ──
           if (!widget.embedded)
           Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -126,7 +145,7 @@ class _ThuChiPageState extends State<ThuChiPage> {
           if (!widget.embedded)
           const SizedBox(height: 4),
 
-          // ── Content ──────────────────────────
+          // ── Content ──
           Expanded(
             child: SingleChildScrollView(
               padding: EdgeInsets.symmetric(horizontal: widget.embedded ? 20 : 16),
@@ -137,7 +156,7 @@ class _ThuChiPageState extends State<ThuChiPage> {
                   children: [
                     const SizedBox(height: 4),
 
-                    // ── Panel 1: Overview ──────────────
+                    // ── Panel 1: Overview ──
                     _panel(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,44 +369,42 @@ class _ThuChiPageState extends State<ThuChiPage> {
                       ),
                     ),
 
-                    const SizedBox(height: 80),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
             ),
           ),
 
-          // ── Bottom buttons ──────────────────
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: AppColors.slate100)),
+          // ── Bottom buttons ──
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              widget.embedded ? 20 : 16, 8,
+              widget.embedded ? 20 : 16, 16,
             ),
-            child: SafeArea(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: widget.embedded ? 600 : 700),
               child: Row(
                 children: [
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => widget.embedded
-                          ? context.push('/nhap-thu')
-                          : context.go('/nhap-thu'),
+                      onTap: () async {
+                        final quota = QuotaHelper(store);
+                        if (!quota.canUseThuChi) {
+                          await showUpgradePrompt(context, quota.thuChiLimitMsg);
+                          return;
+                        }
+                        if (widget.embedded) {
+                          setState(() => _subView = 'thu');
+                        } else {
+                          context.go('/nhap-thu');
+                        }
+                      },
                       child: Container(
                         height: 52,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [AppColors.emerald500, AppColors.emerald600],
-                          ),
+                          color: AppColors.emerald500,
                           borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.emerald500.withValues(alpha: 0.25),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
                         ),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -407,25 +424,23 @@ class _ThuChiPageState extends State<ThuChiPage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => widget.embedded
-                          ? context.push('/nhap-chi')
-                          : context.go('/nhap-chi'),
+                      onTap: () async {
+                        final quota = QuotaHelper(store);
+                        if (!quota.canUseThuChi) {
+                          await showUpgradePrompt(context, quota.thuChiLimitMsg);
+                          return;
+                        }
+                        if (widget.embedded) {
+                          setState(() => _subView = 'chi');
+                        } else {
+                          context.go('/nhap-chi');
+                        }
+                      },
                       child: Container(
                         height: 52,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [AppColors.red500, AppColors.red600],
-                          ),
+                          color: AppColors.red500,
                           borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.red500.withValues(alpha: 0.25),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
                         ),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -586,7 +601,7 @@ class _DisplayTxn {
   final double amount;
   final bool isIncome;
   final IconData icon;
-  final String source; // 'order', 'manual_thu', 'manual_chi'
+  final String source;
   const _DisplayTxn({
     required this.title,
     required this.date,

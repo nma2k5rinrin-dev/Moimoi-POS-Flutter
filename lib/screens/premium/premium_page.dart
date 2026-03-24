@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../store/app_store.dart';
 import '../../utils/constants.dart';
@@ -14,6 +15,9 @@ class _PremiumPageState extends State<PremiumPage>
     with SingleTickerProviderStateMixin {
   int _selectedPlan = 1; // Default to 3-month (popular)
   late AnimationController _shimmerCtrl;
+  String? _paymentView; // null = plan selection, 'payment' = QR payment screen
+  String _transferContent = '';
+  int _paymentAmount = 0;
 
   static const List<_PlanInfo> _plans = [
     _PlanInfo(
@@ -92,31 +96,364 @@ class _PremiumPageState extends State<PremiumPage>
     return '${buffer.toString().split('').reversed.join('')}đ';
   }
 
+  void _handleRegister() {
+    final store = context.read<AppStore>();
+    final user = store.currentUser;
+    if (user == null) return;
+
+    final plan = _plans[_selectedPlan];
+    const planMonths = [1, 3, 6, 12];
+    final transferContent = 'MOIMOI ${user.username.toUpperCase()} $_selectedPlan';
+
+    store.requestUpgrade(
+      user.username,
+      _selectedPlan,
+      plan.name,
+      planMonths[_selectedPlan],
+    );
+
+    setState(() {
+      _paymentView = 'payment';
+      _transferContent = transferContent;
+      _paymentAmount = plan.totalPrice;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_paymentView == 'payment') {
+      return _buildPaymentScreen();
+    }
+
     final plan = _plans[_selectedPlan];
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: CustomScrollView(
-        slivers: [
-          // ── Gradient Header ──
-          SliverToBoxAdapter(child: _buildHeader()),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Column(
+            children: [
+              _buildFeatureCard(),
+              const SizedBox(height: 20),
+              _buildPlansSection(plan),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-          // ── Content ──
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 24,
-            ),
-            sliver: SliverToBoxAdapter(
-              child: Column(
-                children: [
-                  _buildFeatureCard(),
-                  const SizedBox(height: 20),
-                  _buildPlansSection(plan),
-                ],
+  // ── Payment Screen ──
+  Widget _buildPaymentScreen() {
+    final store = context.watch<AppStore>();
+    // Check if the request has been approved via realtime
+    final myReq = store.upgradeRequests
+        .where((r) => r.username == store.currentUser?.username)
+        .toList();
+    final isPaid = myReq.isNotEmpty && myReq.first.status == 'approved';
+
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: Column(
+                  children: [
+                    // Status header
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: isPaid ? const Color(0xFFF0FDF4) : const Color(0xFFFFFBEB),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isPaid ? AppColors.emerald200 : const Color(0xFFFDE68A),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            isPaid ? Icons.check_circle : Icons.hourglass_top_rounded,
+                            size: 48,
+                            color: isPaid ? AppColors.emerald500 : const Color(0xFFD97706),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            isPaid ? 'Thanh toán thành công!' : 'Chờ thanh toán',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: isPaid ? AppColors.emerald700 : const Color(0xFF92400E),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            isPaid
+                                ? 'Premium đã được kích hoạt!'
+                                : 'Chuyển khoản theo thông tin bên dưới',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isPaid ? AppColors.emerald600 : const Color(0xFFB45309),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    if (!isPaid) ...[
+                      // Bank info card
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.account_balance, size: 20, color: AppColors.emerald600),
+                                SizedBox(width: 8),
+                                Text('Thông tin chuyển khoản',
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+
+                            _bankInfoRow('Ngân hàng', 'MB Bank (Quân Đội)'),
+                            _bankInfoRow('Số tài khoản', '0388 686 868', copyable: true),
+                            _bankInfoRow('Chủ tài khoản', 'MOIMOI TECH'),
+                            _bankInfoRow('Số tiền', _formatCurrency(_paymentAmount)),
+                            _bankInfoRow('Nội dung CK', _transferContent, copyable: true, highlight: true),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Warning
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.red200),
+                        ),
+                        child: const Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.warning_amber_rounded, size: 20, color: AppColors.red500),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Vui lòng nhập đúng nội dung chuyển khoản để hệ thống tự động xác nhận. '
+                                'Thời gian xử lý: 1-5 phút sau khi thanh toán.',
+                                style: TextStyle(fontSize: 13, color: AppColors.red600, height: 1.4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // QR Code placeholder
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            const Text('Quét mã QR để chuyển khoản',
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate700)),
+                            const SizedBox(height: 16),
+                            // VietQR image
+                            Container(
+                              width: 220,
+                              height: 220,
+                              decoration: BoxDecoration(
+                                color: AppColors.slate50,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppColors.slate200),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Image.network(
+                                  'https://img.vietqr.io/image/MB-0388686868-compact2.jpg'
+                                  '?amount=$_paymentAmount'
+                                  '&addInfo=${Uri.encodeComponent(_transferContent)}'
+                                  '&accountName=${Uri.encodeComponent('MOIMOI TECH')}',
+                                  fit: BoxFit.contain,
+                                  loadingBuilder: (ctx, child, progress) {
+                                    if (progress == null) return child;
+                                    return const Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.emerald500,
+                                      ),
+                                    );
+                                  },
+                                  errorBuilder: (ctx, error, stack) => const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.qr_code_2, size: 60, color: AppColors.slate300),
+                                      SizedBox(height: 8),
+                                      Text('Không tải được QR',
+                                          style: TextStyle(fontSize: 12, color: AppColors.slate400)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'VietQR • MB Bank',
+                              style: TextStyle(fontSize: 12, color: AppColors.slate400),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+                    ],
+                  ],
+                ),
               ),
+            ),
+          ),
+        ),
+
+        // Bottom button
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: GestureDetector(
+              onTap: () {
+                if (isPaid) {
+                  // Go back to plan selection
+                  setState(() => _paymentView = null);
+                } else {
+                  // Go back to plan selection and cancel the pending request
+                  setState(() => _paymentView = null);
+                }
+              },
+              child: Container(
+                height: 52,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.slate50,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.slate200),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      isPaid ? Icons.check_rounded : Icons.arrow_back_rounded,
+                      size: 18,
+                      color: isPaid ? AppColors.emerald600 : AppColors.slate500,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isPaid ? 'Hoàn tất' : 'Quay lại chọn gói',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: isPaid ? AppColors.emerald600 : AppColors.slate600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _bankInfoRow(String label, String value, {bool copyable = false, bool highlight = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(label,
+                style: const TextStyle(fontSize: 13, color: AppColors.slate500, fontWeight: FontWeight.w500)),
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Container(
+                    padding: highlight
+                        ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
+                        : EdgeInsets.zero,
+                    decoration: highlight
+                        ? BoxDecoration(
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: AppColors.emerald200),
+                          )
+                        : null,
+                    child: Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: highlight ? AppColors.emerald700 : AppColors.slate800,
+                      ),
+                    ),
+                  ),
+                ),
+                if (copyable) ...[
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: value.replaceAll(' ', '')));
+                      context.read<AppStore>().showToast('Đã sao chép!');
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.slate100,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Icon(Icons.copy_rounded, size: 14, color: AppColors.slate500),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
@@ -124,84 +461,6 @@ class _PremiumPageState extends State<PremiumPage>
     );
   }
 
-  // ── Header ──
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF065F46),
-            Color(0xFF047857),
-            Color(0xFF10B981),
-          ],
-        ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Back + Title row
-            Row(
-              children: [
-                InkWell(
-                  onTap: () => Navigator.of(context).maybePop(),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.arrow_back,
-                        color: Colors.white, size: 20),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.workspace_premium,
-                              color: Color(0xFFFCD34D), size: 28),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Moimoi Premium',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Mở khóa toàn bộ tính năng, phát triển cửa hàng không giới hạn',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   // ── Feature Card ──
   Widget _buildFeatureCard() {
@@ -294,102 +553,31 @@ class _PremiumPageState extends State<PremiumPage>
         const SizedBox(height: 20),
 
         // CTA Button
-        AnimatedBuilder(
-          animation: _shimmerCtrl,
-          builder: (context, child) {
-            return Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF047857),
-                    Color(0xFF10B981),
-                    Color(0xFF047857),
-                  ],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.emerald500.withValues(alpha: 0.35),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () {
-                    final store = context.read<AppStore>();
-                    final user = store.currentUser;
-                    if (user == null) return;
-                    // Map plan index to months
-                    const planMonths = [1, 3, 6, 12];
-                    store.requestUpgrade(
-                      user.username,
-                      _selectedPlan,
-                      plan.name,
-                      planMonths[_selectedPlan],
-                    );
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        title: const Row(
-                          children: [
-                            Icon(Icons.check_circle, color: AppColors.emerald500, size: 28),
-                            SizedBox(width: 10),
-                            Text('Đã gửi yêu cầu!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                          ],
-                        ),
-                        content: Text(
-                          'Yêu cầu đăng ký gói ${plan.name} đã được gửi.\nVui lòng chờ Super Admin duyệt.',
-                          style: const TextStyle(fontSize: 14, color: AppColors.slate600),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              Navigator.of(context).maybePop();
-                            },
-                            child: const Text('OK', style: TextStyle(color: AppColors.emerald600, fontWeight: FontWeight.w700)),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    child: Column(
-                      children: [
-                        Text(
-                          'Đăng ký ngay — ${_formatCurrency(plan.totalPrice)}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          plan.discount > 0
-                              ? 'Chỉ ${_formatCurrency(plan.pricePerMonth)}/tháng • Tiết kiệm ${plan.discount}%'
-                              : '${_formatCurrency(plan.pricePerMonth)}/tháng',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.white.withValues(alpha: 0.85),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
+        GestureDetector(
+          onTap: _handleRegister,
+          child: Container(
+            width: double.infinity,
+            height: 52,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: AppColors.emerald500,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.payment_rounded, size: 20, color: Colors.white),
+                const SizedBox(width: 8),
+                Text(
+                  'Đăng ký ngay — ${_formatCurrency(plan.totalPrice)}',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
                   ),
                 ),
-              ),
-            );
-          },
+              ],
+            ),
+          ),
         ),
 
         const SizedBox(height: 14),

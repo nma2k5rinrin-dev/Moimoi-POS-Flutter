@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 // ignore_for_file: avoid_print
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -73,6 +74,9 @@ class AppStore extends ChangeNotifier {
   RealtimeChannel? _productsChannel;
   RealtimeChannel? _notiChannel;
   RealtimeChannel? _upgradeChannel;
+
+  // ── Audio notification ──────────────────────────────────
+  final AudioPlayer _orderSoundPlayer = AudioPlayer();
   RealtimeChannel? _thuChiChannel;
   RealtimeChannel? _categoriesChannel;
   RealtimeChannel? _usersChannel;
@@ -1132,13 +1136,20 @@ class AppStore extends ChangeNotifier {
     }
   }
 
-  void addThuChiTransaction({
+  Future<void> addThuChiTransaction({
     required String type,
     required double amount,
     required String category,
     String note = '',
     DateTime? date,
-  }) {
+  }) async {
+    // Quota check for Basic tier
+    final quota = QuotaHelper(this);
+    if (!quota.canUseThuChi) {
+      final ctx = rootContext;
+      if (ctx != null) await showUpgradePrompt(ctx, quota.thuChiLimitMsg);
+      return;
+    }
     final storeId = getStoreId();
     final txnId = 'tc_${DateTime.now().millisecondsSinceEpoch}';
     final txnTime = (date ?? DateTime.now()).toIso8601String();
@@ -1373,19 +1384,28 @@ class AppStore extends ChangeNotifier {
   }
 
   // ── Upgrade Requests ────────────────────────────────────
+  static const List<int> planPrices = [250000, 600000, 900000, 1500000];
+
   void requestUpgrade(
       String username, int planIndex, String planName, int months) {
-    if (upgradeRequests.any((r) => r.username == username)) {
-      showToast('Bạn đã có yêu cầu đang chờ duyệt!', 'error');
+    if (upgradeRequests.any((r) => r.username == username && r.status == 'pending')) {
+      showToast('Bạn đã có yêu cầu đang chờ thanh toán!', 'error');
       return;
     }
+    final reqId = DateTime.now().millisecondsSinceEpoch.toString();
+    final transferContent = 'MOIMOI ${username.toUpperCase()} $planIndex';
+    final amount = planIndex < planPrices.length ? planPrices[planIndex] : 250000;
+
     final newReq = {
-      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'id': reqId,
       'username': username,
       'plan_index': planIndex,
       'plan_name': planName,
       'months': months,
       'time': DateTime.now().toIso8601String(),
+      'status': 'pending',
+      'transfer_content': transferContent,
+      'amount': amount,
     };
     final reqModel = UpgradeRequestModel.fromMap(newReq);
     _optimistic(
@@ -1393,7 +1413,22 @@ class AppStore extends ChangeNotifier {
         upgradeRequests.add(reqModel);
         isUpgradeModalOpen = false;
       },
-      remote: () => _supabase.from('upgrade_requests').insert(newReq),
+      remote: () async {
+        await _supabase.from('upgrade_requests').insert(newReq);
+        // Send notification to all sadmin users
+        final sadmins = users.where((u) => u.role == 'sadmin').toList();
+        for (final sa in sadmins) {
+          await _supabase.from('notifications').insert({
+            'id': 'noti_upgrade_$reqId',
+            'user_id': sa.username,
+            'title': 'Yêu cầu nâng cấp Premium',
+            'message': '$username đã đăng ký gói $planName. Chờ thanh toán.',
+            'type': 'upgrade',
+            'time': DateTime.now().toIso8601String(),
+            'read': false,
+          });
+        }
+      },
       rollback: () {
         upgradeRequests.removeWhere((r) => r.id == reqModel.id);
       },
@@ -1457,6 +1492,15 @@ class AppStore extends ChangeNotifier {
     );
   }
 
+  // ── Notification Sound ─────────────────────────────────
+  void _playNewOrderSound() {
+    try {
+      _orderSoundPlayer.play(AssetSource('sounds/new_order.wav'));
+    } catch (e) {
+      debugPrint('[Sound] Error playing notification: $e');
+    }
+  }
+
   // ── Realtime ────────────────────────────────────────────
   void _setupRealtime(UserModel user, String? storeId) {
     _removeRealtimeChannels();
@@ -1478,6 +1522,7 @@ class AppStore extends ChangeNotifier {
           final newOrder = OrderModel.fromMap(payload.newRecord);
           if (!orders.any((o) => o.id == newOrder.id)) {
             orders.insert(0, newOrder);
+            _playNewOrderSound();
             notifyListeners();
           }
         } else if (payload.eventType == PostgresChangeEvent.update) {
@@ -1572,19 +1617,31 @@ class AppStore extends ChangeNotifier {
         )
         .subscribe();
 
-    // Upgrade requests realtime (sadmin only)
-    if (user.role == 'sadmin') {
-      _upgradeChannel = _supabase.channel('upgrade-requests').onPostgresChanges(
-        event: PostgresChangeEvent.insert,
-        schema: 'public',
-        table: 'upgrade_requests',
-        callback: (payload) {
+    // Upgrade requests realtime (all users — for payment status updates)
+    _upgradeChannel = _supabase.channel('upgrade-requests').onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'upgrade_requests',
+      callback: (payload) {
+        if (payload.eventType == PostgresChangeEvent.insert) {
           final r = UpgradeRequestModel.fromMap(payload.newRecord);
-          upgradeRequests.insert(0, r);
+          if (!upgradeRequests.any((x) => x.id == r.id)) {
+            upgradeRequests.insert(0, r);
+            notifyListeners();
+          }
+        } else if (payload.eventType == PostgresChangeEvent.update) {
+          final r = UpgradeRequestModel.fromMap(payload.newRecord);
+          upgradeRequests = upgradeRequests
+              .map((x) => x.id == r.id ? r : x)
+              .toList();
           notifyListeners();
-        },
-      ).subscribe();
-    }
+        } else if (payload.eventType == PostgresChangeEvent.delete) {
+          upgradeRequests.removeWhere(
+              (x) => x.id == payload.oldRecord['id']?.toString());
+          notifyListeners();
+        }
+      },
+    ).subscribe();
 
     // Thu Chi Transactions realtime
     _thuChiChannel = _supabase.channel('thu-chi-changes').onPostgresChanges(

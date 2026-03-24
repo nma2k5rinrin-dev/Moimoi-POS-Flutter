@@ -124,8 +124,8 @@ class _AccountDialogContent extends StatelessWidget {
                       },
                     ),
 
-                  // ── Subscription Section (admin/sadmin only) ──
-                  if (_isOwnerOrAdmin) ...[
+                  // ── Subscription Section (admin only, not sadmin) ──
+                  if (store.currentUser?.role == 'admin') ...[
                     _divider(),
                     _buildSubscriptionSection(context),
                   ],
@@ -374,59 +374,61 @@ class _AccountDialogContent extends StatelessWidget {
             ),
           const SizedBox(height: 12),
 
-          // Renew button
-          SizedBox(
-            width: double.infinity,
-            height: 38,
-            child: OutlinedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                context.push('/premium');
-              },
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(
-                    color: AppColors.emerald500, width: 1.5),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: const Text(
-                'Gia hạn / Nâng cấp gói',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.emerald600,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // Payment history link
-          Center(
-            child: GestureDetector(
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Navigate to payment history
-              },
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Lịch sử thanh toán & Hóa đơn',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.slate400,
-                    ),
+          // Renew button (hide for sadmin)
+          if (store.currentUser?.role != 'sadmin') ...[
+            SizedBox(
+              width: double.infinity,
+              height: 38,
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  context.go('/settings?tab=premium');
+                },
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(
+                      color: AppColors.emerald500, width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  SizedBox(width: 4),
-                  Icon(Icons.chevron_right,
-                      size: 14, color: AppColors.slate400),
-                ],
+                ),
+                child: const Text(
+                  'Gia hạn / Nâng cấp gói',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.emerald600,
+                  ),
+                ),
               ),
             ),
-          ),
+            const SizedBox(height: 8),
+
+            // Payment history link
+            Center(
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  // TODO: Navigate to payment history
+                },
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Lịch sử thanh toán & Hóa đơn',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.slate400,
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Icon(Icons.chevron_right,
+                        size: 14, color: AppColors.slate400),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

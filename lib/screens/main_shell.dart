@@ -56,7 +56,7 @@ class _MainShellState extends State<MainShell> {
   int _getCurrentIndex(List<_NavItem> items) {
     var location = GoRouterState.of(context).matchedLocation;
     // Settings sub-routes → map to /settings for sadmin, /admin for others
-    if (location == '/nhap-thu' || location == '/nhap-chi' || location == '/premium') {
+    if (location == '/nhap-thu' || location == '/nhap-chi') {
       location = '/settings';
     }
     // For non-sadmin, /settings maps to /admin

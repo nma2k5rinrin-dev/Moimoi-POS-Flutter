@@ -7,7 +7,9 @@ import '../../utils/constants.dart';
 import 'nhap_thu_page.dart' show showAddCategoryDialog;
 
 class NhapChiPage extends StatefulWidget {
-  const NhapChiPage({super.key});
+  final bool embedded;
+  final VoidCallback? onBack;
+  const NhapChiPage({super.key, this.embedded = false, this.onBack});
 
   @override
   State<NhapChiPage> createState() => _NhapChiPageState();
@@ -51,7 +53,13 @@ class _NhapChiPageState extends State<NhapChiPage> {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => context.go('/settings?tab=thu-chi'),
+                    onTap: () {
+                      if (widget.embedded && widget.onBack != null) {
+                        widget.onBack!();
+                      } else {
+                        context.go('/settings?tab=thu-chi');
+                      }
+                    },
                     child: Container(
                       width: 36,
                       height: 36,
@@ -239,9 +247,15 @@ class _NhapChiPageState extends State<NhapChiPage> {
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => context.go('/settings?tab=thu-chi'),
+                              onTap: () {
+                                if (widget.embedded && widget.onBack != null) {
+                                  widget.onBack!();
+                                } else {
+                                  context.go('/settings?tab=thu-chi');
+                                }
+                              },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                height: 52,
                                 decoration: BoxDecoration(
                                   color: AppColors.slate50,
                                   borderRadius: BorderRadius.circular(14),
@@ -253,7 +267,7 @@ class _NhapChiPageState extends State<NhapChiPage> {
                                     Icon(Icons.close_rounded, size: 18, color: AppColors.slate500),
                                     SizedBox(width: 6),
                                     Text('Hủy bỏ',
-                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600,
+                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
                                           color: AppColors.slate600)),
                                   ],
                                 ),
@@ -265,7 +279,7 @@ class _NhapChiPageState extends State<NhapChiPage> {
                             child: GestureDetector(
                               onTap: _handleSave,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                height: 52,
                                 decoration: BoxDecoration(
                                   color: AppColors.red500,
                                   borderRadius: BorderRadius.circular(14),
@@ -422,7 +436,11 @@ class _NhapChiPageState extends State<NhapChiPage> {
       const SnackBar(content: Text('Đã lưu khoản chi thành công!'),
           backgroundColor: AppColors.red500),
     );
-    context.go('/settings?tab=thu-chi');
+    if (widget.embedded && widget.onBack != null) {
+      widget.onBack!();
+    } else {
+      context.go('/settings?tab=thu-chi');
+    }
   }
 }
 

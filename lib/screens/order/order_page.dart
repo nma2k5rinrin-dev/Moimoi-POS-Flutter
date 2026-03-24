@@ -10,6 +10,7 @@ import '../../models/order_model.dart';
 import '../../models/store_info_model.dart';
 import '../../models/category_model.dart';
 import '../../widgets/payment_confirmation_dialog.dart';
+import '../../services/printer_service.dart';
 import '../../widgets/mobile_cart_sheet.dart';
 
 class OrderPage extends StatelessWidget {
@@ -1196,14 +1197,46 @@ void _showPaymentConfirmation(BuildContext context, AppStore store) {
     context,
     amount: store.getCartTotal(),
     onPaid: (method) {
+      // Save order data for printing before checkout clears it
+      final orderForPrint = OrderModel(
+        id: 'ord_${DateTime.now().millisecondsSinceEpoch}',
+        items: List.from(store.cart),
+        totalAmount: store.getCartTotal(),
+        table: store.selectedTable,
+        time: DateTime.now().toIso8601String(),
+        status: 'paid',
+      );
       store.checkoutOrder(paymentStatus: 'paid', paymentMethod: method);
       store.showToast('Thanh toán thành công!');
+      // Auto-print if printer connected
+      _autoPrintReceipt(store, orderForPrint);
     },
     onUnpaid: () {
+      final orderForPrint = OrderModel(
+        id: 'ord_${DateTime.now().millisecondsSinceEpoch}',
+        items: List.from(store.cart),
+        totalAmount: store.getCartTotal(),
+        table: store.selectedTable,
+        time: DateTime.now().toIso8601String(),
+        status: 'pending',
+      );
       store.checkoutOrder(paymentStatus: 'unpaid');
       store.showToast('Đơn đã tạo, chưa thu tiền');
+      _autoPrintReceipt(store, orderForPrint);
     },
   );
+}
+
+void _autoPrintReceipt(AppStore store, OrderModel order) async {
+  final printer = PrinterService();
+  await printer.refreshConnection();
+  if (printer.isConnected) {
+    final storeInfo = store.currentStoreInfo;
+    final ok = await printer.printReceipt(order, storeInfo);
+    if (ok) {
+      store.showToast('Đã in hóa đơn', 'success');
+    }
+  }
 }
 
 // ─── Cart Bottom Sheet (for mobile) ────────────────────

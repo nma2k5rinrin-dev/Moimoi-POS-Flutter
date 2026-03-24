@@ -15,6 +15,9 @@ import '../../widgets/circle_crop_dialog.dart';
 import '../../models/store_info_model.dart';
 import '../../widgets/date_range_picker_dialog.dart';
 import '../thu_chi/thu_chi_page.dart';
+import '../premium/premium_page.dart';
+import 'qr_menu_page.dart';
+import 'printer_section.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -107,6 +110,12 @@ class _SettingsPageState extends State<SettingsPage> {
       desc: 'Sao lưu dữ liệu đám mây',
       icon: Icons.cloud_outlined,
     ),
+    _SettingMenu(
+      id: 'premium',
+      name: 'Moimoi Premium',
+      desc: 'Gia hạn gói Premium, xem tính năng',
+      icon: Icons.workspace_premium,
+    ),
   ];
 
   @override
@@ -119,9 +128,34 @@ class _SettingsPageState extends State<SettingsPage> {
     final menus = _menus.where((m) {
       if (m.adminOnly && !isAdmin) return false;
       if (m.requiresStore && !hasStoreSelected) return false;
+      if (m.id == 'premium' && isSadmin) return false;
       return true;
     }).toList();
 
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+
+    if (isLandscape) {
+      // Two-column layout: left menu list + right section content
+      final activeId = _selectedSection ?? menus.first.id;
+      return Row(
+        children: [
+          SizedBox(
+            width: 320,
+            child: _SettingsMenuList(
+              menus: menus,
+              selected: activeId,
+              onSelect: (id) => setState(() => _selectedSection = id),
+            ),
+          ),
+          Container(width: 1, color: AppColors.slate200),
+          Expanded(
+            child: _buildSection(activeId, onBack: null),
+          ),
+        ],
+      );
+    }
+
+    // Portrait: single-view
     if (_selectedSection != null) {
       return _buildSection(_selectedSection!,
           onBack: () => setState(() => _selectedSection = null));
@@ -198,15 +232,17 @@ class _SettingsPageState extends State<SettingsPage> {
       case 'tables':
         return const _TablesSection();
       case 'qr-menu':
-        return const _QrMenuSection();
+        return const QrMenuPage();
       case 'users':
         return const _UsersSection();
       case 'printer':
-        return const _PrinterSection();
+        return const PrinterSection();
       case 'backup':
         return const _BackupSection();
       case 'thu-chi':
         return const ThuChiPage(embedded: true);
+      case 'premium':
+        return const PremiumPage();
       default:
         return const Center(child: Text('Coming soon'));
     }
@@ -782,119 +818,6 @@ class _AccountSectionState extends State<_AccountSection> {
                                   ),
                                 ),
                         ),
-
-                        const SizedBox(height: 24),
-
-                        // Cancel + Save buttons
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  _phoneController.text = user?.phone ?? '';
-                                  store.showToast('Đã hủy thay đổi');
-                                },
-                                icon: const Icon(Icons.close_rounded, size: 18),
-                                label: const Text('Hủy bỏ'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppColors.red500,
-                                  side: const BorderSide(color: AppColors.red200),
-                                  minimumSize: const Size(0, 50),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14)),
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  textStyle: const TextStyle(
-                                      fontWeight: FontWeight.w700, fontSize: 15),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  store.updateUser(user!.username, {
-                                    'phone': _phoneController.text.trim(),
-                                  });
-                                  store.showToast('Cập nhật thành công!');
-                                },
-                                icon: const Icon(Icons.save_rounded, size: 18),
-                                label: const Text('Lưu thay đổi'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.emerald500,
-                                  foregroundColor: Colors.white,
-                                  minimumSize: const Size(0, 50),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14)),
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  textStyle: const TextStyle(
-                                      fontWeight: FontWeight.w700, fontSize: 15),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Logout button
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20)),
-                                  title: const Text('Đăng xuất',
-                                      style: TextStyle(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w700)),
-                                  content: const Text(
-                                      'Bạn có chắc chắn muốn đăng xuất?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(ctx),
-                                      child: Text('Hủy',
-                                          style: TextStyle(
-                                              color:
-                                                  AppColors.slate500)),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.pop(ctx);
-                                        store.clearSavedCredentials();
-                                        store.logout();
-                                      },
-                                      child: const Text('Đăng xuất',
-                                          style: TextStyle(
-                                              color: AppColors.red500,
-                                              fontWeight:
-                                                  FontWeight.w600)),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            icon: Icon(Icons.logout_rounded,
-                                size: 20, color: AppColors.red500),
-                            label: Text('Đăng xuất',
-                                style: TextStyle(color: AppColors.red500)),
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(
-                                  color: AppColors.red200),
-                              minimumSize: const Size(double.infinity, 50),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(14)),
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 14),
-                              textStyle: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15),
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -902,9 +825,135 @@ class _AccountSectionState extends State<_AccountSection> {
                 ],
               ),
             ),
+          ),
+        ),
+        // ── Fixed bottom action buttons ──
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          _phoneController.text = user?.phone ?? '';
+                          store.showToast('Đã hủy thay đổi');
+                        },
+                        child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: AppColors.slate50,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.slate200),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.close_rounded, size: 18, color: AppColors.slate500),
+                              SizedBox(width: 8),
+                              Text('Hủy bỏ',
+                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.slate600)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          store.updateUser(user!.username, {
+                            'phone': _phoneController.text.trim(),
+                          });
+                          store.showToast('Cập nhật thành công!');
+                        },
+                        child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: AppColors.emerald500,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.save_rounded, size: 18, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text('Lưu thay đổi',
+                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20)),
+                        title: const Text('Đăng xuất',
+                            style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700)),
+                        content: const Text(
+                            'Bạn có chắc chắn muốn đăng xuất?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.pop(ctx),
+                            child: Text('Hủy',
+                                style: TextStyle(
+                                    color:
+                                        AppColors.slate500)),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              store.clearSavedCredentials();
+                              store.logout();
+                            },
+                            child: const Text('Đăng xuất',
+                                style: TextStyle(
+                                    color: AppColors.red500,
+                                    fontWeight:
+                                        FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  child: Container(
+                    height: 52,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.red50,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.red200),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.logout_rounded, size: 20, color: AppColors.red500),
+                        SizedBox(width: 8),
+                        Text('Đăng xuất',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.red500)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
+      ],
     );
   }
 
@@ -1891,59 +1940,6 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
                             ],
                           ),
                           const SizedBox(height: 20),
-
-                          // ── Cancel + Save buttons ──────────────
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () {
-                                    final info = store.currentStoreInfo;
-                                    _nameController.text = info.name;
-                                    _phoneController.text = info.phone;
-                                    _addressController.text = info.address;
-                                    _taxIdController.text = info.taxId;
-                                    _openHoursController.text = info.openHours;
-                                    _bankNameController.text = info.bankId;
-                                    _bankAccountController.text = info.bankAccount;
-                                    _bankOwnerController.text = info.bankOwner;
-                                    _qrImageUrl = info.qrImageUrl;
-                                    store.showToast('Đã hủy thay đổi');
-                                  },
-                                  icon: const Icon(Icons.close_rounded, size: 18),
-                                  label: const Text('Hủy bỏ'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppColors.red500,
-                                    side: const BorderSide(color: AppColors.red200),
-                                    minimumSize: const Size(0, 50),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14)),
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                    textStyle: const TextStyle(
-                                        fontWeight: FontWeight.w700, fontSize: 14),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () => _saveStoreInfo(store),
-                                  icon: const Icon(Icons.save, size: 18),
-                                  label: const Text('Lưu thay đổi'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.emerald500,
-                                    foregroundColor: Colors.white,
-                                    minimumSize: const Size(0, 50),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14)),
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                    textStyle: const TextStyle(
-                                        fontWeight: FontWeight.w700, fontSize: 14),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                         ],
                       ),
                     ),
@@ -1953,7 +1949,74 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
               ),
             ),
           ),
-        ],
+        // ── Fixed bottom action buttons ──
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      final info = store.currentStoreInfo;
+                      _nameController.text = info.name;
+                      _phoneController.text = info.phone;
+                      _addressController.text = info.address;
+                      _taxIdController.text = info.taxId;
+                      _openHoursController.text = info.openHours;
+                      _bankNameController.text = info.bankId;
+                      _bankAccountController.text = info.bankAccount;
+                      _bankOwnerController.text = info.bankOwner;
+                      _qrImageUrl = info.qrImageUrl;
+                      store.showToast('Đã hủy thay đổi');
+                    },
+                    child: Container(
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: AppColors.slate50,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.slate200),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.close_rounded, size: 18, color: AppColors.slate500),
+                          SizedBox(width: 8),
+                          Text('Hủy bỏ',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.slate600)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _saveStoreInfo(store),
+                    child: Container(
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: AppColors.emerald500,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.save_rounded, size: 18, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text('Lưu thay đổi',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -2314,19 +2377,8 @@ class _TablesSectionState extends State<_TablesSection> {
                     child: Container(
                       height: 52,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [AppColors.emerald500, AppColors.emerald600],
-                        ),
+                        color: AppColors.emerald500,
                         borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.emerald500.withValues(alpha: 0.25),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -3105,6 +3157,18 @@ class _UsersSectionState extends State<_UsersSection> {
     return mainContent;
   }
 
+  /// Role hierarchy: sadmin > admin > manager/cashier/kitchen/staff
+  /// Returns true if [myRole] can manage (edit/delete) a user with [targetRole].
+  bool _canManageUser(String? myRole, String? targetRole) {
+    if (myRole == null || targetRole == null) return false;
+    if (myRole == 'sadmin') return true; // sadmin manages everyone
+    if (myRole == 'admin') {
+      // admin manages all except sadmin and other admins
+      return targetRole != 'sadmin' && targetRole != 'admin';
+    }
+    return false; // other roles cannot manage anyone
+  }
+
   Widget _buildEmployeeCard(AppStore store, UserModel user, UserModel? currentUser, String storeName) {
     final isCurrentUser = user.username == currentUser?.username;
     final displayName = user.fullname.isNotEmpty ? user.fullname : user.username;
@@ -3144,7 +3208,7 @@ class _UsersSectionState extends State<_UsersSection> {
     return Padding(
       padding: const EdgeInsets.only(top: 10),
       child: GestureDetector(
-        onTap: (!isCurrentUser && (currentUser?.role == 'sadmin' || user.role == 'staff'))
+        onTap: (!isCurrentUser && _canManageUser(currentUser?.role, user.role))
             ? () => _openEditPanel(store, user)
             : null,
         child: Container(
@@ -3178,7 +3242,7 @@ class _UsersSectionState extends State<_UsersSection> {
                   ],
                 ),
               ),
-              if (!isCurrentUser && (currentUser?.role == 'sadmin' || user.role == 'staff'))
+              if (!isCurrentUser && _canManageUser(currentUser?.role, user.role))
                 GestureDetector(
                   onTap: () {
                     store.showConfirm(
@@ -3883,70 +3947,7 @@ class _DialogField extends StatelessWidget {
   }
 }
 
-// ─── Printer Section ────────────────────────────────────────
-class _PrinterSection extends StatelessWidget {
-  const _PrinterSection();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: Column(
-              children: [
-                const SizedBox(height: 12),
-                _SectionCard(
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 72, height: 72,
-                        decoration: BoxDecoration(
-                          color: AppColors.blue50,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Icon(Icons.print_outlined, size: 36, color: AppColors.blue400),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text('Tính năng đang phát triển',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.slate800)),
-                      const SizedBox(height: 8),
-                      const Text('Kết nối máy in nhiệt, tuỳ chỉnh hoá đơn sẽ sớm có mặt trong bản cập nhật tiếp theo.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 14, color: AppColors.slate500, height: 1.5)),
-                      const SizedBox(height: 20),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: AppColors.amber50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.amber200),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.info_outline, color: AppColors.amber600, size: 18),
-                            SizedBox(width: 8),
-                            Text('Coming Soon', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.amber600)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
-              ],
-            ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
+// PrinterSection moved to printer_section.dart
 
 // ─── Backup Section ─────────────────────────────────────────
 class _BackupSection extends StatelessWidget {
@@ -4009,61 +4010,6 @@ class _BackupSection extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-// ─── QR Menu & Order Section ─────────────────────────
-class _QrMenuSection extends StatelessWidget {
-  const _QrMenuSection();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80, height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.emerald50,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(Icons.qr_code_2, size: 40, color: AppColors.emerald500),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Menu QR & Order',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.slate800),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Tính năng đang phát triển.\nSẽ hỗ trợ tạo menu QR cho khách hàng quét mã\nđặt món trực tiếp từ bàn.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: AppColors.slate400, height: 1.5),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.amber50,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.amber200),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.construction, size: 18, color: AppColors.amber500),
-                  SizedBox(width: 8),
-                  Text('Sắp ra mắt', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.amber600)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

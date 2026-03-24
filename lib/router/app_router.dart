@@ -8,7 +8,6 @@ import '../screens/order/order_page.dart';
 import '../screens/orders/orders_page.dart';
 import '../screens/dashboard/dashboard_page.dart';
 import '../screens/settings/settings_page.dart';
-import '../screens/premium/premium_page.dart';
 import '../screens/inventory/inventory_page.dart';
 import '../screens/settings/menu_management.dart';
 import '../screens/admin/admin_dashboard_page.dart';
@@ -91,13 +90,7 @@ GoRouter createRouter(AppStore store) {
               child: const SettingsPage(),
             ),
           ),
-          GoRoute(
-            path: '/premium',
-            pageBuilder: (context, state) => _fadeTransitionPage(
-              key: state.pageKey,
-              child: const PremiumPage(),
-            ),
-          ),
+
           GoRoute(
             path: '/admin',
             pageBuilder: (context, state) => _fadeTransitionPage(

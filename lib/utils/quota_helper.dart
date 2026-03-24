@@ -5,7 +5,7 @@ import '../store/app_store.dart';
 class QuotaLimits {
   static const int maxStaff = 1;
   static const int maxTables = 2;
-  static const int maxCategories = 1;
+  static const int maxCategories = 2;
   static const int maxProducts = 5;
   static const int maxOrdersPerDay = 10;
 }
@@ -14,7 +14,8 @@ class QuotaHelper {
   final AppStore store;
   const QuotaHelper(this.store);
 
-  bool get _isPremium => store.currentStoreInfo.isPremium;
+  bool get _isPremium =>
+      store.currentUser?.role == 'sadmin' || store.currentStoreInfo.isPremium;
 
   // ── Staff ──────────────────────────────────────────────
   int get currentStaffCount {
@@ -41,14 +42,14 @@ class QuotaHelper {
       'Gói Cơ bản chỉ cho phép tối đa ${QuotaLimits.maxTables} bàn. '
       'Nâng cấp Premium để thêm không giới hạn.';
 
-  // ── Categories ─────────────────────────────────────────
+  // ── Categories (danh mục sản phẩm) ─────────────────────
   int get currentCategoryCount => store.currentCategories.length;
 
   bool get canAddCategory =>
       _isPremium || currentCategoryCount < QuotaLimits.maxCategories;
 
   String get categoryLimitMsg =>
-      'Gói Cơ bản chỉ cho phép tối đa ${QuotaLimits.maxCategories} khu vực. '
+      'Gói Cơ bản chỉ cho phép tối đa ${QuotaLimits.maxCategories} danh mục. '
       'Nâng cấp Premium để thêm không giới hạn.';
 
   // ── Products ───────────────────────────────────────────
@@ -83,4 +84,18 @@ class QuotaHelper {
       'Gói Cơ bản chỉ cho phép tối đa ${QuotaLimits.maxOrdersPerDay} đơn/ngày. '
       'Còn lại: ${remainingOrdersToday < 0 ? 0 : remainingOrdersToday} đơn. '
       'Nâng cấp Premium để không giới hạn.';
+
+  // ── Thu Chi (Premium only) ──────────────────────────────
+  bool get canUseThuChi => _isPremium;
+
+  String get thuChiLimitMsg =>
+      'Tính năng Thu/Chi chỉ dành cho gói Premium. '
+      'Nâng cấp Premium để sử dụng.';
+
+  // ── Menu QR & Order (Premium only) ─────────────────────
+  bool get canUseMenuOrder => _isPremium;
+
+  String get menuOrderLimitMsg =>
+      'Tính năng Menu QR & Order chỉ dành cho gói Premium. '
+      'Nâng cấp Premium để sử dụng.';
 }

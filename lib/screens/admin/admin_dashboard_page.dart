@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../store/app_store.dart';
@@ -677,9 +678,9 @@ class _StoreCard extends StatelessWidget {
     // Expiry date for premium
     final expiresAt = admin?.expiresAt ?? '';
 
-    final iconSize = compact ? 40.0 : 48.0;
-    final iconInnerSize = compact ? 20.0 : 24.0;
-    final iconRadius = compact ? 14.0 : 16.0;
+    final iconSize = compact ? 52.0 : 60.0;
+    final iconInnerSize = compact ? 24.0 : 28.0;
+    final iconRadius = compact ? 16.0 : 18.0;
     final nameSize = compact ? 12.0 : 14.0;
     final dateSize = compact ? 9.0 : 10.0;
     final badgeFontSize = compact ? 9.0 : 10.0;
@@ -735,21 +736,39 @@ class _StoreCard extends StatelessWidget {
             ),
             SizedBox(height: cardGap),
 
-            // Store icon
-            Container(
-              width: iconSize,
-              height: iconSize,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: colors,
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+            // Store icon — synced with shop's chosen logo
+            Builder(builder: (_) {
+              final hasLogo = info.logoUrl.isNotEmpty;
+              if (hasLogo) {
+                try {
+                  final base64Part = info.logoUrl.split(',').last;
+                  final bytes = base64Decode(base64Part);
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(iconRadius),
+                    child: Image.memory(
+                      bytes,
+                      width: iconSize,
+                      height: iconSize,
+                      fit: BoxFit.cover,
+                    ),
+                  );
+                } catch (_) {}
+              }
+              return Container(
+                width: iconSize,
+                height: iconSize,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: colors,
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(iconRadius),
                 ),
-                borderRadius: BorderRadius.circular(iconRadius),
-              ),
-              alignment: Alignment.center,
-              child: Icon(Icons.storefront, size: iconInnerSize, color: Colors.white),
-            ),
+                alignment: Alignment.center,
+                child: Icon(Icons.storefront, size: iconInnerSize, color: Colors.white),
+              );
+            }),
             SizedBox(height: cardGap),
 
             // Store name
