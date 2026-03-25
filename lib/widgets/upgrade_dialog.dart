@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../store/app_store.dart';
 import '../utils/constants.dart';
 import 'animated_dialogs.dart';
 
@@ -334,8 +337,18 @@ class _PricingDialogState extends State<_PricingDialog> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
+                    final store = context.read<AppStore>();
+                    const planMonths = [1, 3, 6, 12];
+                    store.requestUpgrade(
+                      store.currentUser?.username ?? '',
+                      _selectedPlan,
+                      _plans[_selectedPlan].name,
+                      planMonths[_selectedPlan],
+                    );
                     Navigator.pop(context);
-                    // TODO: Integrate payment gateway
+                    if (context.mounted) {
+                      context.go('/settings?tab=premium');
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.emerald500,

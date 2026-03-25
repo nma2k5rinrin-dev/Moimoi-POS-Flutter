@@ -176,12 +176,7 @@ class _MobileHeader extends StatelessWidget {
     // Current display name
     String displayName = storeInfo.name;
     if (isSadmin) {
-      final viewId = store.sadminViewStoreId;
-      if (viewId == 'all') {
-        displayName = 'Tất cả cửa hàng';
-      } else {
-        displayName = store.storeInfos[viewId]?.name ?? viewId;
-      }
+      displayName = 'Moimoi POS';
     }
 
     final content = Row(
@@ -205,14 +200,10 @@ class _MobileHeader extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        if (isSadmin) ...[
-          const SizedBox(width: 4),
-          const Icon(Icons.unfold_more, size: 16, color: AppColors.slate400),
-        ],
       ],
     );
 
-    if (!isSadmin) return content;
+    if (isSadmin) return content;
 
     return GestureDetector(
       onTap: () {

@@ -1393,7 +1393,13 @@ class AppStore extends ChangeNotifier {
       return;
     }
     final reqId = DateTime.now().millisecondsSinceEpoch.toString();
-    final transferContent = 'MOIMOI ${username.toUpperCase()} $planIndex';
+    final storeName = currentStoreInfo.name.isNotEmpty
+        ? currentStoreInfo.name
+        : username;
+    // Remove spaces and special chars for bank transfer content
+    final cleanStoreName = storeName.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    final cleanPlanName = planName.toUpperCase().replaceAll(' ', '');
+    final transferContent = '$cleanStoreName $cleanPlanName';
     final amount = planIndex < planPrices.length ? planPrices[planIndex] : 250000;
 
     final newReq = {

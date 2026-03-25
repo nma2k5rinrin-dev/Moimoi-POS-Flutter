@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../models/store_info_model.dart';
 import '../../store/app_store.dart';
 import '../../utils/constants.dart';
 
@@ -18,6 +21,8 @@ class _PremiumPageState extends State<PremiumPage>
   String? _paymentView; // null = plan selection, 'payment' = QR payment screen
   String _transferContent = '';
   int _paymentAmount = 0;
+  Timer? _pollTimer;
+  bool _justApproved = false;
 
   static const List<_PlanInfo> _plans = [
     _PlanInfo(
@@ -76,10 +81,71 @@ class _PremiumPageState extends State<PremiumPage>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
+
+    // Auto-detect existing pending request and restore payment view
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkExistingRequest();
+    });
+  }
+
+  void _checkExistingRequest() {
+    final store = context.read<AppStore>();
+    final username = store.currentUser?.username ?? '';
+    final myReq = store.upgradeRequests
+        .where((r) => r.username == username && r.status == 'pending')
+        .toList();
+    if (myReq.isNotEmpty) {
+      final req = myReq.first;
+      setState(() {
+        _paymentView = 'payment';
+        _transferContent = req.transferContent;
+        _paymentAmount = req.amount;
+        _selectedPlan = req.planIndex;
+      });
+      _startPolling();
+    }
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _pollPaymentStatus();
+    });
+  }
+
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+  }
+
+  Future<void> _pollPaymentStatus() async {
+    try {
+      final store = context.read<AppStore>();
+      final username = store.currentUser?.username ?? '';
+      final data = await Supabase.instance.client
+          .from('upgrade_requests')
+          .select()
+          .eq('username', username)
+          .eq('status', 'approved')
+          .limit(1);
+      if ((data as List).isNotEmpty && mounted) {
+        _stopPolling();
+        // Trigger realtime-like update in store
+        final approved = data.first;
+        store.upgradeRequests = store.upgradeRequests
+            .map((r) => r.id == approved['id'] ? r.copyWith(status: 'approved') : r)
+            .toList();
+        store.notifyListeners();
+        setState(() => _justApproved = true);
+      }
+    } catch (e) {
+      debugPrint('[PollPayment] Error: $e');
+    }
   }
 
   @override
   void dispose() {
+    _stopPolling();
     _shimmerCtrl.dispose();
     super.dispose();
   }
@@ -103,7 +169,12 @@ class _PremiumPageState extends State<PremiumPage>
 
     final plan = _plans[_selectedPlan];
     const planMonths = [1, 3, 6, 12];
-    final transferContent = 'MOIMOI ${user.username.toUpperCase()} $_selectedPlan';
+    final storeName = store.currentStoreInfo.name.isNotEmpty
+        ? store.currentStoreInfo.name
+        : user.username;
+    final cleanStoreName = storeName.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    final cleanPlanName = plan.name.toUpperCase().replaceAll(' ', '');
+    final transferContent = '$cleanStoreName $cleanPlanName';
 
     store.requestUpgrade(
       user.username,
@@ -117,6 +188,7 @@ class _PremiumPageState extends State<PremiumPage>
       _transferContent = transferContent;
       _paymentAmount = plan.totalPrice;
     });
+    _startPolling();
   }
 
   @override
@@ -153,6 +225,13 @@ class _PremiumPageState extends State<PremiumPage>
         .where((r) => r.username == store.currentUser?.username)
         .toList();
     final isPaid = myReq.isNotEmpty && myReq.first.status == 'approved';
+
+    // Get sadmin bank config
+    final sadminInfo = store.storeInfos['sadmin'] ?? const StoreInfoModel();
+    final bankName = sadminInfo.bankId.isNotEmpty ? sadminInfo.bankId : 'Chưa cấu hình';
+    final bankAccount = sadminInfo.bankAccount.isNotEmpty ? sadminInfo.bankAccount : 'Chưa cấu hình';
+    final bankOwner = sadminInfo.bankOwner.isNotEmpty ? sadminInfo.bankOwner : 'Chưa cấu hình';
+    final hasBankConfig = sadminInfo.bankId.isNotEmpty && sadminInfo.bankAccount.isNotEmpty;
 
     return Column(
       children: [
@@ -236,9 +315,25 @@ class _PremiumPageState extends State<PremiumPage>
                             ),
                             const SizedBox(height: 16),
 
-                            _bankInfoRow('Ngân hàng', 'MB Bank (Quân Đội)'),
-                            _bankInfoRow('Số tài khoản', '0388 686 868', copyable: true),
-                            _bankInfoRow('Chủ tài khoản', 'MOIMOI TECH'),
+                            if (!hasBankConfig)
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF2F2),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.red200),
+                                ),
+                                child: const Text(
+                                  'Chưa cấu hình thông tin ngân hàng. Vui lòng liên hệ quản trị viên.',
+                                  style: TextStyle(fontSize: 13, color: AppColors.red600),
+                                ),
+                              )
+                            else ...[
+                              _bankInfoRow('Ngân hàng', bankName),
+                              _bankInfoRow('Số tài khoản', bankAccount, copyable: true),
+                              _bankInfoRow('Chủ tài khoản', bankOwner),
+                            ],
                             _bankInfoRow('Số tiền', _formatCurrency(_paymentAmount)),
                             _bankInfoRow('Nội dung CK', _transferContent, copyable: true, highlight: true),
                           ],
@@ -274,72 +369,73 @@ class _PremiumPageState extends State<PremiumPage>
 
                       const SizedBox(height: 16),
 
-                      // QR Code placeholder
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            const Text('Quét mã QR để chuyển khoản',
-                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate700)),
-                            const SizedBox(height: 16),
-                            // VietQR image
-                            Container(
-                              width: 220,
-                              height: 220,
-                              decoration: BoxDecoration(
-                                color: AppColors.slate50,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: AppColors.slate200),
+                      // QR Code
+                      if (hasBankConfig)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.04),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
                               ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Image.network(
-                                  'https://img.vietqr.io/image/MB-0388686868-compact2.jpg'
-                                  '?amount=$_paymentAmount'
-                                  '&addInfo=${Uri.encodeComponent(_transferContent)}'
-                                  '&accountName=${Uri.encodeComponent('MOIMOI TECH')}',
-                                  fit: BoxFit.contain,
-                                  loadingBuilder: (ctx, child, progress) {
-                                    if (progress == null) return child;
-                                    return const Center(
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: AppColors.emerald500,
-                                      ),
-                                    );
-                                  },
-                                  errorBuilder: (ctx, error, stack) => const Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.qr_code_2, size: 60, color: AppColors.slate300),
-                                      SizedBox(height: 8),
-                                      Text('Không tải được QR',
-                                          style: TextStyle(fontSize: 12, color: AppColors.slate400)),
-                                    ],
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              const Text('Quét mã QR để chuyển khoản',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate700)),
+                              const SizedBox(height: 16),
+                              // VietQR image
+                              Container(
+                                width: 220,
+                                height: 220,
+                                decoration: BoxDecoration(
+                                  color: AppColors.slate50,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppColors.slate200),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Image.network(
+                                    'https://img.vietqr.io/image/${Uri.encodeComponent(bankName)}-${bankAccount.replaceAll(' ', '')}-compact2.jpg'
+                                    '?amount=$_paymentAmount'
+                                    '&addInfo=${Uri.encodeComponent(_transferContent)}'
+                                    '&accountName=${Uri.encodeComponent(bankOwner)}',
+                                    fit: BoxFit.contain,
+                                    loadingBuilder: (ctx, child, progress) {
+                                      if (progress == null) return child;
+                                      return const Center(
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.emerald500,
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (ctx, error, stack) => const Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.qr_code_2, size: 60, color: AppColors.slate300),
+                                        SizedBox(height: 8),
+                                        Text('Không tải được QR',
+                                            style: TextStyle(fontSize: 12, color: AppColors.slate400)),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'VietQR • MB Bank',
-                              style: TextStyle(fontSize: 12, color: AppColors.slate400),
-                            ),
-                          ],
+                              const SizedBox(height: 12),
+                              Text(
+                                'VietQR • $bankName',
+                                style: TextStyle(fontSize: 12, color: AppColors.slate400),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
 
                       const SizedBox(height: 20),
                     ],

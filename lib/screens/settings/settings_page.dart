@@ -125,10 +125,13 @@ class _SettingsPageState extends State<SettingsPage> {
     final isSadmin = store.currentUser?.role == 'sadmin';
     final hasStoreSelected = !isSadmin || store.sadminViewStoreId != 'all';
 
+    // Sadmin only sees: account
+    const sadminTabs = {'account'};
+
     final menus = _menus.where((m) {
+      if (isSadmin) return sadminTabs.contains(m.id);
       if (m.adminOnly && !isAdmin) return false;
       if (m.requiresStore && !hasStoreSelected) return false;
-      if (m.id == 'premium' && isSadmin) return false;
       return true;
     }).toList();
 
@@ -394,6 +397,9 @@ class _AccountSection extends StatefulWidget {
 
 class _AccountSectionState extends State<_AccountSection> {
   final _phoneController = TextEditingController();
+  final _bankNameController = TextEditingController();
+  final _bankAccountController = TextEditingController();
+  final _bankOwnerController = TextEditingController();
   bool _biometricAvailable = false;
   bool _biometricEnabled = false;
 
@@ -402,6 +408,13 @@ class _AccountSectionState extends State<_AccountSection> {
     super.initState();
     final store = context.read<AppStore>();
     _phoneController.text = store.currentUser?.phone ?? '';
+    // Init bank info for sadmin
+    if (store.currentUser?.role == 'sadmin') {
+      final sadminInfo = store.storeInfos['sadmin'] ?? const StoreInfoModel();
+      _bankNameController.text = sadminInfo.bankId;
+      _bankAccountController.text = sadminInfo.bankAccount;
+      _bankOwnerController.text = sadminInfo.bankOwner;
+    }
     _initBiometricState();
   }
 
@@ -476,9 +489,52 @@ class _AccountSectionState extends State<_AccountSection> {
     }
   }
 
+  Widget _buildTextField(String label, TextEditingController controller, {
+    IconData? icon,
+    String? hint,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.slate600)),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.slate200),
+          ),
+          child: Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 18, color: AppColors.slate400),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  style: const TextStyle(fontSize: 14),
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: hint,
+                    hintStyle: const TextStyle(color: AppColors.slate300),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   void dispose() {
     _phoneController.dispose();
+    _bankNameController.dispose();
+    _bankAccountController.dispose();
+    _bankOwnerController.dispose();
     super.dispose();
   }
 
@@ -821,6 +877,77 @@ class _AccountSectionState extends State<_AccountSection> {
                       ],
                     ),
                   ),
+
+                  // ── Bank info for sadmin ──
+                  if (store.currentUser?.role == 'sadmin') ...[
+                    const SizedBox(height: 24),
+                    _SectionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Expanded(child: Divider(color: AppColors.slate200)),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  'Thanh toán ngân hàng',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.slate400,
+                                  ),
+                                ),
+                              ),
+                              const Expanded(child: Divider(color: AppColors.slate200)),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField('Tên ngân hàng', _bankNameController,
+                              icon: Icons.account_balance_outlined,
+                              hint: 'VD: TECHCOMBANK, VIETCOMBANK'),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildTextField('Số tài khoản', _bankAccountController,
+                                    icon: Icons.credit_card_outlined,
+                                    hint: 'VD: 19034153150012'),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildTextField('Chủ tài khoản', _bankOwnerController,
+                                    icon: Icons.person_outline,
+                                    hint: 'VD: NGUYEN VAN A'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFFBEB),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFFDE68A)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.info_outline, size: 16, color: Color(0xFFD97706)),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Số tài khoản phải trùng với tài khoản đã đăng ký trên SePay webhook để hệ thống tự động xác nhận thanh toán.',
+                                    style: TextStyle(fontSize: 12, color: Color(0xFF92400E), height: 1.4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 32),
                 ],
               ),
@@ -869,6 +996,15 @@ class _AccountSectionState extends State<_AccountSection> {
                           store.updateUser(user!.username, {
                             'phone': _phoneController.text.trim(),
                           });
+                          // Save bank info for sadmin
+                          if (store.currentUser?.role == 'sadmin') {
+                            final sadminInfo = store.storeInfos['sadmin'] ?? const StoreInfoModel();
+                            store.updateStoreInfoById('sadmin', sadminInfo.copyWith(
+                              bankId: _bankNameController.text.trim(),
+                              bankAccount: _bankAccountController.text.trim(),
+                              bankOwner: _bankOwnerController.text.trim(),
+                            ));
+                          }
                           store.showToast('Cập nhật thành công!');
                         },
                         child: Container(
