@@ -1493,11 +1493,14 @@ class AppStore extends ChangeNotifier {
   }
 
   // ── Notification Sound ─────────────────────────────────
-  void _playNewOrderSound() {
+  void _playNewOrderSound() async {
     try {
-      _orderSoundPlayer.play(AssetSource('sounds/new_order.wav'));
+      await _orderSoundPlayer.stop();
+      await _orderSoundPlayer.setSource(AssetSource('sounds/new_order.wav'));
+      await _orderSoundPlayer.resume();
+      debugPrint('[Sound] ✅ Played new order notification sound');
     } catch (e) {
-      debugPrint('[Sound] Error playing notification: $e');
+      debugPrint('[Sound] ❌ Error playing notification: $e');
     }
   }
 
@@ -1518,12 +1521,17 @@ class AppStore extends ChangeNotifier {
             )
           : null,
       callback: (payload) {
+        debugPrint('[Realtime] Orders event: ${payload.eventType} | id=${payload.newRecord['id']}');
         if (payload.eventType == PostgresChangeEvent.insert) {
           final newOrder = OrderModel.fromMap(payload.newRecord);
+          debugPrint('[Realtime] ✅ New order received: ${newOrder.id} | table=${newOrder.table} | store=${newOrder.storeId}');
           if (!orders.any((o) => o.id == newOrder.id)) {
             orders.insert(0, newOrder);
             _playNewOrderSound();
             notifyListeners();
+            debugPrint('[Realtime] ✅ Order added to list, sound triggered');
+          } else {
+            debugPrint('[Realtime] ⚠️ Order ${newOrder.id} already exists, skipped');
           }
         } else if (payload.eventType == PostgresChangeEvent.update) {
           final rec = payload.newRecord;
