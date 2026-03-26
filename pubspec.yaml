@@ -57,6 +57,14 @@ dependencies:
   audioplayers: ^6.6.0
   print_bluetooth_thermal: ^1.1.9
   esc_pos_utils_plus: ^2.0.4
+  # Offline-first packages
+  drift: ^2.22.1
+  drift_flutter: ^0.2.4
+  sqlite3_flutter_libs: ^0.5.28
+  connectivity_plus: ^6.1.4
+  workmanager: ^0.5.2
+  path_provider: ^2.1.5
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:
@@ -68,6 +76,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  drift_dev: ^2.22.1
+  build_runner: ^2.4.15
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

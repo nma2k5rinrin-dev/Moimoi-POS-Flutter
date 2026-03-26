@@ -15,9 +15,69 @@ import '../models/upgrade_request_model.dart';
 import '../models/thu_chi_transaction_model.dart';
 import '../utils/quota_helper.dart';
 import '../widgets/upgrade_dialog.dart';
+import '../db/app_database.dart';
+import '../sync/sync_engine.dart';
+import 'dart:convert' show jsonEncode, jsonDecode;
+import 'package:drift/drift.dart' show Value;
 
 class AppStore extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
+
+  // ── Offline-first (Drift + SyncEngine) ──────────────────
+  AppDatabase? _db;
+  SyncEngine? _syncEngine;
+
+  /// Inject Drift DB and SyncEngine (called from main.dart)
+  void initOfflineFirst(AppDatabase db, SyncEngine engine) {
+    _db = db;
+    _syncEngine = engine;
+    engine.onNewServerOrders = (count) {
+      debugPrint('[AppStore] $count new orders pulled from server');
+      // Trigger reload from Drift
+      _reloadOrdersFromDrift();
+    };
+  }
+
+  /// Reload orders from Drift into in-memory list
+  Future<void> _reloadOrdersFromDrift() async {
+    if (_db == null) return;
+    final storeId = getStoreId();
+    final localOrders = await _db!.getOrdersByStore(storeId);
+    orders = localOrders.map((lo) => OrderModel.fromMap({
+      'id': lo.id,
+      'store_id': lo.storeId,
+      'table_name': lo.orderTable,
+      'items': jsonDecode(lo.itemsJson),
+      'status': lo.status,
+      'payment_status': lo.paymentStatus,
+      'total_amount': lo.totalAmount,
+      'created_by': lo.createdBy,
+      'time': lo.time,
+      'payment_method': lo.paymentMethod,
+    })).toList();
+    notifyListeners();
+  }
+
+  /// Build a Drift update for an existing in-memory order
+  Future<void> _updateOrderInDrift(String orderId) async {
+    if (_db == null) return;
+    final order = orders.firstWhere((o) => o.id == orderId,
+        orElse: () => const OrderModel(id: ''));
+    if (order.id.isEmpty) return;
+    await _db!.upsertOrder(LocalOrdersCompanion(
+      id: Value(orderId),
+      storeId: Value(order.storeId),
+      orderTable: Value(order.table),
+      itemsJson: Value(jsonEncode(order.items.map((i) => i.toMap()).toList())),
+      status: Value(order.status),
+      paymentStatus: Value(order.paymentStatus),
+      totalAmount: Value(order.totalAmount),
+      createdBy: Value(order.createdBy),
+      time: Value(order.time),
+      paymentMethod: Value(order.paymentMethod),
+      isSynced: const Value(false),
+    ));
+  }
 
   /// Global context set by MaterialApp builder for showing dialogs.
   BuildContext? rootContext;
@@ -119,6 +179,67 @@ class AppStore extends ChangeNotifier {
       notifyListeners();
       showToast(errorMsg, 'error');
     });
+  }
+
+  // ── Offline-First Helper ──────────────────────────────
+  /// Ghi vào Drift trước, enqueue sync_queue, UI cập nhật ngay.
+  /// Nếu không có Drift DB (web/test) → fallback về _optimistic.
+  Future<void> _offlineFirst({
+    required String table,
+    required String operation,
+    required String recordId,
+    required Map<String, dynamic> payload,
+    required VoidCallback applyInMemory,
+    required Future<void> Function() applyDrift,
+    VoidCallback? rollback,
+    String errorMsg = 'Có lỗi xảy ra',
+  }) async {
+    if (_db == null) {
+      // Fallback: no local DB → direct to Supabase
+      _optimistic(
+        apply: applyInMemory,
+        remote: () async {
+          if (operation == 'INSERT') {
+            await _supabase.from(table).upsert(payload);
+          } else if (operation == 'UPDATE') {
+            await _supabase.from(table).update(payload).eq('id', recordId);
+          } else if (operation == 'DELETE') {
+            await _supabase.from(table).delete().eq('id', recordId);
+          }
+        },
+        rollback: rollback ?? () {},
+        errorMsg: errorMsg,
+      );
+      return;
+    }
+
+    try {
+      // 1. Apply to in-memory state
+      applyInMemory();
+
+      // 2. Apply to Drift
+      await applyDrift();
+
+      // 3. Enqueue sync operation
+      final txId = 'tx_${DateTime.now().millisecondsSinceEpoch}_${recordId.hashCode}';
+      await _db!.enqueueSyncOp(
+        txId: txId,
+        tableName: table,
+        operation: operation,
+        recordId: recordId,
+        payload: jsonEncode(payload),
+      );
+
+      notifyListeners();
+
+      // 4. Try sync immediately (fire-and-forget)
+      _syncEngine?.tryImmediateSync();
+    } catch (e) {
+      debugPrint('[_offlineFirst] Error: $e');
+      rollback?.call();
+      notifyListeners();
+      showToast(errorMsg, 'error');
+    }
   }
 
   // ── Derived: getStoreId ─────────────────────────────────
@@ -231,6 +352,84 @@ class AppStore extends ChangeNotifier {
       thuChiTransactions = (results[8] as List)
           .map((r) => ThuChiTransaction.fromMap(r))
           .toList();
+
+      // ── Cache into Drift for offline use ──
+      if (_db != null) {
+        final sid = storeId ?? 'sadmin';
+        // Cache orders
+        for (final o in orders) {
+          await _db!.upsertOrder(LocalOrdersCompanion(
+            id: Value(o.id),
+            storeId: Value(o.storeId),
+            orderTable: Value(o.table),
+            itemsJson: Value(jsonEncode(o.items.map((i) => i.toMap()).toList())),
+            status: Value(o.status),
+            paymentStatus: Value(o.paymentStatus),
+            totalAmount: Value(o.totalAmount),
+            createdBy: Value(o.createdBy),
+            time: Value(o.time),
+            paymentMethod: Value(o.paymentMethod),
+            isSynced: const Value(true),
+          ));
+        }
+        // Cache products
+        final prodCompanions = <LocalProductsCompanion>[];
+        for (final entry in products.entries) {
+          for (final p in entry.value) {
+            prodCompanions.add(LocalProductsCompanion(
+              id: Value(p.id),
+              storeId: Value(p.storeId),
+              name: Value(p.name),
+              price: Value(p.price),
+              image: Value(p.image),
+              category: Value(p.category),
+              description: Value(p.description),
+              isOutOfStock: Value(p.isOutOfStock),
+              isHot: Value(p.isHot),
+              quantity: Value(p.quantity),
+              costPrice: Value(p.costPrice),
+            ));
+          }
+        }
+        if (prodCompanions.isNotEmpty) {
+          await _db!.replaceAllProducts(sid, prodCompanions);
+        }
+        // Cache categories
+        final catCompanions = <LocalCategoriesCompanion>[];
+        for (final entry in categories.entries) {
+          for (final c in entry.value) {
+            catCompanions.add(LocalCategoriesCompanion(
+              id: Value(c.id),
+              name: Value(c.name),
+              storeId: Value(c.storeId),
+              emoji: Value(c.emoji),
+              color: Value(c.color),
+            ));
+          }
+        }
+        if (catCompanions.isNotEmpty) {
+          await _db!.replaceAllCategories(sid, catCompanions);
+        }
+        // Cache thu chi
+        for (final t in thuChiTransactions) {
+          await _db!.upsertThuChi(LocalThuChiCompanion(
+            id: Value(t.id),
+            storeId: Value(t.storeId),
+            type: Value(t.type),
+            amount: Value(t.amount),
+            category: Value(t.category),
+            note: Value(t.note),
+            time: Value(t.time),
+            createdBy: Value(t.createdBy),
+            isSynced: const Value(true),
+          ));
+        }
+        // Set pull timestamps
+        final now = DateTime.now().toIso8601String();
+        await _db!.setKv('last_pull_orders_at', now);
+        await _db!.setKv('last_pull_thuchi_at', now);
+        debugPrint('[Drift] Cached ${orders.length} orders, ${prodCompanions.length} products, ${catCompanions.length} categories, ${thuChiTransactions.length} thu/chi');
+      }
 
       isLoading = false;
       notifyListeners();
@@ -864,11 +1063,15 @@ class AppStore extends ChangeNotifier {
   // ── Orders ──────────────────────────────────────────────
   void updateOrderStatus(String orderId, String status) {
     final oldOrders = List<OrderModel>.from(orders);
-    _optimistic(
-      apply: () {
+    _offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: orderId,
+      payload: {'status': status},
+      applyInMemory: () {
         orders = orders.map((o) => o.id == orderId ? o.copyWith(status: status) : o).toList();
       },
-      remote: () => _supabase.from('orders').update({'status': status}).eq('id', orderId),
+      applyDrift: () => _updateOrderInDrift(orderId),
       rollback: () { orders = oldOrders; },
       errorMsg: 'Cập nhật trạng thái đơn thất bại, đã hoàn tác',
     );
@@ -877,17 +1080,21 @@ class AppStore extends ChangeNotifier {
   /// Atomically mark an order as completed + paid in one call.
   void completeOrderWithPayment(String orderId, String paymentMethod) {
     final oldOrders = List<OrderModel>.from(orders);
-    _optimistic(
-      apply: () {
+    _offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: orderId,
+      payload: {
+        'status': 'completed',
+        'payment_status': 'paid',
+        'payment_method': paymentMethod,
+      },
+      applyInMemory: () {
         orders = orders.map((o) => o.id == orderId
             ? o.copyWith(status: 'completed', paymentStatus: 'paid', paymentMethod: paymentMethod)
             : o).toList();
       },
-      remote: () => _supabase.from('orders').update({
-        'status': 'completed',
-        'payment_status': 'paid',
-        'payment_method': paymentMethod,
-      }).eq('id', orderId),
+      applyDrift: () => _updateOrderInDrift(orderId),
       rollback: () { orders = oldOrders; },
       errorMsg: 'Thanh toán thất bại, đã hoàn tác',
     );
@@ -896,11 +1103,15 @@ class AppStore extends ChangeNotifier {
   /// Change the table of an existing order.
   void updateOrderTable(String orderId, String newTable) {
     final oldOrders = List<OrderModel>.from(orders);
-    _optimistic(
-      apply: () {
+    _offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: orderId,
+      payload: {'table_name': newTable},
+      applyInMemory: () {
         orders = orders.map((o) => o.id == orderId ? o.copyWith(table: newTable) : o).toList();
       },
-      remote: () => _supabase.from('orders').update({'table_name': newTable}).eq('id', orderId),
+      applyDrift: () => _updateOrderInDrift(orderId),
       rollback: () { orders = oldOrders; },
       errorMsg: 'Đổi bàn thất bại, đã hoàn tác',
     );
@@ -911,13 +1122,17 @@ class AppStore extends ChangeNotifier {
     final oldOrders = List<OrderModel>.from(orders);
     final updateData = <String, dynamic>{'payment_status': paymentStatus};
     if (paymentMethod.isNotEmpty) updateData['payment_method'] = paymentMethod;
-    _optimistic(
-      apply: () {
+    _offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: orderId,
+      payload: updateData,
+      applyInMemory: () {
         orders = orders.map((o) => o.id == orderId
             ? o.copyWith(paymentStatus: paymentStatus, paymentMethod: paymentMethod.isNotEmpty ? paymentMethod : null)
             : o).toList();
       },
-      remote: () => _supabase.from('orders').update(updateData).eq('id', orderId),
+      applyDrift: () => _updateOrderInDrift(orderId),
       rollback: () { orders = oldOrders; },
       errorMsg: 'Cập nhật thanh toán thất bại, đã hoàn tác',
     );
@@ -930,11 +1145,15 @@ class AppStore extends ChangeNotifier {
     if (order.id.isEmpty) return;
     final newItems =
         order.items.map((i) => i.id == itemId ? i.copyWith(isDone: isDone) : i).toList();
-    _optimistic(
-      apply: () {
+    _offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: orderId,
+      payload: {'items': newItems.map((i) => i.toMap()).toList()},
+      applyInMemory: () {
         orders = orders.map((o) => o.id == orderId ? o.copyWith(items: newItems) : o).toList();
       },
-      remote: () => _supabase.from('orders').update({'items': newItems.map((i) => i.toMap()).toList()}).eq('id', orderId),
+      applyDrift: () => _updateOrderInDrift(orderId),
       rollback: () {
         orders = orders.map((o) => o.id == orderId ? o.copyWith(items: order.items) : o).toList();
       },
@@ -969,14 +1188,17 @@ class AppStore extends ChangeNotifier {
         .map((i) => i.id == targetItemId ? i.copyWith(isDone: isDone) : i)
         .toList();
 
-    _optimistic(
-      apply: () {
+    final capturedTargetOrderId = targetOrderId;
+    _offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: capturedTargetOrderId,
+      payload: {'items': updatedItems.map((i) => i.toMap()).toList()},
+      applyInMemory: () {
         orders = orders.map((o) =>
-            o.id == targetOrderId ? o.copyWith(items: updatedItems) : o).toList();
+            o.id == capturedTargetOrderId ? o.copyWith(items: updatedItems) : o).toList();
       },
-      remote: () => _supabase.from('orders').update({
-        'items': updatedItems.map((i) => i.toMap()).toList(),
-      }).eq('id', targetOrderId!),
+      applyDrift: () => _updateOrderInDrift(capturedTargetOrderId),
       rollback: () { orders = oldOrders; },
       errorMsg: 'Cập nhật trạng thái sản phẩm thất bại, đã hoàn tác',
     );
@@ -999,23 +1221,26 @@ class AppStore extends ChangeNotifier {
     }
     if (updatedOrderMap.isEmpty) return;
 
-    _optimistic(
-      apply: () {
-        orders = orders.map((o) {
-          final updated = updatedOrderMap[o.id];
-          return updated != null ? o.copyWith(items: updated) : o;
-        }).toList();
-      },
-      remote: () async {
-        for (final entry in updatedOrderMap.entries) {
-          await _supabase.from('orders').update({
-            'items': entry.value.map((i) => i.toMap()).toList(),
-          }).eq('id', entry.key);
-        }
-      },
-      rollback: () { orders = oldOrders; },
-      errorMsg: 'Cập nhật trạng thái sản phẩm thất bại, đã hoàn tác',
-    );
+    // Apply in-memory
+    orders = orders.map((o) {
+      final updated = updatedOrderMap[o.id];
+      return updated != null ? o.copyWith(items: updated) : o;
+    }).toList();
+
+    // Enqueue each updated order separately
+    for (final entry in updatedOrderMap.entries) {
+      _offlineFirst(
+        table: 'orders',
+        operation: 'UPDATE',
+        recordId: entry.key,
+        payload: {'items': entry.value.map((i) => i.toMap()).toList()},
+        applyInMemory: () {}, // Already applied above
+        applyDrift: () => _updateOrderInDrift(entry.key),
+        rollback: () { orders = oldOrders; },
+        errorMsg: 'Cập nhật trạng thái sản phẩm thất bại, đã hoàn tác',
+      );
+    }
+    notifyListeners();
   }
 
   void updateOrderItemNote(
@@ -1025,11 +1250,15 @@ class AppStore extends ChangeNotifier {
     if (order.id.isEmpty) return;
     final newItems =
         order.items.map((i) => i.id == itemId ? i.copyWith(note: note) : i).toList();
-    _optimistic(
-      apply: () {
+    _offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: orderId,
+      payload: {'items': newItems.map((i) => i.toMap()).toList()},
+      applyInMemory: () {
         orders = orders.map((o) => o.id == orderId ? o.copyWith(items: newItems) : o).toList();
       },
-      remote: () => _supabase.from('orders').update({'items': newItems.map((i) => i.toMap()).toList()}).eq('id', orderId),
+      applyDrift: () => _updateOrderInDrift(orderId),
       rollback: () {
         orders = orders.map((o) => o.id == orderId ? o.copyWith(items: order.items) : o).toList();
       },
@@ -1040,16 +1269,20 @@ class AppStore extends ChangeNotifier {
   void updateOrderItems(
       String orderId, List<OrderItemModel> newItems, double newTotal) {
     final oldOrders = List<OrderModel>.from(orders);
-    _optimistic(
-      apply: () {
+    _offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: orderId,
+      payload: {
+        'items': newItems.map((i) => i.toMap()).toList(),
+        'total_amount': newTotal,
+      },
+      applyInMemory: () {
         orders = orders.map((o) => o.id == orderId
             ? o.copyWith(items: newItems, totalAmount: newTotal)
             : o).toList();
       },
-      remote: () => _supabase.from('orders').update({
-        'items': newItems.map((i) => i.toMap()).toList(),
-        'total_amount': newTotal,
-      }).eq('id', orderId),
+      applyDrift: () => _updateOrderInDrift(orderId),
       rollback: () { orders = oldOrders; },
       errorMsg: 'Cập nhật đơn hàng thất bại, đã hoàn tác',
     );
@@ -1065,12 +1298,16 @@ class AppStore extends ChangeNotifier {
 
   void cancelOrder(String orderId) {
     final oldOrders = List<OrderModel>.from(orders);
-    _optimistic(
-      apply: () {
+    _offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: orderId,
+      payload: {'status': 'cancelled'},
+      applyInMemory: () {
         final idx = orders.indexWhere((o) => o.id == orderId);
         if (idx != -1) orders[idx] = orders[idx].copyWith(status: 'cancelled');
       },
-      remote: () => _supabase.from('orders').update({'status': 'cancelled'}).eq('id', orderId),
+      applyDrift: () => _updateOrderInDrift(orderId),
       rollback: () { orders = oldOrders; },
       errorMsg: 'Huỷ đơn thất bại, đã hoàn tác',
     );
@@ -1091,29 +1328,57 @@ class AppStore extends ChangeNotifier {
     final storeId = getStoreId();
     final orderId =
         'ORD-${Random().nextInt(10000).toString().padLeft(4, '0')}';
+    final itemsList = cart.map((item) => item.copyWith(isDone: false).toMap()).toList();
+    final timeStr = DateTime.now().toIso8601String();
+    final createdByStr = (currentUser?.fullname.isNotEmpty == true ? currentUser!.fullname : currentUser?.username) ?? 'unknown';
 
     final newOrder = {
       'id': orderId,
       'store_id': storeId,
       'table_name': selectedTable,
-      'items': cart.map((item) => item.copyWith(isDone: false).toMap()).toList(),
+      'items': itemsList,
       'status': 'pending',
       'payment_status': paymentStatus,
-      'time': DateTime.now().toIso8601String(),
+      'time': timeStr,
       'total_amount': totalAmount,
-      'created_by': (currentUser?.fullname.isNotEmpty == true ? currentUser!.fullname : currentUser?.username) ?? 'unknown',
+      'created_by': createdByStr,
       'payment_method': paymentMethod,
     };
 
-    try {
-      await _supabase.from('orders').insert(newOrder);
-      orders.insert(0, OrderModel.fromMap(newOrder));
-      cart = [];
-      selectedTable = '';
-      notifyListeners();
-    } catch (e) {
-      showToast('Tạo đơn thất bại', 'error');
-    }
+    final orderModel = OrderModel.fromMap(newOrder);
+    final savedCart = List<OrderItemModel>.from(cart);
+    final savedTable = selectedTable;
+
+    await _offlineFirst(
+      table: 'orders',
+      operation: 'INSERT',
+      recordId: orderId,
+      payload: newOrder,
+      applyInMemory: () {
+        orders.insert(0, orderModel);
+        cart = [];
+        selectedTable = '';
+      },
+      applyDrift: () => _db!.upsertOrder(LocalOrdersCompanion(
+        id: Value(orderId),
+        storeId: Value(storeId),
+        orderTable: Value(newOrder['table_name'] as String),
+        itemsJson: Value(jsonEncode(itemsList)),
+        status: const Value('pending'),
+        paymentStatus: Value(paymentStatus),
+        totalAmount: Value(totalAmount),
+        createdBy: Value(createdByStr),
+        time: Value(timeStr),
+        paymentMethod: Value(paymentMethod),
+        isSynced: const Value(false),
+      )),
+      rollback: () {
+        orders.removeWhere((o) => o.id == orderId);
+        cart = savedCart;
+        selectedTable = savedTable;
+      },
+      errorMsg: 'Tạo đơn thất bại',
+    );
   }
 
   // ── Thu Chi Transactions ────────────────────────────────
@@ -1168,9 +1433,23 @@ class AppStore extends ChangeNotifier {
       'created_by': createdBy,
     };
     final txnModel = ThuChiTransaction.fromMap(newTxn);
-    _optimistic(
-      apply: () { thuChiTransactions.insert(0, txnModel); },
-      remote: () => _supabase.from('thu_chi_transactions').insert(newTxn),
+    await _offlineFirst(
+      table: 'thu_chi_transactions',
+      operation: 'INSERT',
+      recordId: txnId,
+      payload: newTxn,
+      applyInMemory: () { thuChiTransactions.insert(0, txnModel); },
+      applyDrift: () => _db!.upsertThuChi(LocalThuChiCompanion(
+        id: Value(txnId),
+        storeId: Value(storeId),
+        type: Value(type),
+        amount: Value(amount),
+        category: Value(category),
+        note: Value(note),
+        time: Value(txnTime),
+        createdBy: Value(createdBy),
+        isSynced: const Value(false),
+      )),
       rollback: () { thuChiTransactions.removeWhere((t) => t.id == txnId); },
       errorMsg: 'Lưu giao dịch thất bại, đã hoàn tác',
     );
@@ -1526,7 +1805,7 @@ class AppStore extends ChangeNotifier {
               value: storeId,
             )
           : null,
-      callback: (payload) {
+      callback: (payload) async {
         debugPrint('[Realtime] Orders event: ${payload.eventType} | id=${payload.newRecord['id']}');
         if (payload.eventType == PostgresChangeEvent.insert) {
           final newOrder = OrderModel.fromMap(payload.newRecord);
@@ -1534,8 +1813,24 @@ class AppStore extends ChangeNotifier {
           if (!orders.any((o) => o.id == newOrder.id)) {
             orders.insert(0, newOrder);
             _playNewOrderSound();
+            // Also write to Drift (marking as synced since it came from server)
+            if (_db != null) {
+              await _db!.upsertOrder(LocalOrdersCompanion(
+                id: Value(newOrder.id),
+                storeId: Value(newOrder.storeId),
+                orderTable: Value(newOrder.table),
+                itemsJson: Value(jsonEncode(newOrder.items.map((i) => i.toMap()).toList())),
+                status: Value(newOrder.status),
+                paymentStatus: Value(newOrder.paymentStatus),
+                totalAmount: Value(newOrder.totalAmount),
+                createdBy: Value(newOrder.createdBy),
+                time: Value(newOrder.time),
+                paymentMethod: Value(newOrder.paymentMethod),
+                isSynced: const Value(true),
+              ));
+            }
             notifyListeners();
-            debugPrint('[Realtime] ✅ Order added to list, sound triggered');
+            debugPrint('[Realtime] ✅ Order added to list + Drift, sound triggered');
           } else {
             debugPrint('[Realtime] ⚠️ Order ${newOrder.id} already exists, skipped');
           }
@@ -1543,6 +1838,12 @@ class AppStore extends ChangeNotifier {
           final rec = payload.newRecord;
           final id = rec['id']?.toString() ?? '';
           final idx = orders.indexWhere((o) => o.id == id);
+          // Skip if there's a pending local sync for this order (local wins)
+          final hasPending = _db != null ? await _db!.hasPendingSync(id) : false;
+          if (hasPending) {
+            debugPrint('[Realtime] ⚠️ Order $id has pending sync, skipping server update');
+            return;
+          }
           if (idx != -1) {
             final existing = orders[idx];
             // Merge: use new values if present, keep existing otherwise
@@ -1563,10 +1864,16 @@ class AppStore extends ChangeNotifier {
                   : null,
               items: updatedItems,
             );
+            // Update Drift too
+            if (_db != null) await _updateOrderInDrift(id);
             notifyListeners();
           }
         } else if (payload.eventType == PostgresChangeEvent.delete) {
-          orders.removeWhere((o) => o.id == payload.oldRecord['id']);
+          final deletedId = payload.oldRecord['id']?.toString() ?? '';
+          orders.removeWhere((o) => o.id == deletedId);
+          if (_db != null) {
+            await (_db!.delete(_db!.localOrders)..where((t) => t.id.equals(deletedId))).go();
+          }
           notifyListeners();
         }
       },
