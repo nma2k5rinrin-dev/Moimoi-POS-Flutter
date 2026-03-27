@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:ui';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,6 +9,7 @@ import '../../store/app_store.dart';
 import '../../models/product_model.dart';
 import '../../utils/constants.dart';
 import '../../utils/avatar_picker.dart';
+import '../../services/cloudflare_service.dart';
 import '../../widgets/square_crop_dialog.dart';
 
 /// Formats number with thousand separators (e.g. 15000 → 15.000)
@@ -414,7 +416,24 @@ class _AddProductPanelState extends State<AddProductPanel>
   }
 
   Widget _buildImagePreview() {
-    // Base64 data URI (from crop dialog)
+    if (_imageUrl.isEmpty) return _buildImagePlaceholder();
+
+    // URL (Cloudflare R2 or any HTTP URL)
+    if (CloudflareService.isUrl(_imageUrl)) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(15),
+        child: CachedNetworkImage(
+          imageUrl: _imageUrl,
+          fit: BoxFit.cover,
+          width: 120,
+          height: 120,
+          placeholder: (_, __) => _buildImagePlaceholder(),
+          errorWidget: (_, __, ___) => _buildImagePlaceholder(),
+        ),
+      );
+    }
+
+    // Base64 data URI (backward compatible)
     if (_imageUrl.startsWith('data:')) {
       final base64Part = _imageUrl.split(',').last;
       final bytes = base64Decode(base64Part);
@@ -429,19 +448,18 @@ class _AddProductPanelState extends State<AddProductPanel>
         ),
       );
     }
-    if (_imageUrl.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(15),
-        child: Image.network(
-          _imageUrl,
-          fit: BoxFit.cover,
-          width: 120,
-          height: 120,
-          errorBuilder: (_, __, ___) => _buildImagePlaceholder(),
-        ),
-      );
-    }
-    return _buildImagePlaceholder();
+
+    // Legacy network URL without scheme
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(15),
+      child: Image.network(
+        _imageUrl,
+        fit: BoxFit.cover,
+        width: 120,
+        height: 120,
+        errorBuilder: (_, __, ___) => _buildImagePlaceholder(),
+      ),
+    );
   }
 
   Widget _buildImagePlaceholder() {
@@ -800,30 +818,37 @@ class _AddProductPanelState extends State<AddProductPanel>
 
   Future<void> _doPickImage(ImageSource source) async {
     try {
-      final picked = await _picker.pickImage(
-        source: source,
-      );
+      final picked = await _picker.pickImage(source: source);
       if (picked == null) return;
 
       // Read bytes for validation and crop dialog
       final bytes = await picked.readAsBytes();
       if (!mounted) return;
 
-      // Auto-resize & compress if needed (max 1024px, under 1MB)
+      // Auto-resize & compress if needed
       final prepared = await prepareImageBytes(bytes);
 
-      // Show square crop dialog
-      final result = await showSquareCropDialog(
+      // Show square crop dialog (FB-style)
+      final base64Result = await showSquareCropDialog(
         context,
         imageBytes: prepared,
         borderRadius: 16,
         title: 'Cắt ảnh sản phẩm',
       );
 
-      if (result != null && mounted) {
-        setState(() {
-          _imageUrl = result;
-        });
+      if (base64Result == null || !mounted) return;
+
+      // Try uploading to Cloudflare R2
+      try {
+        final url = await CloudflareService.uploadBase64(
+          base64Data: base64Result,
+          folder: 'products',
+        );
+        setState(() => _imageUrl = url);
+      } catch (e) {
+        // Fallback: store as base64 if R2 upload fails
+        debugPrint('[AddProduct] R2 upload failed, using base64 fallback: $e');
+        setState(() => _imageUrl = base64Result);
       }
     } catch (e) {
       if (mounted) {

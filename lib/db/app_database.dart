@@ -134,7 +134,19 @@ class KvStore extends Table {
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
-      : super(executor ?? driftDatabase(name: 'moimoi_pos'));
+      : super(executor ?? driftDatabase(
+          name: 'moimoi_pos',
+          web: DriftWebOptions(
+            sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+            driftWorker: Uri.parse('drift_worker.js'),
+            onResult: (result) {
+              if (result.missingFeatures.isNotEmpty) {
+                // ignore: avoid_print
+                print('Using ${result.chosenImplementation} due to unsupported browser features: ${result.missingFeatures}');
+              }
+            },
+          ),
+        ));
 
   @override
   int get schemaVersion => 1;

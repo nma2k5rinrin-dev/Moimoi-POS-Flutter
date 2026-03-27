@@ -14,9 +14,9 @@ import 'sync/sync_engine.dart';
 import 'sync/sync_worker.dart';
 
 // Global instances for offline-first
-late final AppDatabase appDb;
-late final ConnectivityService connectivityService;
-late final SyncEngine syncEngine;
+AppDatabase? appDb;
+ConnectivityService? connectivityService;
+SyncEngine? syncEngine;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,19 +26,29 @@ void main() async {
     debugPrint('[Supabase Init Error] $e');
   }
 
-  // Init Drift database
-  appDb = AppDatabase();
+  // Init Drift database (may fail on web due to WASM)
+  try {
+    appDb = AppDatabase();
+    debugPrint('[Drift] Database initialized OK');
+  } catch (e) {
+    debugPrint('[Drift] Database init failed (web WASM?): $e');
+    appDb = null;
+  }
 
   // Init connectivity
   connectivityService = ConnectivityService();
-  connectivityService.init();
+  connectivityService!.init();
 
-  // Init sync engine
-  syncEngine = SyncEngine(
-    db: appDb,
-    connectivity: connectivityService,
-  );
-  syncEngine.init();
+  // Init sync engine (only if DB available)
+  if (appDb != null) {
+    syncEngine = SyncEngine(
+      db: appDb!,
+      connectivity: connectivityService!,
+    );
+    syncEngine!.init();
+  } else {
+    debugPrint('[SyncEngine] Skipped — no local DB');
+  }
 
   // Init Workmanager background sync
   await SyncWorker.init();
@@ -67,8 +77,8 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> {
 
   @override
   void dispose() {
-    syncEngine.dispose();
-    connectivityService.dispose();
+    syncEngine?.dispose();
+    connectivityService?.dispose();
     _router.dispose();
     super.dispose();
   }

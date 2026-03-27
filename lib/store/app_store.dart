@@ -28,10 +28,10 @@ class AppStore extends ChangeNotifier {
   SyncEngine? _syncEngine;
 
   /// Inject Drift DB and SyncEngine (called from main.dart)
-  void initOfflineFirst(AppDatabase db, SyncEngine engine) {
+  void initOfflineFirst(AppDatabase? db, SyncEngine? engine) {
     _db = db;
     _syncEngine = engine;
-    engine.onNewServerOrders = (count) {
+    engine?.onNewServerOrders = (count) {
       debugPrint('[AppStore] $count new orders pulled from server');
       // Trigger reload from Drift
       _reloadOrdersFromDrift();
@@ -317,6 +317,23 @@ class AppStore extends ChangeNotifier {
       storeInfos = {'sadmin': const StoreInfoModel(name: 'Nhà Hàng Của Tôi', isPremium: true)};
       for (final s in results[1]) {
         storeInfos[s['store_id']] = StoreInfoModel.fromMap(s);
+      }
+
+      // ── Auto-downgrade expired premium stores to basic ──
+      for (final entry in storeInfos.entries.toList()) {
+        if (entry.key == 'sadmin') continue;
+        final info = entry.value;
+        if (info.isPremium && info.isExpired) {
+          // Update local state immediately
+          storeInfos[entry.key] = info.copyWith(isPremium: false);
+          // Fire-and-forget: update Supabase in the background
+          _supabase
+              .from('store_infos')
+              .update({'is_premium': false})
+              .eq('store_id', entry.key)
+              .then((_) => debugPrint('⚠️ Auto-downgraded expired store: ${entry.key}'))
+              .catchError((e) => debugPrint('❌ Failed to downgrade store ${entry.key}: $e'));
+        }
       }
 
       storeTables = {};

@@ -7,8 +7,9 @@ import 'package:image/image.dart' as img;
 import '../utils/constants.dart';
 import '../utils/avatar_picker.dart';
 
-/// Shows a crop dialog where the user can drag & resize a square crop frame
-/// over the image. Returns base64 data-URI or null if cancelled.
+/// Facebook-style crop dialog.
+/// Fixed square overlay in the center; user drags & pinch-zooms the image
+/// behind the overlay. Returns base64 data-URI or null if cancelled.
 Future<String?> showSquareCropDialog(
   BuildContext context, {
   required Uint8List imageBytes,
@@ -22,7 +23,7 @@ Future<String?> showSquareCropDialog(
     barrierColor: const Color(0xCC000000),
     transitionDuration: const Duration(milliseconds: 250),
     pageBuilder: (ctx, anim1, anim2) {
-      return _SquareCropDialog(
+      return _FbCropDialog(
         imageBytes: imageBytes,
         borderRadius: borderRadius,
         title: title,
@@ -40,42 +41,35 @@ Future<String?> showSquareCropDialog(
   );
 }
 
-class _SquareCropDialog extends StatefulWidget {
+class _FbCropDialog extends StatefulWidget {
   final Uint8List imageBytes;
   final double borderRadius;
   final String title;
-  const _SquareCropDialog({
+  const _FbCropDialog({
     required this.imageBytes,
     required this.borderRadius,
     required this.title,
   });
 
   @override
-  State<_SquareCropDialog> createState() => _SquareCropDialogState();
+  State<_FbCropDialog> createState() => _FbCropDialogState();
 }
 
-class _SquareCropDialogState extends State<_SquareCropDialog> {
+class _FbCropDialogState extends State<_FbCropDialog> {
   bool _exporting = false;
 
   // Image natural size
   int _imgW = 0;
   int _imgH = 0;
 
-  // Displayed image size (fitted in viewport)
-  double _displayW = 0;
-  double _displayH = 0;
+  // Transform state — image offset & scale
+  Offset _offset = Offset.zero;
+  double _scale = 1.0;
 
-  // Crop rect in display coordinates
-  double _cropX = 0;
-  double _cropY = 0;
-  double _cropSize = 100;
-
-  // Drag state
-  _DragMode _dragMode = _DragMode.none;
-  Offset _dragStart = Offset.zero;
-  double _startCropX = 0;
-  double _startCropY = 0;
-  double _startCropSize = 0;
+  // Gesture accumulation
+  Offset _startOffset = Offset.zero;
+  double _startScale = 1.0;
+  int _pointerCount = 0;
 
   bool _initialized = false;
 
@@ -94,121 +88,91 @@ class _SquareCropDialogState extends State<_SquareCropDialog> {
     if (mounted) setState(() {});
   }
 
-  void _initCropIfNeeded(double viewportW, double viewportH) {
+  /// Compute base scale so image covers the crop square
+  double _baseScale(double cropSize) {
+    if (_imgW == 0 || _imgH == 0) return 1.0;
+    final shorter = math.min(_imgW, _imgH).toDouble();
+    return cropSize / shorter;
+  }
+
+  /// Initialize offset to center the image over the crop
+  void _initIfNeeded(double cropSize) {
     if (_initialized || _imgW == 0) return;
     _initialized = true;
-
-    // Fit image in viewport
-    final scaleX = viewportW / _imgW;
-    final scaleY = viewportH / _imgH;
-    final scale = math.min(scaleX, scaleY);
-    _displayW = _imgW * scale;
-    _displayH = _imgH * scale;
-
-    // Init crop: centered square, 80% of smaller dimension
-    _cropSize = math.min(_displayW, _displayH) * 0.8;
-    _cropX = (_displayW - _cropSize) / 2;
-    _cropY = (_displayH - _cropSize) / 2;
+    final base = _baseScale(cropSize);
+    _scale = base;
+    // Center image over crop square
+    _offset = Offset(
+      -((_imgW * base) - cropSize) / 2,
+      -((_imgH * base) - cropSize) / 2,
+    );
   }
 
-  void _clampCrop() {
-    _cropSize = _cropSize.clamp(40.0, math.min(_displayW, _displayH));
-    _cropX = _cropX.clamp(0.0, _displayW - _cropSize);
-    _cropY = _cropY.clamp(0.0, _displayH - _cropSize);
+  /// Clamp offset so the crop square is always over image content
+  void _clampOffset(double cropSize) {
+    final imgDisplayW = _imgW * _scale;
+    final imgDisplayH = _imgH * _scale;
+
+    // image offset must be <= 0 (left/top edge at or before crop origin)
+    // image offset + image size must be >= cropSize
+    _offset = Offset(
+      _offset.dx.clamp(cropSize - imgDisplayW, 0.0),
+      _offset.dy.clamp(cropSize - imgDisplayH, 0.0),
+    );
   }
 
-  _DragMode _hitTest(Offset local) {
-    const handleSize = 28.0;
-    final r = Rect.fromLTWH(_cropX, _cropY, _cropSize, _cropSize);
-
-    // Corner handles (resize)
-    if ((local - r.topLeft).distance < handleSize) return _DragMode.resizeTL;
-    if ((local - r.topRight).distance < handleSize) return _DragMode.resizeTR;
-    if ((local - r.bottomLeft).distance < handleSize) return _DragMode.resizeBL;
-    if ((local - r.bottomRight).distance < handleSize) return _DragMode.resizeBR;
-
-    // Inside crop = move
-    if (r.contains(local)) return _DragMode.move;
-
-    return _DragMode.none;
+  /// Enforce minimum scale = base (so image always covers crop)
+  void _clampScale(double cropSize) {
+    final minScale = _baseScale(cropSize);
+    _scale = _scale.clamp(minScale, minScale * 5.0);
   }
 
-  void _onPanStart(DragStartDetails d) {
-    final local = d.localPosition;
-    _dragMode = _hitTest(local);
-    _dragStart = local;
-    _startCropX = _cropX;
-    _startCropY = _cropY;
-    _startCropSize = _cropSize;
+  // ── Gesture handlers ───────────────────────────────
+  void _onScaleStart(ScaleStartDetails d) {
+    _startOffset = _offset;
+    _startScale = _scale;
+    _pointerCount = d.pointerCount;
   }
 
-  void _onPanUpdate(DragUpdateDetails d) {
-    if (_dragMode == _DragMode.none) return;
-    final local = d.localPosition;
-    final dx = local.dx - _dragStart.dx;
-    final dy = local.dy - _dragStart.dy;
-
+  void _onScaleUpdate(ScaleUpdateDetails d, double cropSize) {
     setState(() {
-      if (_dragMode == _DragMode.move) {
-        _cropX = _startCropX + dx;
-        _cropY = _startCropY + dy;
-      } else {
-        // Resize from corner — keep square
-        double delta;
-        switch (_dragMode) {
-          case _DragMode.resizeBR:
-            delta = math.max(dx, dy);
-            _cropSize = _startCropSize + delta;
-            break;
-          case _DragMode.resizeTL:
-            delta = math.min(dx, dy);
-            _cropSize = _startCropSize - delta;
-            _cropX = _startCropX + (_startCropSize - _cropSize);
-            _cropY = _startCropY + (_startCropSize - _cropSize);
-            break;
-          case _DragMode.resizeTR:
-            delta = math.max(dx, -dy);
-            _cropSize = _startCropSize + delta;
-            _cropY = _startCropY + (_startCropSize - _cropSize);
-            break;
-          case _DragMode.resizeBL:
-            delta = math.max(-dx, dy);
-            _cropSize = _startCropSize + delta;
-            _cropX = _startCropX + (_startCropSize - _cropSize);
-            break;
-          default:
-            break;
-        }
+      if (_pointerCount >= 2) {
+        // Pinch-to-zoom
+        _scale = _startScale * d.scale;
+        _clampScale(cropSize);
       }
-      _clampCrop();
+      // Pan
+      _offset = _startOffset + d.focalPointDelta;
+      _clampOffset(cropSize);
     });
   }
 
-  void _onPanEnd(DragEndDetails d) {
-    _dragMode = _DragMode.none;
+  void _onScaleEnd(ScaleEndDetails d) {
+    _pointerCount = 0;
   }
 
-  Future<void> _handleConfirm() async {
+  // ── Export cropped image ───────────────────────────
+  Future<void> _handleConfirm(double cropSize) async {
     setState(() => _exporting = true);
     try {
-      // Calculate crop in original image coordinates
-      final scale = _imgW / _displayW;
-      final srcX = (_cropX * scale).round();
-      final srcY = (_cropY * scale).round();
-      final srcSize = (_cropSize * scale).round();
+      // Convert display coords to original image coords
+      final srcX = (-_offset.dx / _scale).round();
+      final srcY = (-_offset.dy / _scale).round();
+      final srcSize = (cropSize / _scale).round();
 
-      // Decode and crop using image package
       final decoded = img.decodeImage(widget.imageBytes);
       if (decoded == null) {
         setState(() => _exporting = false);
         return;
       }
 
-      final cropped = img.copyCrop(decoded,
-          x: srcX.clamp(0, decoded.width - 1),
-          y: srcY.clamp(0, decoded.height - 1),
-          width: srcSize.clamp(1, decoded.width - srcX.clamp(0, decoded.width - 1)),
-          height: srcSize.clamp(1, decoded.height - srcY.clamp(0, decoded.height - 1)));
+      final cropped = img.copyCrop(
+        decoded,
+        x: srcX.clamp(0, decoded.width - 1),
+        y: srcY.clamp(0, decoded.height - 1),
+        width: srcSize.clamp(1, decoded.width - srcX.clamp(0, decoded.width - 1)),
+        height: srcSize.clamp(1, decoded.height - srcY.clamp(0, decoded.height - 1)),
+      );
 
       // Resize to max dimension if needed
       img.Image processed = cropped;
@@ -217,7 +181,7 @@ class _SquareCropDialogState extends State<_SquareCropDialog> {
             width: maxImageDimension, interpolation: img.Interpolation.linear);
       }
 
-      // Encode as JPEG (compressed), label as webp
+      // Encode as JPEG, label as webp
       var quality = 85;
       var compressed = Uint8List.fromList(img.encodeJpg(processed, quality: quality));
       while (compressed.length > maxImageFileBytes && quality > 30) {
@@ -226,10 +190,9 @@ class _SquareCropDialogState extends State<_SquareCropDialog> {
       }
 
       final base64Str = 'data:image/webp;base64,${base64Encode(compressed)}';
-
       if (mounted) Navigator.pop(context, base64Str);
     } catch (e) {
-      debugPrint('[SquareCrop] export error: $e');
+      debugPrint('[FbCrop] export error: $e');
       setState(() => _exporting = false);
     }
   }
@@ -237,23 +200,24 @@ class _SquareCropDialogState extends State<_SquareCropDialog> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    final viewportW = (screenSize.width - 80).clamp(200.0, 440.0);
-    final viewportH = (screenSize.height * 0.5).clamp(200.0, 440.0);
+    // Crop square size — responsive
+    final cropSize = (math.min(screenSize.width, screenSize.height) * 0.65)
+        .clamp(200.0, 420.0);
 
-    _initCropIfNeeded(viewportW, viewportH);
+    _initIfNeeded(cropSize);
 
     return Center(
       child: Container(
-        width: viewportW + 48,
+        width: cropSize + 48,
         margin: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: const Color(0xFF1A1A2E),
           borderRadius: BorderRadius.circular(24),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 32,
-              offset: Offset(0, 8),
+              color: Color(0x66000000),
+              blurRadius: 40,
+              offset: Offset(0, 12),
             ),
           ],
         ),
@@ -264,133 +228,152 @@ class _SquareCropDialogState extends State<_SquareCropDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header
+              // ── Header ─────────────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.crop_rounded,
-                            size: 20, color: AppColors.emerald600),
-                        const SizedBox(width: 8),
-                        Text(
-                          widget.title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 18,
-                            color: AppColors.slate800,
-                          ),
+                    const Icon(Icons.crop_rounded, size: 20, color: AppColors.emerald400),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        widget.title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 17,
+                          color: Colors.white,
                         ),
-                      ],
+                      ),
                     ),
                     InkWell(
                       onTap: () => Navigator.pop(context),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
-                        width: 32,
-                        height: 32,
+                        width: 32, height: 32,
                         decoration: BoxDecoration(
-                          color: AppColors.slate100,
+                          color: Colors.white.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Icon(Icons.close,
-                            size: 18, color: AppColors.slate500),
+                        child: const Icon(Icons.close, size: 18, color: Colors.white54),
                       ),
                     ),
                   ],
                 ),
               ),
-              Container(height: 1, color: AppColors.slate100),
 
-              // Crop area
+              // ── Hint ───────────────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Kéo để di chuyển • Kéo góc để thay đổi kích thước',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.slate400,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(
+                  'Kéo để di chuyển • Chụm để phóng to',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.45),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
 
-                    // Image + crop frame
-                    Container(
-                      width: viewportW,
-                      height: viewportH,
-                      decoration: BoxDecoration(
-                        color: AppColors.slate800,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: _imgW == 0
-                          ? const Center(
-                              child: CircularProgressIndicator(
-                                  color: AppColors.emerald500))
-                          : Stack(
-                              children: [
-                                // Centered image
-                                Positioned(
-                                  left: (viewportW - _displayW) / 2,
-                                  top: (viewportH - _displayH) / 2,
-                                  child: GestureDetector(
-                                    onPanStart: _onPanStart,
-                                    onPanUpdate: _onPanUpdate,
-                                    onPanEnd: _onPanEnd,
-                                    child: SizedBox(
-                                      width: _displayW,
-                                      height: _displayH,
-                                      child: Stack(
-                                        children: [
-                                          // Full image
-                                          Image.memory(
-                                            widget.imageBytes,
-                                            width: _displayW,
-                                            height: _displayH,
-                                            fit: BoxFit.fill,
-                                          ),
-                                          // Dark overlay outside crop
-                                          CustomPaint(
-                                            size: Size(_displayW, _displayH),
-                                            painter: _CropOverlayPainter(
-                                              cropRect: Rect.fromLTWH(
-                                                  _cropX, _cropY,
-                                                  _cropSize, _cropSize),
-                                              borderRadius:
-                                                  widget.borderRadius,
-                                            ),
-                                          ),
-                                          // Corner handles
-                                          ..._buildCornerHandles(),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+              // ── Crop viewport ──────────────────────
+              Container(
+                width: cropSize,
+                height: cropSize,
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
+                  color: Colors.black,
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: _imgW == 0
+                    ? const Center(
+                        child: CircularProgressIndicator(color: AppColors.emerald400))
+                    : GestureDetector(
+                        onScaleStart: _onScaleStart,
+                        onScaleUpdate: (d) => _onScaleUpdate(d, cropSize),
+                        onScaleEnd: _onScaleEnd,
+                        child: Stack(
+                          children: [
+                            // Image (movable & zoomable)
+                            Positioned(
+                              left: _offset.dx,
+                              top: _offset.dy,
+                              child: Image.memory(
+                                widget.imageBytes,
+                                width: _imgW * _scale,
+                                height: _imgH * _scale,
+                                fit: BoxFit.fill,
+                              ),
                             ),
-                    ),
-                  ],
-                ),
+                            // Grid overlay (rule of thirds)
+                            CustomPaint(
+                              size: Size(cropSize, cropSize),
+                              painter: _GridPainter(),
+                            ),
+                          ],
+                        ),
+                      ),
               ),
 
-              // Buttons
+              const SizedBox(height: 8),
+
+              // ── Zoom slider ────────────────────────
+              if (_imgW > 0)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Row(
+                    children: [
+                      Icon(Icons.photo_size_select_small,
+                          size: 16, color: Colors.white.withValues(alpha: 0.4)),
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderThemeData(
+                            activeTrackColor: AppColors.emerald500,
+                            inactiveTrackColor: Colors.white.withValues(alpha: 0.12),
+                            thumbColor: AppColors.emerald400,
+                            overlayColor: AppColors.emerald500.withValues(alpha: 0.15),
+                            trackHeight: 3,
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+                          ),
+                          child: Slider(
+                            value: _scale,
+                            min: _baseScale(cropSize),
+                            max: _baseScale(cropSize) * 5.0,
+                            onChanged: (v) {
+                              setState(() {
+                                final oldScale = _scale;
+                                _scale = v;
+                                // Zoom toward center
+                                final center = cropSize / 2;
+                                _offset = Offset(
+                                  center - (center - _offset.dx) * (_scale / oldScale),
+                                  center - (center - _offset.dy) * (_scale / oldScale),
+                                );
+                                _clampOffset(cropSize);
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                      Icon(Icons.photo_size_select_large,
+                          size: 16, color: Colors.white.withValues(alpha: 0.4)),
+                    ],
+                  ),
+                ),
+
+              const SizedBox(height: 4),
+
+              // ── Buttons ────────────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
                 child: Row(
                   children: [
                     Expanded(
                       child: GestureDetector(
                         onTap: () => Navigator.pop(context),
                         child: Container(
-                          height: 48,
+                          height: 46,
                           decoration: BoxDecoration(
-                            color: AppColors.slate100,
+                            color: Colors.white.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: const Center(
@@ -399,7 +382,7 @@ class _SquareCropDialogState extends State<_SquareCropDialog> {
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 15,
-                                color: AppColors.slate600,
+                                color: Colors.white70,
                               ),
                             ),
                           ),
@@ -410,9 +393,9 @@ class _SquareCropDialogState extends State<_SquareCropDialog> {
                     Expanded(
                       flex: 2,
                       child: GestureDetector(
-                        onTap: _exporting ? null : _handleConfirm,
+                        onTap: _exporting ? null : () => _handleConfirm(cropSize),
                         child: Container(
-                          height: 48,
+                          height: 46,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
                               begin: Alignment.topCenter,
@@ -434,8 +417,7 @@ class _SquareCropDialogState extends State<_SquareCropDialog> {
                           child: Center(
                             child: _exporting
                                 ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
+                                    width: 22, height: 22,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2.5,
                                       color: Colors.white,
@@ -470,102 +452,41 @@ class _SquareCropDialogState extends State<_SquareCropDialog> {
       ),
     );
   }
-
-  List<Widget> _buildCornerHandles() {
-    const size = 20.0;
-    const half = size / 2;
-    final positions = [
-      Offset(_cropX - half, _cropY - half),          // TL
-      Offset(_cropX + _cropSize - half, _cropY - half),  // TR
-      Offset(_cropX - half, _cropY + _cropSize - half),  // BL
-      Offset(_cropX + _cropSize - half, _cropY + _cropSize - half), // BR
-    ];
-
-    return positions.map((pos) {
-      return Positioned(
-        left: pos.dx,
-        top: pos.dy,
-        child: IgnorePointer(
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.emerald500, width: 2.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }).toList();
-  }
 }
 
-enum _DragMode { none, move, resizeTL, resizeTR, resizeBL, resizeBR }
-
-/// Draws dark overlay outside the crop rect with a clear cutout.
-class _CropOverlayPainter extends CustomPainter {
-  final Rect cropRect;
-  final double borderRadius;
-
-  _CropOverlayPainter({required this.cropRect, required this.borderRadius});
-
+/// Draws rule-of-thirds grid lines
+class _GridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final fullRect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final cropRRect =
-        RRect.fromRectAndRadius(cropRect, Radius.circular(borderRadius.clamp(0, cropRect.width / 2)));
-
-    // Dark overlay
-    final overlayPath = Path()
-      ..fillType = PathFillType.evenOdd
-      ..addRect(fullRect)
-      ..addRRect(cropRRect);
-    canvas.drawPath(
-      overlayPath,
-      Paint()
-        ..color = Colors.black.withValues(alpha: 0.5)
-        ..style = PaintingStyle.fill,
-    );
-
-    // White border on crop
-    canvas.drawRRect(
-      cropRRect,
-      Paint()
-        ..color = Colors.white.withValues(alpha: 0.7)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
-    );
-
-    // Grid lines (rule of thirds)
     final gridPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.25)
+      ..color = Colors.white.withValues(alpha: 0.2)
       ..strokeWidth = 0.5;
 
-    final thirdW = cropRect.width / 3;
-    final thirdH = cropRect.height / 3;
+    final thirdW = size.width / 3;
+    final thirdH = size.height / 3;
     for (int i = 1; i < 3; i++) {
       canvas.drawLine(
-        Offset(cropRect.left + thirdW * i, cropRect.top),
-        Offset(cropRect.left + thirdW * i, cropRect.bottom),
+        Offset(thirdW * i, 0),
+        Offset(thirdW * i, size.height),
         gridPaint,
       );
       canvas.drawLine(
-        Offset(cropRect.left, cropRect.top + thirdH * i),
-        Offset(cropRect.right, cropRect.top + thirdH * i),
+        Offset(0, thirdH * i),
+        Offset(size.width, thirdH * i),
         gridPaint,
       );
     }
+
+    // Subtle border
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant _CropOverlayPainter old) =>
-      old.cropRect != cropRect;
+  bool shouldRepaint(covariant CustomPainter old) => false;
 }

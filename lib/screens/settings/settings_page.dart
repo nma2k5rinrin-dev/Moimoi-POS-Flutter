@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +10,7 @@ import '../../models/user_model.dart';
 import '../../utils/constants.dart';
 import '../../utils/avatar_picker.dart';
 import '../../utils/validators.dart';
+import '../../services/cloudflare_service.dart';
 import 'menu_management.dart';
 import '../../widgets/square_crop_dialog.dart';
 import '../../widgets/circle_crop_dialog.dart';
@@ -1750,8 +1752,10 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
                                         color: AppColors.slate200, width: 1.5),
                                     image: info.logoUrl.isNotEmpty
                                         ? DecorationImage(
-                                            image: MemoryImage(
-                                                _decodeAvatar(info.logoUrl)),
+                                            image: CloudflareService.isUrl(info.logoUrl)
+                                                ? CachedNetworkImageProvider(info.logoUrl)
+                                                : MemoryImage(
+                                                    _decodeAvatar(info.logoUrl)) as ImageProvider,
                                             fit: BoxFit.cover,
                                           )
                                         : null,
@@ -1991,19 +1995,26 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
                                             ClipRRect(
                                               borderRadius: BorderRadius.circular(13),
                                               child: Center(
-                                                child: _qrImageUrl.startsWith('data:')
-                                                    ? Image.memory(
-                                                        _decodeStoreImage(_qrImageUrl),
+                                                child: CloudflareService.isUrl(_qrImageUrl)
+                                                    ? CachedNetworkImage(
+                                                        imageUrl: _qrImageUrl,
                                                         width: 200,
                                                         height: 200,
                                                         fit: BoxFit.contain,
                                                       )
-                                                    : Image.network(
-                                                        _qrImageUrl,
-                                                        width: 200,
-                                                        height: 200,
-                                                        fit: BoxFit.contain,
-                                                      ),
+                                                    : _qrImageUrl.startsWith('data:')
+                                                        ? Image.memory(
+                                                            _decodeStoreImage(_qrImageUrl),
+                                                            width: 200,
+                                                            height: 200,
+                                                            fit: BoxFit.contain,
+                                                          )
+                                                        : Image.network(
+                                                            _qrImageUrl,
+                                                            width: 200,
+                                                            height: 200,
+                                                            fit: BoxFit.contain,
+                                                          ),
                                               ),
                                             ),
                                             // Dark overlay with "Thay đổi QR"
@@ -2166,16 +2177,26 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
     final bytes = await pickedFile.readAsBytes();
     if (!mounted) return;
 
-    // Auto-resize & compress if needed (max 1024px, under 1MB)
+    // Auto-resize & compress
     final prepared = await prepareImageBytes(bytes);
 
-    final base64 = await showSquareCropDialog(
+    final base64Result = await showSquareCropDialog(
       context,
       imageBytes: prepared,
       borderRadius: 24,
     );
-    if (base64 != null) {
-      final info = store.currentStoreInfo.copyWith(logoUrl: base64);
+    if (base64Result != null) {
+      // Try uploading to R2
+      String imageData = base64Result;
+      try {
+        imageData = await CloudflareService.uploadBase64(
+          base64Data: base64Result,
+          folder: 'logos',
+        );
+      } catch (e) {
+        debugPrint('[SettingsPage] Logo R2 upload failed, using base64: $e');
+      }
+      final info = store.currentStoreInfo.copyWith(logoUrl: imageData);
       store.updateStoreInfo(info);
       setState(() {});
     }
@@ -2207,18 +2228,28 @@ class _StoreInfoSectionState extends State<_StoreInfoSection> {
     final bytes = await pickedFile.readAsBytes();
     if (!mounted) return;
 
-    // Auto-resize & compress if needed (max 1024px, under 1MB)
+    // Auto-resize & compress
     final prepared = await prepareImageBytes(bytes);
 
     // Show square crop dialog to let user adjust/resize
-    final base64 = await showSquareCropDialog(
+    final base64Result = await showSquareCropDialog(
       context,
       imageBytes: prepared,
       borderRadius: 12,
       title: 'Điều chỉnh ảnh QR',
     );
-    if (base64 != null && mounted) {
-      setState(() => _qrImageUrl = base64);
+    if (base64Result != null && mounted) {
+      // Try uploading to R2
+      String imageData = base64Result;
+      try {
+        imageData = await CloudflareService.uploadBase64(
+          base64Data: base64Result,
+          folder: 'qr',
+        );
+      } catch (e) {
+        debugPrint('[SettingsPage] QR R2 upload failed, using base64: $e');
+      }
+      setState(() => _qrImageUrl = imageData);
       store.showToast('Đã chọn ảnh QR. Ấn Lưu để áp dụng.');
     }
   }
@@ -2248,6 +2279,8 @@ class _TablesSectionState extends State<_TablesSection> {
   final _areaCtrl = TextEditingController();
   final _newAreaCtrl = TextEditingController();
   String _newAreaName = '';
+  bool _isDefault = false;
+  StateSetter? _dialogSetState;
 
   @override
   void dispose() {
@@ -2257,15 +2290,23 @@ class _TablesSectionState extends State<_TablesSection> {
     super.dispose();
   }
 
+  // ── Default table prefix helpers ────────────────────
+  static const _defaultPrefix = '\u2605';
+  static bool _isDefaultTable(String raw) => raw.startsWith(_defaultPrefix);
+  static String _stripDefault(String raw) => raw.startsWith(_defaultPrefix) ? raw.substring(1) : raw;
+  static String _makeDefault(String raw) => '$_defaultPrefix$raw';
+
   // ── Parse area::table name ──────────────────────────
   static String _areaOf(String raw) {
-    final parts = raw.split('::');
+    final clean = _stripDefault(raw);
+    final parts = clean.split('::');
     return parts.length > 1 ? parts[0] : 'Mặc định';
   }
 
   static String _nameOf(String raw) {
-    final parts = raw.split('::');
-    return parts.length > 1 ? parts.sublist(1).join('::') : raw;
+    final clean = _stripDefault(raw);
+    final parts = clean.split('::');
+    return parts.length > 1 ? parts.sublist(1).join('::') : clean;
   }
 
   static final _tableAvatarColors = [
@@ -2288,12 +2329,16 @@ class _TablesSectionState extends State<_TablesSection> {
     var display = tables.toList();
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
-      display = display.where((t) => t.toLowerCase().contains(q)).toList();
+      display = display.where((t) => _stripDefault(t).toLowerCase().contains(q)).toList();
     }
 
-    // Group by area
+    // Separate default tables from area groups
+    final defaultTables = display.where((t) => _isDefaultTable(t)).toList();
+    final nonDefaultTables = display.where((t) => !_isDefaultTable(t)).toList();
+
+    // Group non-default by area
     final Map<String, List<String>> areaGroups = {};
-    for (final t in display) {
+    for (final t in nonDefaultTables) {
       final area = _areaOf(t);
       areaGroups.putIfAbsent(area, () => []);
       areaGroups[area]!.add(t);
@@ -2344,7 +2389,7 @@ class _TablesSectionState extends State<_TablesSection> {
 
                   // ── Area Groups (collapsible) ───────
                   Expanded(
-                    child: areaGroups.isEmpty
+                    child: (defaultTables.isEmpty && areaGroups.isEmpty)
                         ? Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
@@ -2361,7 +2406,67 @@ class _TablesSectionState extends State<_TablesSection> {
                           )
                         : ListView(
                             padding: EdgeInsets.zero,
-                            children: areaGroups.entries.map((entry) {
+                            children: [
+                              // ── Default tables at top ──
+                              ...defaultTables.map((raw) {
+                                final stripped = _stripDefault(raw);
+                                final displayName = _nameOf(stripped);
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: GestureDetector(
+                                    onTap: () => _openEditPanel(raw),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(color: AppColors.slate200),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 40, height: 40,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFFF7ED),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: const Icon(Icons.shopping_bag_outlined, size: 20, color: Color(0xFFF59E0B)),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(displayName,
+                                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                                          ),
+                                          GestureDetector(
+                                            onTap: () {
+                                              store.showConfirm(
+                                                'Xóa bàn "$displayName"?',
+                                                () => store.removeTable(raw),
+                                                title: 'Xóa bàn?',
+                                                description: 'Bạn có chắc muốn xóa bàn này?',
+                                                icon: Icons.shopping_bag_outlined,
+                                                itemName: displayName,
+                                              );
+                                            },
+                                            child: Container(
+                                              width: 36, height: 36,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFFEF2F2),
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFEF4444)),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
+                              if (defaultTables.isNotEmpty && areaGroups.isNotEmpty)
+                                const SizedBox(height: 4),
+                              // ── Area Groups ──
+                              ...areaGroups.entries.map((entry) {
                               final areaName = entry.key;
                               final areaTables = entry.value;
                               final isCollapsed = _collapsedAreas.contains(areaName);
@@ -2502,8 +2607,9 @@ class _TablesSectionState extends State<_TablesSection> {
                                   ),
                                 ),
                               );
-                            }).toList(),
-                          ),
+                            }),
+                          ],
+                        ),
                   ),
                   const SizedBox(height: 12),
 
@@ -2599,6 +2705,7 @@ class _TablesSectionState extends State<_TablesSection> {
     _areaCtrl.clear();
     _newAreaCtrl.clear();
     _newAreaName = '';
+    _isDefault = false;
     setState(() => _showPanel = true);
     _showTablePanelDialog();
   }
@@ -2606,8 +2713,10 @@ class _TablesSectionState extends State<_TablesSection> {
   // ── Open Edit Panel ─────────────────────────────────
   void _openEditPanel(String rawTableName) {
     _editingTable = rawTableName;
-    _areaCtrl.text = _areaOf(rawTableName) == 'Mặc định' ? '' : _areaOf(rawTableName);
-    _tableNameCtrl.text = _nameOf(rawTableName);
+    _isDefault = _isDefaultTable(rawTableName);
+    final stripped = _stripDefault(rawTableName);
+    _areaCtrl.text = _areaOf(stripped) == 'Mặc định' ? '' : _areaOf(stripped);
+    _tableNameCtrl.text = _nameOf(stripped);
     _newAreaCtrl.clear();
     _newAreaName = '';
     setState(() => _showPanel = true);
@@ -2622,7 +2731,12 @@ class _TablesSectionState extends State<_TablesSection> {
       useRootNavigator: true,
       transitionDuration: Duration.zero,
       pageBuilder: (ctx, _, __) {
-        return _buildTableFormPanel(context.read<AppStore>());
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            _dialogSetState = setDialogState;
+            return _buildTableFormPanel(context.read<AppStore>());
+          },
+        );
       },
     );
   }
@@ -2787,13 +2901,12 @@ class _TablesSectionState extends State<_TablesSection> {
                                   items: items,
                                 ).then((val) {
                                   if (val != null) {
-                                    setState(() {
-                                      if (val == '__new__') {
-                                        _areaCtrl.text = '__new__';
-                                      } else {
-                                        _areaCtrl.text = val;
-                                      }
-                                    });
+                                    if (val == '__new__') {
+                                      _areaCtrl.text = '__new__';
+                                    } else {
+                                      _areaCtrl.text = val;
+                                    }
+                                    _dialogSetState?.call(() {});
                                   }
                                 });
                               },
@@ -2867,6 +2980,57 @@ class _TablesSectionState extends State<_TablesSection> {
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.slate200)),
                         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.slate200)),
                         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.emerald400)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Default toggle
+                    StatefulBuilder(
+                      builder: (ctx, setToggle) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: _isDefault ? const Color(0xFFFFF7ED) : AppColors.slate50,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: _isDefault ? const Color(0xFFFDE68A) : AppColors.slate200),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36, height: 36,
+                              decoration: BoxDecoration(
+                                color: _isDefault ? const Color(0xFFFEF3C7) : AppColors.slate100,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(Icons.star_rounded, size: 18,
+                                  color: _isDefault ? const Color(0xFFF59E0B) : AppColors.slate400),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Mặc định',
+                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700,
+                                          color: _isDefault ? const Color(0xFF92400E) : AppColors.slate800)),
+                                  Text('Hiển thị ở đầu danh sách',
+                                      style: TextStyle(fontSize: 11,
+                                          color: _isDefault ? const Color(0xFFB45309) : AppColors.slate400)),
+                                ],
+                              ),
+                            ),
+                            Transform.scale(
+                              scale: 0.85,
+                              child: Switch(
+                                value: _isDefault,
+                                onChanged: (v) {
+                                  setToggle(() => _isDefault = v);
+                                  setState(() {});
+                                },
+                                activeTrackColor: const Color(0xFFF59E0B),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -2945,7 +3109,13 @@ class _TablesSectionState extends State<_TablesSection> {
     if (area == '__new__') {
       area = _newAreaName.trim();
     }
-    final fullName = area.isNotEmpty ? '$area::$name' : name;
+    // Default tables don't have an area
+    String fullName;
+    if (_isDefault) {
+      fullName = _makeDefault(name);
+    } else {
+      fullName = area.isNotEmpty ? '$area::$name' : name;
+    }
 
     if (_editingTable != null) {
       store.updateTable(_editingTable!, fullName);

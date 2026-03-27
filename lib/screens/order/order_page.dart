@@ -754,8 +754,10 @@ class _TableSelectorBtn extends StatelessWidget {
   }
 
   static String _nameOf(String raw) {
-    final parts = raw.split('::');
-    return parts.length > 1 ? parts.sublist(1).join('::') : raw;
+    // Strip ★ prefix for default tables
+    final clean = raw.startsWith('★') ? raw.substring(1) : raw;
+    final parts = clean.split('::');
+    return parts.length > 1 ? parts.sublist(1).join('::') : clean;
   }
 
   static String _displayText(String raw) {
@@ -790,7 +792,7 @@ class _TableSelectorBtn extends StatelessWidget {
               child: Text(
                 selected.isEmpty
                     ? 'Chọn bàn'
-                    : (selected == 'Mang về' ? selected : _displayText(selected)),
+                    : (selected.startsWith('★') ? selected.substring(1) : _displayText(selected)),
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -811,8 +813,12 @@ class _TableSelectorBtn extends StatelessWidget {
   }
 
   void _showTablePicker(BuildContext context) {
+    // Separate default (★ prefix) tables from area-grouped tables
+    final defaultTables = tables.where((t) => t.startsWith('★')).toList();
+    final nonDefaultTables = tables.where((t) => !t.startsWith('★')).toList();
+
     final Map<String, List<String>> areaGroups = {};
-    for (final t in tables) {
+    for (final t in nonDefaultTables) {
       final area = _areaOf(t);
       final groupName = area.isEmpty ? 'Mặc định' : area;
       areaGroups.putIfAbsent(groupName, () => []);
@@ -825,7 +831,7 @@ class _TableSelectorBtn extends StatelessWidget {
     );
     final occupiedTables = <String>{};
     for (final o in activeOrders) {
-      if (o.table.isNotEmpty) occupiedTables.add(o.table);
+      if (o.table.isNotEmpty && !o.table.startsWith('★')) occupiedTables.add(o.table);
     }
 
       // ── Bottom sheet for mobile ──
@@ -856,20 +862,24 @@ class _TableSelectorBtn extends StatelessWidget {
                   child: ListView(
                     shrinkWrap: true,
                     children: [
-                      ListTile(
-                        leading: const Icon(Icons.shopping_bag_outlined,
-                            color: AppColors.orange500),
-                        title: const Text('Mang về',
-                            style: TextStyle(fontWeight: FontWeight.w600)),
-                        trailing: store.selectedTable == 'Mang về'
-                            ? const Icon(Icons.check_circle,
-                                color: AppColors.emerald500)
-                            : null,
-                        onTap: () {
-                          store.setSelectedTable('Mang về');
-                          Navigator.pop(context);
-                        },
-                      ),
+                      // Default tables at top
+                      ...defaultTables.map((raw) {
+                        final displayName = raw.substring(1); // strip ★
+                        return ListTile(
+                          leading: const Icon(Icons.shopping_bag_outlined,
+                              color: AppColors.orange500),
+                          title: Text(displayName,
+                              style: const TextStyle(fontWeight: FontWeight.w600)),
+                          trailing: store.selectedTable == raw
+                              ? const Icon(Icons.check_circle,
+                                  color: AppColors.emerald500)
+                              : null,
+                          onTap: () {
+                            store.setSelectedTable(raw);
+                            Navigator.pop(context);
+                          },
+                        );
+                      }),
                       ...areaGroups.entries.map((entry) {
                         final areaName = entry.key;
                         final areaTables = entry.value;

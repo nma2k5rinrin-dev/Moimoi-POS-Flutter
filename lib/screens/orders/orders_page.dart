@@ -478,9 +478,9 @@ class _OrderCardState extends State<_OrderCard> {
                           runSpacing: 4,
                           children: [
                             Text(
-                              order.table.isNotEmpty && order.table != 'Mang về'
+                              order.table.isNotEmpty && !isDefaultTable(order.table)
                                   ? order.table.replaceAll('::', ' · ')
-                                  : '🛍️ Mang về',
+                                  : '🛍️ ${displayTableName(order.table)}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 16,
@@ -1094,8 +1094,12 @@ class _OrderCardState extends State<_OrderCard> {
     final tables = store.currentTables;
     if (tables.isEmpty) return;
 
+    // Separate default (★) tables from area-grouped tables
+    final defaultTables = tables.where((t) => t.startsWith('★')).toList();
+    final nonDefaultTables = tables.where((t) => !t.startsWith('★')).toList();
+
     final Map<String, List<String>> areaGroups = {};
-    for (final t in tables) {
+    for (final t in nonDefaultTables) {
       final parts = t.split('::');
       final area = parts.length > 1 ? parts[0] : 'Mặc định';
       areaGroups.putIfAbsent(area, () => []);
@@ -1108,7 +1112,7 @@ class _OrderCardState extends State<_OrderCard> {
     );
     final occupiedTables = <String>{};
     for (final o in activeOrders) {
-      if (o.table.isNotEmpty) occupiedTables.add(o.table);
+      if (o.table.isNotEmpty && !o.table.startsWith('★')) occupiedTables.add(o.table);
     }
 
     showGeneralDialog(
@@ -1176,7 +1180,7 @@ class _OrderCardState extends State<_OrderCard> {
                                     border: Border.all(color: AppColors.emerald200),
                                   ),
                                   child: Text(
-                                    order.table.isNotEmpty ? order.table.replaceAll('::', ' · ') : 'Mang về',
+                                    order.table.isNotEmpty ? displayTableName(order.table) : 'Mang về',
                                     style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.emerald600),
                                   ),
                                 ),
@@ -1202,39 +1206,45 @@ class _OrderCardState extends State<_OrderCard> {
                               padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
                               shrinkWrap: true,
                               children: [
-                                // Mang về option (full width)
-                                GestureDetector(
-                                  onTap: () {
-                                    Navigator.of(dialogCtx).pop();
-                                    store.updateOrderTable(order.id, 'Mang về');
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                    decoration: BoxDecoration(
-                                      color: (order.table == 'Mang về' || order.table.isEmpty)
-                                          ? AppColors.emerald50 : AppColors.slate50,
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: (order.table == 'Mang về' || order.table.isEmpty)
-                                          ? Border.all(color: AppColors.emerald200) : null,
+                                // Default tables at top (full width)
+                                ...defaultTables.map((raw) {
+                                  final displayName = raw.substring(1); // strip ★
+                                  final isSelected = order.table == raw || (order.table.isEmpty && defaultTables.indexOf(raw) == 0);
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Navigator.of(dialogCtx).pop();
+                                        store.updateOrderTable(order.id, raw);
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        decoration: BoxDecoration(
+                                          color: isSelected ? AppColors.emerald50 : AppColors.slate50,
+                                          borderRadius: BorderRadius.circular(14),
+                                          border: isSelected ? Border.all(color: AppColors.emerald200) : null,
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.shopping_bag_outlined, size: 18,
+                                                color: isSelected ? AppColors.emerald600 : AppColors.orange500),
+                                            const SizedBox(width: 8),
+                                            Text(displayName,
+                                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
+                                                    color: isSelected ? AppColors.emerald600 : AppColors.slate800)),
+                                            if (isSelected) ...[
+                                              const SizedBox(width: 8),
+                                              const Icon(Icons.check_circle, size: 16, color: AppColors.emerald500),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
                                     ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.shopping_bag_outlined, size: 18,
-                                            color: (order.table == 'Mang về' || order.table.isEmpty) ? AppColors.emerald600 : AppColors.orange500),
-                                        const SizedBox(width: 8),
-                                        Text('Mang về',
-                                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
-                                                color: (order.table == 'Mang về' || order.table.isEmpty) ? AppColors.emerald600 : AppColors.slate800)),
-                                        if (order.table == 'Mang về' || order.table.isEmpty) ...[
-                                          const SizedBox(width: 8),
-                                          const Icon(Icons.check_circle, size: 16, color: AppColors.emerald500),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
+                                  );
+                                }),
+                                if (defaultTables.isNotEmpty)
+                                  const SizedBox(height: 4),
 
                                 // Area groups with 3-column grid
                                 ...areaGroups.entries.map((entry) {
@@ -1431,9 +1441,9 @@ class _OrderCardState extends State<_OrderCard> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  order.table.isNotEmpty && order.table != 'Mang về'
+                                  order.table.isNotEmpty && !isDefaultTable(order.table)
                                       ? order.table.replaceAll('::', ' · ')
-                                      : 'Mang về',
+                                      : '🛍️ ${displayTableName(order.table)}',
                                   style: const TextStyle(
                                     fontSize: 13,
                                     color: AppColors.slate400,
@@ -1658,7 +1668,7 @@ class _OrderCardState extends State<_OrderCard> {
                               Text(
                                 order.table.isNotEmpty
                                     ? order.table
-                                    : 'Mang về',
+                                    : displayTableName(order.table),
                                 style: const TextStyle(
                                   fontSize: 13,
                                   color: AppColors.slate400,
@@ -2014,7 +2024,7 @@ class _OrderCardState extends State<_OrderCard> {
                                         order.table.isNotEmpty
                                             ? order.table
                                                 .replaceAll('::', ' · ')
-                                            : 'Mang về',
+                                            : displayTableName(order.table),
                                         style: const TextStyle(
                                           fontSize: 12,
                                           color: AppColors.slate400,

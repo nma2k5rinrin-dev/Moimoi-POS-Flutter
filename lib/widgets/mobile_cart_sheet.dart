@@ -514,9 +514,14 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
     final buttonSize = renderBox.size;
     final tables = widget.store.currentTables;
 
-    // Group tables by area
+    // Separate default (★ prefix) tables from area-grouped tables
+    const defaultPrefix = '★';
+    final defaultTables = tables.where((t) => t.startsWith(defaultPrefix)).toList();
+    final nonDefaultTables = tables.where((t) => !t.startsWith(defaultPrefix)).toList();
+
+    // Group non-default tables by area
     final Map<String, List<String>> areaGroups = {};
-    for (final t in tables) {
+    for (final t in nonDefaultTables) {
       final parts = t.split('::');
       final area = parts.length > 1 ? parts[0] : 'Mặc định';
       areaGroups.putIfAbsent(area, () => []);
@@ -529,11 +534,11 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
     );
     final occupiedTables = <String>{};
     for (final o in activeOrders) {
-      if (o.table.isNotEmpty) occupiedTables.add(o.table);
+      if (o.table.isNotEmpty && !o.table.startsWith('★')) occupiedTables.add(o.table);
     }
 
     // Total items for height calculation
-    final itemCount = tables.length + 1 + areaGroups.length; // tables + Mang về + headers
+    final itemCount = tables.length + defaultTables.length + areaGroups.length;
     final dropdownHeight = (itemCount * 42.0 + 18).clamp(0.0, 350.0);
 
     _overlayEntry = OverlayEntry(
@@ -581,14 +586,19 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Mang về (full width)
-                        _buildDropItem(
-                          'Mang về',
-                          Icons.shopping_bag_rounded,
-                          isSelected: widget.store.selectedTable == 'Mang về',
-                          isBusy: false,
-                        ),
-                        const SizedBox(height: 8),
+                        // Default tables at top (full width, like old "Mang về")
+                        ...defaultTables.map((raw) {
+                          final displayName = raw.substring(1); // strip ★
+                          return _buildDropItem(
+                            displayName,
+                            Icons.shopping_bag_rounded,
+                            isSelected: widget.store.selectedTable == raw,
+                            isBusy: false,
+                            rawValue: raw,
+                          );
+                        }),
+                        if (defaultTables.isNotEmpty && areaGroups.isNotEmpty)
+                          const SizedBox(height: 8),
                         // Grouped tables in 2-column grid
                         ...areaGroups.entries.expand((entry) {
                           final areaName = entry.key;
@@ -849,8 +859,8 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
               const SizedBox(width: 8),
               Text(
                 hasSelection
-                    ? (selected == 'Mang về'
-                        ? selected
+                    ? (selected.startsWith('★')
+                        ? selected.substring(1)
                         : selected.contains('::')
                             ? '${selected.split('::').sublist(1).join('::')} · ${selected.split('::')[0]}'
                             : selected)
