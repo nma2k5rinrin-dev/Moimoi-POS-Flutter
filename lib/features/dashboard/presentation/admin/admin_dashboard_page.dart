@@ -1296,12 +1296,6 @@ class _StoreCard extends StatelessWidget {
       ],
     );
   }
-
-  String _formatDateTime(DateTime? dt) {
-    if (dt == null) return '—';
-    return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
-  }
-
   void _showStoreMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -1617,7 +1611,6 @@ class _AddStoreCard extends StatelessWidget {
                                     final fullname = fullnameCtrl.text.trim();
                                     final phone = phoneCtrl.text.trim();
                                     final storeName = storeNameCtrl.text.trim();
-                                    final address = addressCtrl.text.trim();
 
                                     if (username.isEmpty || password.isEmpty || storeName.isEmpty) {
                                       store.showToast('Vui lòng nhập đầy đủ thông tin', 'error');
@@ -1789,36 +1782,6 @@ class _LandscapeStatPill extends StatelessWidget {
 }
 
 
-class _DialogField extends StatelessWidget {
-  final TextEditingController controller;
-  final String label;
-  final IconData icon;
-  final TextInputType keyboardType;
-  final bool obscure;
-
-  const _DialogField({
-    required this.controller,
-    required this.label,
-    required this.icon,
-    this.keyboardType = TextInputType.text,
-    this.obscure = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      obscureText: obscure,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        prefixIcon: Icon(icon),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      ),
-    );
-  }
-}
 
 // ═══════════════════════════════════════════════════════════
 // UPGRADE REQUEST CARDS

@@ -62,6 +62,7 @@ class _AccountSectionState extends State<AccountSection> {
 
       bool enabled = false;
       if (available) {
+        if (!context.mounted) return;
         final store = context.read<AppStore>();
         final creds = await store.getCachedCredentials();
         if (!mounted) return;

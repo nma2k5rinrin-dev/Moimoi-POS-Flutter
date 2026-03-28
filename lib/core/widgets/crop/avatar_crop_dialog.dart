@@ -421,9 +421,8 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
                               ? null
                               : () async {
                                   final result = await _cropImage();
-                                  if (mounted) {
-                                    Navigator.pop(context, result);
-                                  }
+                                  if (!context.mounted) return;
+                                  Navigator.pop(context, result);
                                 },
                           icon: _isProcessing
                               ? const SizedBox(

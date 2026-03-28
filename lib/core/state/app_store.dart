@@ -21,11 +21,7 @@ import 'package:moimoi_pos/core/sync/sync_engine.dart';
 import 'dart:convert' show jsonEncode, jsonDecode;
 import 'package:drift/drift.dart' show Value;
 import 'package:moimoi_pos/core/models/confirm_dialog_data.dart';
-import 'package:moimoi_pos/services/api/cloudflare_service.dart';
 import 'package:moimoi_pos/features/auth/logic/auth_store.dart';
-import 'package:drift_sqflite/drift_sqflite.dart';
-import 'package:flutter/foundation.dart';
-
 import 'package:moimoi_pos/core/state/base_mixin.dart';
 import 'package:moimoi_pos/features/inventory/logic/inventory_store.dart';
 import 'package:moimoi_pos/features/pos_order/logic/order_store.dart';
@@ -628,7 +624,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     final oldUsers = List<UserModel>.from(users);
     final oldCurrentUser = currentUser;
 
-    _optimistic(
+    optimistic(
       apply: () {
         users = users.map((u) {
           if (u.username == username) {
@@ -664,7 +660,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
   // ── Delete User ─────────────────────────────────────────
   void deleteUser(String username) {
     final oldUsers = List<UserModel>.from(users);
-    _optimistic(
+    optimistic(
       apply: () {
         users.removeWhere((u) => u.username == username);
       },
@@ -750,7 +746,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
       'qr_image_url': info.qrImageUrl,
     };
     dbData.removeWhere((k, v) => v.toString().isEmpty);
-    _optimistic(
+    optimistic(
       apply: () { storeInfos[storeId] = info; },
       remote: () => _supabase.from('store_infos').upsert({'store_id': storeId, ...dbData}),
       rollback: () {
@@ -780,7 +776,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
       'qr_image_url': info.qrImageUrl,
     };
     dbData.removeWhere((k, v) => v.toString().isEmpty);
-    _optimistic(
+    optimistic(
       apply: () { storeInfos[storeId] = info; },
       remote: () => _supabase.from('store_infos').upsert({'store_id': storeId, ...dbData}),
       rollback: () {
@@ -800,7 +796,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     final oldUsers = List<UserModel>.from(users);
     final staffToDelete = users.where((u) => u.createdBy == storeId).map((u) => u.username).toList();
 
-    _optimistic(
+    optimistic(
       apply: () {
         storeInfos.remove(storeId);
         users.removeWhere((u) => u.username == storeId || u.createdBy == storeId);
@@ -835,7 +831,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     final storeId = getStoreId();
     final currentTablesList = storeTables[storeId] ?? [];
     if (currentTablesList.contains(tableName)) return;
-    _optimistic(
+    optimistic(
       apply: () {
         storeTables.putIfAbsent(storeId, () => []);
         storeTables[storeId]!.add(tableName);
@@ -854,7 +850,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     final storeId = getStoreId();
     final oldTables = List<String>.from(storeTables[storeId] ?? []);
     final oldSelectedTable = selectedTable;
-    _optimistic(
+    optimistic(
       apply: () {
         storeTables[storeId]?.remove(tableName);
         if (selectedTable == tableName) {
@@ -877,7 +873,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     final storeId = getStoreId();
     final oldTables = List<String>.from(storeTables[storeId] ?? []);
     final oldSelectedTable = selectedTable;
-    _optimistic(
+    optimistic(
       apply: () {
         final tablesList = storeTables[storeId] ?? [];
         final idx = tablesList.indexOf(oldName);
@@ -910,7 +906,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
         renamePairs.add(MapEntry(oldFullName, newFullName));
       }
     }
-    _optimistic(
+    optimistic(
       apply: () {
         for (final pair in renamePairs) {
           final idx = tablesList.indexOf(pair.key);
@@ -949,7 +945,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
       'color': color,
     };
     final catModel = CategoryModel.fromMap(newCat);
-    _optimistic(
+    optimistic(
       apply: () {
         categories.putIfAbsent(storeId, () => []);
         categories[storeId]!.add(catModel);
@@ -963,7 +959,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
   void updateCategory(CategoryModel updatedCategory) {
     final storeId = getStoreId();
     final oldCategories = List<CategoryModel>.from(categories[storeId] ?? []);
-    _optimistic(
+    optimistic(
       apply: () {
         categories[storeId] = (categories[storeId] ?? [])
             .map((c) => c.id == updatedCategory.id ? updatedCategory : c)
@@ -983,7 +979,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     final storeId = getStoreId();
     final oldCategories = List<CategoryModel>.from(categories[storeId] ?? []);
     final oldProducts = List<ProductModel>.from(products[storeId] ?? []);
-    _optimistic(
+    optimistic(
       apply: () {
         categories[storeId]?.removeWhere((c) => c.id == categoryId);
         products[storeId] = (products[storeId] ?? []).map((p) {
@@ -1026,7 +1022,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
       'cost_price': product.costPrice,
     };
     final newProduct = product.copyWith(id: newProd['id'] as String, storeId: storeId);
-    _optimistic(
+    optimistic(
       apply: () {
         products.putIfAbsent(storeId, () => []);
         products[storeId]!.insert(0, newProduct);
@@ -1040,7 +1036,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
   void updateProduct(ProductModel updatedProduct) {
     final storeId = getStoreId();
     final oldProducts = List<ProductModel>.from(products[storeId] ?? []);
-    _optimistic(
+    optimistic(
       apply: () {
         products[storeId] = (products[storeId] ?? [])
             .map((p) => p.id == updatedProduct.id ? updatedProduct : p)
@@ -1065,7 +1061,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
   void deleteProduct(String productId) {
     final storeId = getStoreId();
     final oldProducts = List<ProductModel>.from(products[storeId] ?? []);
-    _optimistic(
+    optimistic(
       apply: () { products[storeId]?.removeWhere((p) => p.id == productId); },
       remote: () => _supabase.from('products').delete().eq('id', productId),
       rollback: () { products[storeId] = oldProducts; },
@@ -1548,6 +1544,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     notifyListeners();
   }
 
+  @override
   void setSearchQuery(String query) {
     searchQuery = query;
     if (query.isNotEmpty && selectedCategory != 'all') {
@@ -1596,7 +1593,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     confirmDialog = ConfirmDialogData(
       message: message,
       onConfirm: onConfirm,
-      title: title,
+      title: title ?? 'Xác nhận',
       description: description,
       itemName: itemName,
       itemSubtitle: itemSubtitle,
@@ -1616,15 +1613,15 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
 
   // ── Upgrade Modal ───────────────────────────────────────
   @override
-  void setUpgradeModalOpen(bool isOpen) {
-    isUpgradeModalOpen = isOpen;
+  void setUpgradeModalOpen(bool open) {
+    isUpgradeModalOpen = open;
     notifyListeners();
   }
 
   // ── Notifications ───────────────────────────────────────
   void markNotificationAsRead(String id) {
     final oldNotifications = List<NotificationModel>.from(notifications);
-    _optimistic(
+    optimistic(
       apply: () {
         notifications = notifications.map((n) => n.id == id ? n.copyWith(read: true) : n).toList();
       },
@@ -1635,7 +1632,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
 
   void clearNotifications(String userId) {
     final oldNotifications = List<NotificationModel>.from(notifications);
-    _optimistic(
+    optimistic(
       apply: () { notifications.removeWhere((n) => n.userId == userId); },
       remote: () => _supabase.from('notifications').delete().eq('user_id', userId),
       rollback: () { notifications = oldNotifications; },
@@ -1646,7 +1643,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
   void clearVipCongrat(String username) {
     final oldUsers = List<UserModel>.from(users);
     final oldCurrentUser = currentUser;
-    _optimistic(
+    optimistic(
       apply: () {
         users = users.map((u) => u.username == username ? u.copyWith(showVipCongrat: false) : u).toList();
         if (currentUser?.username == username) {
@@ -1664,7 +1661,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
   void closeVipExpiredModal(String username) {
     final oldUsers = List<UserModel>.from(users);
     final oldCurrentUser = currentUser;
-    _optimistic(
+    optimistic(
       apply: () {
         users = users.map((u) => u.username == username ? u.copyWith(showVipExpired: false) : u).toList();
         if (currentUser?.username == username) {
@@ -1710,7 +1707,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
       'amount': amount,
     };
     final reqModel = UpgradeRequestModel.fromMap(newReq);
-    _optimistic(
+    optimistic(
       apply: () {
         upgradeRequests.add(reqModel);
         isUpgradeModalOpen = false;
@@ -1804,7 +1801,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
 
   void rejectUpgrade(String requestId) {
     final oldRequests = List<UpgradeRequestModel>.from(upgradeRequests);
-    _optimistic(
+    optimistic(
       apply: () { upgradeRequests.removeWhere((r) => r.id == requestId); },
       remote: () => _supabase.from('upgrade_requests').delete().eq('id', requestId),
       rollback: () { upgradeRequests = oldRequests; },
@@ -2228,8 +2225,6 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     _cachedVisibleOrders = list;
     return list;
   }
-}
-
 }
 
 /// Lightweight [ChangeNotifier] that fires ONLY on auth state changes.

@@ -138,7 +138,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   /// Factory method to create an encrypted database connection.
-  static AppDatabase connect(String password) {
+  static AppDatabase connect([String? password]) {
     if (kIsWeb) {
       return AppDatabase(driftDatabase(
         name: 'moimoi_pos',
@@ -152,7 +152,6 @@ class AppDatabase extends _$AppDatabase {
     // Mobile/Desktop encrypted path
     final executor = SqfliteQueryExecutor.inDatabaseFolder(
       path: 'moimoi_pos.db',
-      password: password,
       logStatements: kDebugMode,
     );
 

@@ -71,6 +71,7 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
     if (!mounted) return;
 
     final prepared = await prepareImageBytes(bytes);
+    if (!context.mounted) return;
     final base64Result = await showSquareCropDialog(
       context,
       imageBytes: prepared,
@@ -98,6 +99,7 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
     if (!mounted) return;
 
     final prepared = await prepareImageBytes(bytes);
+    if (!context.mounted) return;
     final base64Result = await showSquareCropDialog(
       context,
       imageBytes: prepared,

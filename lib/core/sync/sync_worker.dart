@@ -16,7 +16,7 @@ void callbackDispatcher() {
 
     try {
       // Tạo instances riêng cho background isolate
-      final db = AppDatabase();
+      final db = AppDatabase.connect();
       final connectivity = ConnectivityService();
       connectivity.init();
 

@@ -15,7 +15,7 @@ class ConfirmModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = data.title ?? data.message;
+    final title = data.title;
     final description = data.description ??
         'Bạn có chắc muốn thực hiện hành động này? Hành động này không thể hoàn tác.';
     final confirmLabel = data.confirmLabel ?? 'Xóa';

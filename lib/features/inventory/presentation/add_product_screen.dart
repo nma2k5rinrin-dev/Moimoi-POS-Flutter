@@ -828,6 +828,8 @@ class _AddProductPanelState extends State<AddProductPanel>
       // Auto-resize & compress if needed
       final prepared = await prepareImageBytes(bytes);
 
+      if (!context.mounted) return;
+
       // Show square crop dialog (FB-style)
       final base64Result = await showSquareCropDialog(
         context,

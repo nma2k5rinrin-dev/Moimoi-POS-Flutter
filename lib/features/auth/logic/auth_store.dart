@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:moimoi_pos/features/auth/models/user_model.dart';
@@ -12,17 +13,8 @@ mixin AuthStore on ChangeNotifier, BaseMixin {
   List<UserModel> users = [];
   String sadminViewStoreId = 'all';
 
-  // --- Cache Invalidation ---
-  bool _cachesDirty = true;
-  Timer? _searchDebounce;
-
-  void _invalidateCaches() {
-    _cachesDirty = true;
-  }
-
   @override
   void notifyListeners() {
-    _invalidateCaches();
     super.notifyListeners();
   }
 
