@@ -66185,7 +66185,7 @@
                               "type": "text",
                               "id": "6Xcv2",
                               "fill": "#EF4444",
-                              "content": "3 ngày hết hạn",
+                              "content": "Premium còn 7 ngày",
                               "fontFamily": "Inter",
                               "fontSize": 10,
                               "fontWeight": "700"
@@ -66241,33 +66241,6 @@
                                   "id": "PonWQ",
                                   "fill": "#4B5563",
                                   "content": "Kích hoạt: 12/12/2026",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 11,
-                                  "fontWeight": "600"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "f7gC2",
-                              "name": "l2",
-                              "gap": 8,
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon_font",
-                                  "id": "ahDlE",
-                                  "width": 14,
-                                  "height": 14,
-                                  "iconFontName": "event_available",
-                                  "iconFontFamily": "Material Symbols Rounded",
-                                  "fill": "#10B981"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "6OqDM",
-                                  "fill": "#4B5563",
-                                  "content": "Hết hạn: 12/12/2026",
                                   "fontFamily": "Inter",
                                   "fontSize": 11,
                                   "fontWeight": "600"
@@ -66562,7 +66535,7 @@
                               "type": "text",
                               "id": "s6KmH",
                               "fill": "#EF4444",
-                              "content": "15 ngày hết hạn",
+                              "content": "Premium còn 3 ngày",
                               "fontFamily": "Inter",
                               "fontSize": 10,
                               "fontWeight": "700"
@@ -66618,33 +66591,6 @@
                                   "id": "lBucS",
                                   "fill": "#4B5563",
                                   "content": "Kích hoạt: 03/02/2026",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 11,
-                                  "fontWeight": "600"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "vaSsd",
-                              "name": "l2",
-                              "gap": 8,
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon_font",
-                                  "id": "lzmnu",
-                                  "width": 14,
-                                  "height": 14,
-                                  "iconFontName": "event_available",
-                                  "iconFontFamily": "Material Symbols Rounded",
-                                  "fill": "#10B981"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "TS0GG",
-                                  "fill": "#4B5563",
-                                  "content": "Hết hạn: 03/08/2026",
                                   "fontFamily": "Inter",
                                   "fontSize": 11,
                                   "fontWeight": "600"
@@ -66915,7 +66861,7 @@
                         },
                         {
                           "type": "frame",
-                          "id": "m9e3i",
+                          "id": "GXaqj",
                           "name": "Expiry Warning",
                           "fill": "#FEF2F2",
                           "cornerRadius": 6,
@@ -66928,18 +66874,18 @@
                           "children": [
                             {
                               "type": "icon_font",
-                              "id": "JIXNt",
+                              "id": "mynsF",
                               "width": 10,
                               "height": 10,
                               "iconFontName": "fiber_manual_record",
                               "iconFontFamily": "Material Symbols Rounded",
-                              "fill": "#9CA3AF"
+                              "fill": "#EF4444"
                             },
                             {
                               "type": "text",
-                              "id": "2wgop",
-                              "fill": "#9CA3AF",
-                              "content": "Còn 245 ngày",
+                              "id": "xaEmc",
+                              "fill": "#EF4444",
+                              "content": "Premium còn 3 ngày",
                               "fontFamily": "Inter",
                               "fontSize": 10,
                               "fontWeight": "700"
@@ -70689,6 +70635,1195 @@
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "Shhd9",
+      "x": 574,
+      "y": 2939,
+      "name": "Store Detail (Portrait)",
+      "width": 402,
+      "height": 874,
+      "fill": "#F8FAFC",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "yKeyV",
+          "name": "Status Bar",
+          "width": "fill_container",
+          "height": 62,
+          "fill": "#FFFFFF",
+          "padding": [
+            0,
+            24
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "lqiyl",
+              "name": "sbTime",
+              "fill": "#1A1A1A",
+              "content": "16:14",
+              "fontFamily": "Inter",
+              "fontSize": 15,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "iAjQG",
+              "name": "sbRight",
+              "gap": 6,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "DoyD5",
+                  "name": "sbSignal",
+                  "width": 16,
+                  "height": 16,
+                  "iconFontName": "signal_cellular_alt",
+                  "iconFontFamily": "Material Symbols Rounded",
+                  "fill": "#1A1A1A"
+                },
+                {
+                  "type": "icon_font",
+                  "id": "MV4TJ",
+                  "name": "sbWifi",
+                  "width": 16,
+                  "height": 16,
+                  "iconFontName": "wifi",
+                  "iconFontFamily": "Material Symbols Rounded",
+                  "fill": "#1A1A1A"
+                },
+                {
+                  "type": "icon_font",
+                  "id": "CyvUv",
+                  "name": "sbBatt",
+                  "width": 16,
+                  "height": 16,
+                  "iconFontName": "battery_full",
+                  "iconFontFamily": "Material Symbols Rounded",
+                  "fill": "#1A1A1A"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "PKYdy",
+          "name": "Header",
+          "width": "fill_container",
+          "gap": 16,
+          "padding": [
+            16,
+            20
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "Ox8mQ",
+              "name": "Back Button",
+              "width": 40,
+              "height": 40,
+              "fill": "#FFFFFF",
+              "cornerRadius": 12,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#E5E7EB"
+              },
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "qGp4o",
+                  "name": "backIcon",
+                  "width": 24,
+                  "height": 24,
+                  "iconFontName": "arrow_back",
+                  "iconFontFamily": "Material Symbols Rounded",
+                  "fill": "#1A1A1A"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "BrS1Y",
+              "name": "Title Area",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "AJVv8",
+                  "name": "title",
+                  "fill": "#1A1A1A",
+                  "content": "Moimoi Coffee",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "800"
+                },
+                {
+                  "type": "text",
+                  "id": "dpKIa",
+                  "name": "subtitle",
+                  "fill": "#9CA3AF",
+                  "content": "Chi tiết cửa hàng",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "wLZAP",
+          "name": "Scroll Content",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            0,
+            20,
+            20,
+            20
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "WaVeD",
+              "name": "Store Info Card",
+              "width": "fill_container",
+              "fill": "#FFFFFF",
+              "cornerRadius": 24,
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "65ePr",
+                  "name": "Top Row",
+                  "width": "fill_container",
+                  "gap": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "iZeoA",
+                      "name": "Logo Box",
+                      "width": 56,
+                      "height": 56,
+                      "fill": "#10B981",
+                      "cornerRadius": 16,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "CXdLw",
+                          "name": "licon",
+                          "width": 24,
+                          "height": 24,
+                          "iconFontName": "storefront",
+                          "iconFontFamily": "Material Symbols Rounded",
+                          "fill": "#FFFFFF"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "VVrwN",
+                      "name": "Text",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "uQzXu",
+                          "name": "stitle",
+                          "fill": "#1A1A1A",
+                          "content": "Moimoi Coffee",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "text",
+                          "id": "HUjOt",
+                          "name": "sid",
+                          "fill": "#9CA3AF",
+                          "content": "ID: MM-20240328",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Ql17b",
+                  "name": "Details Row",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Z88m3",
+                      "name": "Joined",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "gKZC4",
+                          "name": "jval",
+                          "fill": "#1A1A1A",
+                          "content": "15 Th03, 2024",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hyZcI",
+                      "name": "Status Badge",
+                      "fill": "#ECFDF5",
+                      "cornerRadius": 10,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "rTdPy",
+                          "name": "stxt",
+                          "fill": "#047857",
+                          "content": "Premium",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "5okxC",
+              "name": "Metrics Grid",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Dfxf9",
+                  "name": "Row 1",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "RAuDd",
+                      "name": "Metric Card",
+                      "width": "fill_container",
+                      "fill": "#FFFFFF",
+                      "cornerRadius": 20,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "wlEnX",
+                          "name": "c1icon",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "payments",
+                          "iconFontFamily": "Material Symbols Rounded",
+                          "fill": "#10B981"
+                        },
+                        {
+                          "type": "text",
+                          "id": "FmA2c",
+                          "name": "c1val",
+                          "fill": "#1A1A1A",
+                          "content": "15.420.000d",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "800"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "4U4cQ",
+                      "name": "Metric Card",
+                      "width": "fill_container",
+                      "fill": "#FFFFFF",
+                      "cornerRadius": 20,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "fm2Ep",
+                          "name": "c2icon",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "group",
+                          "iconFontFamily": "Material Symbols Rounded",
+                          "fill": "#6366F1"
+                        },
+                        {
+                          "type": "text",
+                          "id": "r8aaC",
+                          "name": "c2val",
+                          "fill": "#1A1A1A",
+                          "content": "12",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "800"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wRKX8",
+                  "name": "Row 2",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "YZG6L",
+                      "name": "Metric Card",
+                      "width": "fill_container",
+                      "fill": "#FFFFFF",
+                      "cornerRadius": 20,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "RT0zV",
+                          "name": "c3icon",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "inventory_2",
+                          "iconFontFamily": "Material Symbols Rounded",
+                          "fill": "#F59E0B"
+                        },
+                        {
+                          "type": "text",
+                          "id": "XMN06",
+                          "name": "c3lbl",
+                          "fill": "#9CA3AF",
+                          "content": "Sản phẩm",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "icvKG",
+                          "name": "c3val",
+                          "fill": "#1A1A1A",
+                          "content": "124",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "800"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "3Zvx5",
+                      "name": "Metric Card",
+                      "width": "fill_container",
+                      "fill": "#FFFFFF",
+                      "cornerRadius": 20,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "bUQ82",
+                          "name": "c4icon",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "shopping_cart",
+                          "iconFontFamily": "Material Symbols Rounded",
+                          "fill": "#3B82F6"
+                        },
+                        {
+                          "type": "text",
+                          "id": "rTwFi",
+                          "name": "c4lbl",
+                          "fill": "#9CA3AF",
+                          "content": "Đơn hàng",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "a67Xe",
+                          "name": "c4val",
+                          "fill": "#1A1A1A",
+                          "content": "1,204",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "800"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "M5gLI",
+              "name": "Subscription Card",
+              "width": "fill_container",
+              "fill": "#FFFFFF",
+              "cornerRadius": 24,
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "zp1Pf",
+                  "name": "Header",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "bNp0o",
+                      "name": "subTitle",
+                      "fill": "#1A1A1A",
+                      "content": "Gói Premium",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "800"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "uxbCR",
+                      "name": "Active Badge",
+                      "fill": "#F0FDF4",
+                      "cornerRadius": 8,
+                      "gap": 4,
+                      "padding": [
+                        4,
+                        10
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "0y0VQ",
+                          "name": "subDot",
+                          "width": 6,
+                          "height": 6,
+                          "fill": "#10B981",
+                          "cornerRadius": 3
+                        },
+                        {
+                          "type": "text",
+                          "id": "mSlT4",
+                          "name": "subStatus",
+                          "fill": "#10B981",
+                          "content": "Active",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "T7xXc",
+                  "name": "Info",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "a7AzF",
+                      "name": "expiryLbl",
+                      "fill": "#9CA3AF",
+                      "content": "Hết hạn vào",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "h56Qu",
+                      "name": "expiryVal",
+                      "fill": "#1A1A1A",
+                      "content": "31 Tháng 12, 2024 (Còn 278 ngày)",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "TFcc2",
+                  "name": "Extend Button",
+                  "width": "fill_container",
+                  "height": 48,
+                  "fill": "#10B981",
+                  "cornerRadius": 14,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "AuWjw",
+                      "name": "extendTxt",
+                      "fill": "#FFFFFF",
+                      "content": "Gia hạn Premium",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "SDxe6",
+              "name": "Store Actions",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "YJcAr",
+                  "name": "Edit Button",
+                  "width": "fill_container",
+                  "height": 52,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 16,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#E5E7EB"
+                  },
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "zCBNJ",
+                      "name": "editIcon",
+                      "width": 20,
+                      "height": 20,
+                      "iconFontName": "edit",
+                      "iconFontFamily": "Material Symbols Rounded",
+                      "fill": "#1A1A1A"
+                    },
+                    {
+                      "type": "text",
+                      "id": "LLJzp",
+                      "name": "editTxt",
+                      "fill": "#1A1A1A",
+                      "content": "Chỉnh sửa thông tin",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "u7RmD",
+                  "name": "Block Button",
+                  "width": "fill_container",
+                  "height": 52,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 16,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#E5E7EB"
+                  },
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "6wtec",
+                      "name": "blockIcon",
+                      "width": 20,
+                      "height": 20,
+                      "iconFontName": "block",
+                      "iconFontFamily": "Material Symbols Rounded",
+                      "fill": "#F59E0B"
+                    },
+                    {
+                      "type": "text",
+                      "id": "yO5ya",
+                      "name": "blockTxt",
+                      "fill": "#F59E0B",
+                      "content": "Tạm khóa cửa hàng",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "s4LrV",
+                  "name": "Delete Button",
+                  "width": "fill_container",
+                  "height": 52,
+                  "fill": "#FEF2F2",
+                  "cornerRadius": 16,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#FEE2E2"
+                  },
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "rw2i3",
+                      "name": "deleteIcon",
+                      "width": 20,
+                      "height": 20,
+                      "iconFontName": "delete",
+                      "iconFontFamily": "Material Symbols Rounded",
+                      "fill": "#EF4444"
+                    },
+                    {
+                      "type": "text",
+                      "id": "vDq1Y",
+                      "name": "deleteTxt",
+                      "fill": "#EF4444",
+                      "content": "Xóa cửa hàng",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "HqH4D",
+      "x": 1074,
+      "y": 2939,
+      "name": "Store Detail (Landscape)",
+      "width": 874,
+      "height": 535,
+      "fill": "#F8FAFC",
+      "children": [
+        {
+          "type": "frame",
+          "id": "OTrHV",
+          "name": "Left Panel",
+          "width": 280,
+          "height": "fill_container",
+          "fill": "#FFFFFF",
+          "layout": "vertical",
+          "gap": 20,
+          "padding": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "LjxJq",
+              "name": "Header",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "eUhjW",
+                  "name": "Back",
+                  "width": 32,
+                  "height": 32,
+                  "fill": "#F1F5F9",
+                  "cornerRadius": 8,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "gCaDo",
+                      "name": "lbackI",
+                      "width": 18,
+                      "height": 18,
+                      "iconFontName": "arrow_back",
+                      "iconFontFamily": "Material Symbols Rounded",
+                      "fill": "#1A1A1A"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "Xkmc4",
+                  "name": "ltitle",
+                  "fill": "#1A1A1A",
+                  "content": "Chi tiết",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "800"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "IyZK2",
+              "name": "Store Info",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "k0jXM",
+                  "name": "Logo",
+                  "width": 48,
+                  "height": 48,
+                  "fill": "#10B981",
+                  "cornerRadius": 12,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "agGlc",
+                      "name": "llogoI",
+                      "width": 24,
+                      "height": 24,
+                      "iconFontName": "storefront",
+                      "iconFontFamily": "Material Symbols Rounded",
+                      "fill": "#FFFFFF"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "bnHrK",
+                  "name": "lname",
+                  "fill": "#1A1A1A",
+                  "content": "Moimoi Coffee",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "800"
+                },
+                {
+                  "type": "text",
+                  "id": "uRr6J",
+                  "name": "lid",
+                  "fill": "#9CA3AF",
+                  "content": "ID: MM-20240328",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ltqEc",
+              "name": "Subscription",
+              "fill": "#F0FDF4",
+              "cornerRadius": 14,
+              "layout": "vertical",
+              "gap": 4,
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Aqpd2",
+                  "name": "lsubT",
+                  "fill": "#10B981",
+                  "content": "Gói Premium",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "a9raY",
+                  "name": "lsubE",
+                  "fill": "#059669",
+                  "content": "Hết hạn: 31/12/2024",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "rY68W",
+              "name": "Actions",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "nyZnX",
+                  "name": "Action",
+                  "height": 40,
+                  "fill": "#10B981",
+                  "cornerRadius": 10,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "p0evI",
+                      "name": "lbtn1T",
+                      "fill": "#FFFFFF",
+                      "content": "Gia hạn Premium",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "T9Cfi",
+                  "name": "Action",
+                  "height": 40,
+                  "cornerRadius": 10,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#E5E7EB"
+                  },
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "VnYb6",
+                      "name": "lbtn2T",
+                      "fill": "#1A1A1A",
+                      "content": "Chỉnh sửa cửa hàng",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "0zRPC",
+                  "name": "Action",
+                  "height": 40,
+                  "fill": "#FEF2F2",
+                  "cornerRadius": 10,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "eWBZl",
+                      "name": "lbtn3T",
+                      "fill": "#EF4444",
+                      "content": "Xóa cửa hàng",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "3vwE5",
+          "name": "Right Panel",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "TPbJk",
+              "name": "Right Header",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "5kSDo",
+                  "name": "rhdrT",
+                  "fill": "#1A1A1A",
+                  "content": "Hiệu quả kinh doanh",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "800"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "zHoPo",
+              "name": "Metrics Grid",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "wXTkx",
+                  "name": "Row",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "vSb6d",
+                      "name": "Card",
+                      "width": "fill_container",
+                      "fill": "#FFFFFF",
+                      "cornerRadius": 20,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "#F1F5F9"
+                      },
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "DwtdQ",
+                          "name": "rm1I",
+                          "width": 24,
+                          "height": 24,
+                          "iconFontName": "payments",
+                          "iconFontFamily": "Material Symbols Rounded",
+                          "fill": "#10B981"
+                        },
+                        {
+                          "type": "text",
+                          "id": "tWbFx",
+                          "name": "rm1V",
+                          "fill": "#1A1A1A",
+                          "content": "15.420.000d",
+                          "fontFamily": "Inter",
+                          "fontSize": 18,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "text",
+                          "id": "BXyS1",
+                          "name": "rm1L",
+                          "fill": "#9CA3AF",
+                          "content": "Doanh thu (7d)",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "0U24x",
+                      "name": "Card",
+                      "width": "fill_container",
+                      "fill": "#FFFFFF",
+                      "cornerRadius": 20,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "#F1F5F9"
+                      },
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "1Sa4N",
+                          "name": "rm2I",
+                          "width": 24,
+                          "height": 24,
+                          "iconFontName": "group",
+                          "iconFontFamily": "Material Symbols Rounded",
+                          "fill": "#6366F1"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Y5W1l",
+                          "name": "rm2V",
+                          "fill": "#1A1A1A",
+                          "content": "12",
+                          "fontFamily": "Inter",
+                          "fontSize": 18,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "text",
+                          "id": "eOSrh",
+                          "name": "rm2L",
+                          "fill": "#9CA3AF",
+                          "content": "Nhân viên",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Q8drv",
+              "name": "Chart Card",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "#FFFFFF",
+              "cornerRadius": 24,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#F1F5F9"
+              },
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "cXowI",
+                  "name": "chartH",
+                  "fill": "#1A1A1A",
+                  "content": "Biểu đồ đơn hàng",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "bfffI",
+                  "name": "Chart Area",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "gap": 8,
+                  "padding": [
+                    10,
+                    0
+                  ],
+                  "alignItems": "end",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "bvIjC",
+                      "name": "bar1",
+                      "width": 20,
+                      "height": 40,
+                      "fill": "#10B981",
+                      "cornerRadius": 4
+                    },
+                    {
+                      "type": "frame",
+                      "id": "uTXPo",
+                      "name": "bar2",
+                      "width": 20,
+                      "height": 80,
+                      "fill": "#10B981",
+                      "cornerRadius": 4
+                    },
+                    {
+                      "type": "frame",
+                      "id": "YmH1m",
+                      "name": "bar3",
+                      "width": 20,
+                      "height": 60,
+                      "fill": "#10B981",
+                      "cornerRadius": 4
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mjSBp",
+                      "name": "bar4",
+                      "width": 20,
+                      "height": 100,
+                      "fill": "#10B981",
+                      "cornerRadius": 4
+                    },
+                    {
+                      "type": "frame",
+                      "id": "SgwMU",
+                      "name": "bar5",
+                      "width": 20,
+                      "height": 70,
+                      "fill": "#10B981",
+                      "cornerRadius": 4
+                    }
+                  ]
                 }
               ]
             }

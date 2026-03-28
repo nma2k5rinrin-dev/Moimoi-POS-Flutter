@@ -1,0 +1,176 @@
+﻿Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 93.0.0 (98.0.0 available)
+  analyzer 10.0.1 (12.0.0 available)
+  app_links 6.4.1 (7.0.0 available)
+  async 2.13.0 (2.13.1 available)
+  connectivity_plus 6.1.5 (7.0.0 available)
+  cupertino_icons 1.0.8 (1.0.9 available)
+  dart_jsonwebtoken 3.3.2 (3.4.0 available)
+  dart_style 3.1.7 (3.1.8 available)
+  drift 2.31.0 (2.32.1 available)
+  drift_dev 2.31.0 (2.32.1 available)
+  drift_flutter 0.2.8 (0.3.0 available)
+  flutter_plugin_android_lifecycle 2.0.33 (2.0.34 available)
+  gotrue 2.18.0 (2.19.0 available)
+  image_cropper 11.0.0 (12.1.0 available)
+  image_picker_android 0.8.13+14 (0.8.13+15 available)
+  local_auth_android 2.0.5 (2.0.7 available)
+  meta 1.17.0 (1.18.2 available)
+  native_toolchain_c 0.17.5 (0.17.6 available)
+  path_provider_android 2.2.22 (2.2.23 available)
+  realtime_client 2.7.0 (2.7.1 available)
+  shared_preferences 2.5.4 (2.5.5 available)
+  shared_preferences_android 2.4.21 (2.4.23 available)
+  shared_preferences_platform_interface 2.4.1 (2.4.2 available)
+  sqlite3 2.9.4 (3.2.0 available)
+  sqlite3_flutter_libs 0.5.42 (0.6.0+eol available)
+  sqlparser 0.43.1 (0.44.3 available)
+  storage_client 2.4.1 (2.5.1 available)
+  supabase 2.10.2 (2.10.4 available)
+  supabase_flutter 2.12.0 (2.12.2 available)
+  test_api 0.7.10 (0.7.11 available)
+  url_launcher_android 6.3.28 (6.3.29 available)
+  vector_math 2.2.0 (2.3.0 available)
+  win32 5.15.0 (6.0.0 available)
+  workmanager 0.5.2 (0.9.0+3 available)
+Got dependencies!
+34 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Analyzing Moimoi-POS-Flutter...                                 
+
+  error - The named parameter 'password' isn't defined - lib\core\database\app_database.dart:155:7 - undefined_named_parameter
+   info - Field overrides a field inherited from 'InventoryStore' - lib\core\state\app_store.dart:99:36 - overridden_fields
+   info - Field overrides a field inherited from 'InventoryStore' - lib\core\state\app_store.dart:101:35 - overridden_fields
+   info - Field overrides a field inherited from 'OrderStore' - lib\core\state\app_store.dart:105:20 - overridden_fields
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:123:7 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:609:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:645:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:730:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:760:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:780:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:815:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:834:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:857:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:890:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:929:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:943:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:963:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:1006:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:1020:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:1045:5 - undefined_method
+  error - Undefined name '_searchDebounce' - lib\core\state\app_store.dart:1524:5 - undefined_identifier
+   info - The member 'setSearchQuery' overrides an inherited member but isn't annotated with '@override' - lib\core\state\app_store.dart:1528:8 - annotate_overrides
+  error - Undefined name '_searchDebounce' - lib\core\state\app_store.dart:1533:5 - undefined_identifier
+  error - Undefined name '_searchDebounce' - lib\core\state\app_store.dart:1534:5 - undefined_identifier
+  error - The method 'ConfirmDialogData' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:1573:21 - undefined_method
+   info - The parameter name 'isOpen' doesn't match the name 'open' in the overridden method - lib\core\state\app_store.dart:1596:33 - avoid_renaming_method_parameters
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:1604:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:1615:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:1626:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:1644:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:1690:5 - undefined_method
+  error - The method '_optimistic' isn't defined for the type 'AppStore' - lib\core\state\app_store.dart:1784:5 - undefined_method
+  error - Undefined name '_orderSoundPlayer' - lib\core\state\app_store.dart:1795:13 - undefined_identifier
+  error - Undefined name '_orderSoundPlayer' - lib\core\state\app_store.dart:1796:13 - undefined_identifier
+  error - Undefined name '_orderSoundPlayer' - lib\core\state\app_store.dart:1797:13 - undefined_identifier
+  error - Undefined name '_ordersChannel' - lib\core\state\app_store.dart:1809:5 - undefined_identifier
+  error - Undefined name '_productsChannel' - lib\core\state\app_store.dart:1896:5 - undefined_identifier
+  error - Undefined name '_notiChannel' - lib\core\state\app_store.dart:1936:5 - undefined_identifier
+  error - Undefined name '_upgradeChannel' - lib\core\state\app_store.dart:1956:5 - undefined_identifier
+  error - Undefined name '_thuChiChannel' - lib\core\state\app_store.dart:1982:5 - undefined_identifier
+  error - Undefined name '_categoriesChannel' - lib\core\state\app_store.dart:2017:5 - undefined_identifier
+  error - Undefined name '_usersChannel' - lib\core\state\app_store.dart:2057:5 - undefined_identifier
+  error - Undefined name '_storeInfoChannel' - lib\core\state\app_store.dart:2094:5 - undefined_identifier
+  error - Undefined name '_ordersChannel' - lib\core\state\app_store.dart:2125:9 - undefined_identifier
+  error - Undefined name '_ordersChannel' - lib\core\state\app_store.dart:2125:57 - undefined_identifier
+  error - Undefined name '_productsChannel' - lib\core\state\app_store.dart:2126:9 - undefined_identifier
+  error - Undefined name '_productsChannel' - lib\core\state\app_store.dart:2126:59 - undefined_identifier
+  error - Undefined name '_notiChannel' - lib\core\state\app_store.dart:2127:9 - undefined_identifier
+  error - Undefined name '_notiChannel' - lib\core\state\app_store.dart:2127:55 - undefined_identifier
+  error - Undefined name '_upgradeChannel' - lib\core\state\app_store.dart:2128:9 - undefined_identifier
+  error - Undefined name '_upgradeChannel' - lib\core\state\app_store.dart:2128:58 - undefined_identifier
+  error - Undefined name '_thuChiChannel' - lib\core\state\app_store.dart:2129:9 - undefined_identifier
+  error - Undefined name '_thuChiChannel' - lib\core\state\app_store.dart:2129:57 - undefined_identifier
+  error - Undefined name '_categoriesChannel' - lib\core\state\app_store.dart:2130:9 - undefined_identifier
+  error - Undefined name '_categoriesChannel' - lib\core\state\app_store.dart:2130:61 - undefined_identifier
+  error - Undefined name '_usersChannel' - lib\core\state\app_store.dart:2131:9 - undefined_identifier
+  error - Undefined name '_usersChannel' - lib\core\state\app_store.dart:2131:56 - undefined_identifier
+  error - Undefined name '_storeInfoChannel' - lib\core\state\app_store.dart:2132:9 - undefined_identifier
+  error - Undefined name '_storeInfoChannel' - lib\core\state\app_store.dart:2132:60 - undefined_identifier
+  error - Undefined name '_ordersChannel' - lib\core\state\app_store.dart:2133:5 - undefined_identifier
+  error - Undefined name '_productsChannel' - lib\core\state\app_store.dart:2134:5 - undefined_identifier
+  error - Undefined name '_notiChannel' - lib\core\state\app_store.dart:2135:5 - undefined_identifier
+  error - Undefined name '_upgradeChannel' - lib\core\state\app_store.dart:2136:5 - undefined_identifier
+  error - Undefined name '_thuChiChannel' - lib\core\state\app_store.dart:2137:5 - undefined_identifier
+  error - Undefined name '_categoriesChannel' - lib\core\state\app_store.dart:2138:5 - undefined_identifier
+  error - Undefined name '_usersChannel' - lib\core\state\app_store.dart:2139:5 - undefined_identifier
+  error - Undefined name '_storeInfoChannel' - lib\core\state\app_store.dart:2140:5 - undefined_identifier
+  error - Undefined name '_cachedStoreUsernames' - lib\core\state\app_store.dart:2145:9 - undefined_identifier
+  error - Undefined name '_cachedStoreUsernames' - lib\core\state\app_store.dart:2145:47 - undefined_identifier
+  error - Undefined name '_cachedStoreUsernames' - lib\core\state\app_store.dart:2167:5 - undefined_identifier
+  error - Undefined name '_cachedStoreOrders' - lib\core\state\app_store.dart:2172:9 - undefined_identifier
+  error - Undefined name '_cachedStoreOrders' - lib\core\state\app_store.dart:2172:44 - undefined_identifier
+  error - Undefined name '_cachedStoreOrders' - lib\core\state\app_store.dart:2175:5 - undefined_identifier
+  error - Undefined name '_cachedStoreOrders' - lib\core\state\app_store.dart:2176:12 - undefined_identifier
+  error - Undefined name '_cachedVisibleOrders' - lib\core\state\app_store.dart:2190:9 - undefined_identifier
+  error - Undefined name '_cachedVisibleOrders' - lib\core\state\app_store.dart:2190:46 - undefined_identifier
+  error - Undefined name '_cachedVisibleOrders' - lib\core\state\app_store.dart:2205:5 - undefined_identifier
+  error - Expected a method, getter, setter or operator declaration - lib\core\state\app_store.dart:2210:1 - expected_executable
+  error - 1 positional argument expected by 'AppDatabase.new', but 0 found - lib\core\sync\sync_worker.dart:19:30 - not_enough_positional_arguments
+warning - Dead code - lib\core\widgets\confirm_modal.dart:18:30 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\core\widgets\confirm_modal.dart:18:33 - dead_null_aware_expression
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\core\widgets\crop\avatar_crop_dialog.dart:425:51 - use_build_context_synchronously
+warning - The value of the field '_cachesDirty' isn't used - lib\features\auth\logic\auth_store.dart:16:8 - unused_field
+  error - Undefined class 'Timer' - lib\features\auth\logic\auth_store.dart:17:3 - undefined_class
+warning - The value of the field '_searchDebounce' isn't used - lib\features\auth\logic\auth_store.dart:17:10 - unused_field
+warning - The declaration '_formatDateTime' isn't referenced - lib\features\dashboard\presentation\admin\admin_dashboard_page.dart:1300:10 - unused_element
+warning - The value of the local variable 'address' isn't used - lib\features\dashboard\presentation\admin\admin_dashboard_page.dart:1620:43 - unused_local_variable
+warning - The declaration '_DialogField' isn't referenced - lib\features\dashboard\presentation\admin\admin_dashboard_page.dart:1792:7 - unused_element
+warning - A value for optional parameter 'keyboardType' isn't ever given - lib\features\dashboard\presentation\admin\admin_dashboard_page.dart:1803:10 - unused_element_parameter
+warning - A value for optional parameter 'obscure' isn't ever given - lib\features\dashboard\presentation\admin\admin_dashboard_page.dart:1804:10 - unused_element_parameter
+warning - The value of the field '_timeRange' isn't used - lib\features\dashboard\presentation\dashboard_page.dart:18:10 - unused_field
+warning - The declaration '_TimeChip' isn't referenced - lib\features\dashboard\presentation\dashboard_page.dart:461:7 - unused_element
+warning - The declaration '_DateRangePicker' isn't referenced - lib\features\dashboard\presentation\dashboard_page.dart:503:7 - unused_element
+warning - The declaration '_StatCard' isn't referenced - lib\features\dashboard\presentation\dashboard_page.dart:581:7 - unused_element
+warning - The declaration '_MiniStat' isn't referenced - lib\features\dashboard\presentation\dashboard_page.dart:1131:7 - unused_element
+warning - Unused import: 'package:moimoi_pos/features/dashboard/presentation/widgets/store_selector.dart' - lib\features\dashboard\presentation\main_shell.dart:10:8 - unused_import
+   info - Missing type annotation - lib\features\dashboard\presentation\processing_page.dart:1351:33 - strict_top_level_inference
+warning - The value of the local variable 'allCategories' isn't used - lib\features\dashboard\presentation\processing_page.dart:1439:11 - unused_local_variable
+warning - The declaration '_miniBtn' isn't referenced - lib\features\dashboard\presentation\processing_page.dart:1941:10 - unused_element
+warning - The declaration '_ActionButton' isn't referenced - lib\features\dashboard\presentation\processing_page.dart:1999:7 - unused_element
+warning - The value of the field '_supabase' isn't used - lib\features\inventory\logic\inventory_store.dart:8:24 - unused_field
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\features\inventory\presentation\add_category_screen.dart:56:57 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\features\inventory\presentation\add_category_screen.dart:56:77 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\features\inventory\presentation\add_category_screen.dart:609:61 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\features\inventory\presentation\add_product_screen.dart:833:9 - use_build_context_synchronously
+warning - The value of the field '_supabase' isn't used - lib\features\pos_order\logic\order_store.dart:8:24 - unused_field
+   info - Missing type annotation - lib\features\pos_order\presentation\history\orders_page.dart:1823:33 - strict_top_level_inference
+warning - The declaration '_miniBtn' isn't referenced - lib\features\pos_order\presentation\history\orders_page.dart:2411:10 - unused_element
+warning - The declaration '_ActionButton' isn't referenced - lib\features\pos_order\presentation\history\orders_page.dart:2510:7 - unused_element
+warning - The value of the local variable 'storeInfo' isn't used - lib\features\pos_order\presentation\order_page.dart:79:11 - unused_local_variable
+warning - The declaration '_showStoreSelector' isn't referenced - lib\features\pos_order\presentation\order_page.dart:273:8 - unused_element
+warning - The declaration '_tableOption' isn't referenced - lib\features\pos_order\presentation\order_page.dart:973:17 - unused_element
+   info - Missing type annotation - lib\features\pos_order\presentation\widgets\payment_confirmation_dialog.dart:285:26 - strict_top_level_inference
+warning - The value of the field '_justApproved' isn't used - lib\features\premium\presentation\premium_page.dart:25:8 - unused_field
+warning - The value of the field '_supabase' isn't used - lib\features\settings\logic\management_store.dart:10:24 - unused_field
+warning - The value of the field '_subScreen' isn't used - lib\features\settings\presentation\menu_management.dart:24:11 - unused_field
+warning - The value of the field '_editingProduct' isn't used - lib\features\settings\presentation\menu_management.dart:25:17 - unused_field
+warning - The value of the field '_editingCategory' isn't used - lib\features\settings\presentation\menu_management.dart:26:18 - unused_field
+warning - The value of the local variable 'categories' isn't used - lib\features\settings\presentation\menu_management.dart:67:11 - unused_local_variable
+warning - The declaration '_showProductDialog' isn't referenced - lib\features\settings\presentation\menu_management.dart:280:8 - unused_element
+warning - The declaration '_showCategoryDialog' isn't referenced - lib\features\settings\presentation\menu_management.dart:408:8 - unused_element
+warning - The declaration '_showCategoryDialog' isn't referenced - lib\features\settings\presentation\menu_management.dart:893:8 - unused_element
+   info - Don't use 'BuildContext's across async gaps - lib\features\settings\presentation\sections\account_section.dart:65:23 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\settings\presentation\sections\store_info_section.dart:75:7 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\settings\presentation\sections\store_info_section.dart:102:7 - use_build_context_synchronously
+warning - The value of the field '_showPanel' isn't used - lib\features\settings\presentation\sections\tables_section.dart:20:8 - unused_field
+warning - The value of the field '_showPanel' isn't used - lib\features\settings\presentation\sections\users_section.dart:25:8 - unused_field
+
+flutter : 127 issues found. (ran in 1.9s)
+At line:1 char:1
++ flutter analyze > analyze_output_v2.txt 2>&1; Get-Content analyze_out ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (127 issues found. (ran in 1.9s):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

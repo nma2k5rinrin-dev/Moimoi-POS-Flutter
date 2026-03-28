@@ -65,7 +65,11 @@ dependencies:
   workmanager: ^0.5.2
   path_provider: ^2.1.5
   path: ^1.9.1
+  sqflite_sqlcipher: ^3.4.0
+  drift_sqflite: ^2.0.1
+  flutter_secure_storage: ^10.0.0
 
+  vector_math: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

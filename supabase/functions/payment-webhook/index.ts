@@ -121,6 +121,16 @@ Deno.serve(async (req) => {
       status: 'approved',
     }).eq('id', matched.id)
 
+    // Record premium payment history
+    await supabase.from('premium_payments').insert({
+      id: `pp_${Date.now()}`,
+      username: matched.username,
+      plan_name: matched.plan_name,
+      months: matched.months,
+      amount: matched.amount,
+      paid_at: new Date().toISOString(),
+    })
+
     // ── Send notification to sadmin(s) ──
     const { data: sadmins } = await supabase
       .from('users')

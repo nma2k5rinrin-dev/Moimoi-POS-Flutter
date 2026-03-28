@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
-import 'services/supabase_service.dart';
-import 'store/app_store.dart';
-import 'router/app_router.dart';
-import 'utils/constants.dart';
-import 'widgets/toast_overlay.dart';
-import 'widgets/confirm_modal.dart';
-import 'db/app_database.dart';
-import 'sync/connectivity_service.dart';
-import 'sync/sync_engine.dart';
-import 'sync/sync_worker.dart';
+import 'package:moimoi_pos/services/api/supabase_service.dart';
+import 'package:moimoi_pos/core/state/app_store.dart';
+import 'package:moimoi_pos/core/router/app_router.dart';
+import 'package:moimoi_pos/core/utils/constants.dart';
+import 'package:moimoi_pos/core/widgets/toast_overlay.dart';
+import 'package:moimoi_pos/core/widgets/confirm_modal.dart';
+import 'package:moimoi_pos/core/database/app_database.dart';
+import 'package:moimoi_pos/services/connectivity/connectivity_service.dart';
+import 'package:moimoi_pos/core/sync/sync_engine.dart';
+import 'package:moimoi_pos/core/sync/sync_worker.dart';
+import 'package:moimoi_pos/core/utils/security_utils.dart';
 
 // Global instances for offline-first
 AppDatabase? appDb;
@@ -26,12 +27,13 @@ void main() async {
     debugPrint('[Supabase Init Error] $e');
   }
 
-  // Init Drift database (may fail on web due to WASM)
+  // Init Drift database
   try {
-    appDb = AppDatabase();
-    debugPrint('[Drift] Database initialized OK');
+    final encryptionKey = await SecurityUtils.getDatabaseKey();
+    appDb = AppDatabase.connect(encryptionKey);
+    debugPrint('[Drift] Encrypted database initialized OK');
   } catch (e) {
-    debugPrint('[Drift] Database init failed (web WASM?): $e');
+    debugPrint('[Drift] Database init failed: $e');
     appDb = null;
   }
 
