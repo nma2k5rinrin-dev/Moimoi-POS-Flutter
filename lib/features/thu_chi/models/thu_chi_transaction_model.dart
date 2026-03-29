@@ -1,4 +1,4 @@
-class ThuChiTransaction {
+class Transaction {
   final String id;
   final String storeId;
   final String type; // 'thu' or 'chi'
@@ -8,7 +8,7 @@ class ThuChiTransaction {
   final String time;
   final String createdBy;
 
-  const ThuChiTransaction({
+  const Transaction({
     required this.id,
     required this.storeId,
     required this.type,
@@ -19,8 +19,8 @@ class ThuChiTransaction {
     this.createdBy = '',
   });
 
-  factory ThuChiTransaction.fromMap(Map<String, dynamic> map) {
-    return ThuChiTransaction(
+  factory Transaction.fromMap(Map<String, dynamic> map) {
+    return Transaction(
       id: map['id']?.toString() ?? '',
       storeId: map['store_id'] ?? '',
       type: map['type'] ?? 'thu',
@@ -45,7 +45,7 @@ class ThuChiTransaction {
     };
   }
 
-  ThuChiTransaction copyWith({
+  Transaction copyWith({
     String? id,
     String? storeId,
     String? type,
@@ -55,7 +55,7 @@ class ThuChiTransaction {
     String? time,
     String? createdBy,
   }) {
-    return ThuChiTransaction(
+    return Transaction(
       id: id ?? this.id,
       storeId: storeId ?? this.storeId,
       type: type ?? this.type,
@@ -67,3 +67,6 @@ class ThuChiTransaction {
     );
   }
 }
+
+/// Backward-compatible alias
+typedef ThuChiTransaction = Transaction;

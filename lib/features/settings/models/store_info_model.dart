@@ -102,13 +102,15 @@ class StoreInfoModel {
   }
 
   /// Số ngày offline kể từ lần đăng nhập cuối (tính theo ngày lịch hệ thống UTC)
+  /// Nếu chưa bao giờ đăng nhập, tính từ ngày tạo tài khoản
   int get consecutiveOfflineDays {
-    if (lastLoginAt == null) return 0;
+    final referenceDate = lastLoginAt ?? createdAt;
+    if (referenceDate == null) return 0;
     final utcNow = DateTime.now().toUtc();
-    final utcLast = lastLoginAt!.toUtc();
-    final last = DateTime.utc(utcLast.year, utcLast.month, utcLast.day);
+    final utcRef = referenceDate.toUtc();
+    final ref = DateTime.utc(utcRef.year, utcRef.month, utcRef.day);
     final today = DateTime.utc(utcNow.year, utcNow.month, utcNow.day);
-    final diff = today.difference(last).inDays;
+    final diff = today.difference(ref).inDays;
     return diff > 0 ? diff : 0;
   }
 

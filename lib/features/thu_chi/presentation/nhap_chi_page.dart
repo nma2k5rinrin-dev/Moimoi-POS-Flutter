@@ -424,7 +424,7 @@ class _NhapChiPageState extends State<NhapChiPage> {
       return;
     }
     final store = context.read<AppStore>();
-    store.addThuChiTransaction(
+    store.addTransaction(
       type: 'chi',
       amount: amount,
       category: _categories[_selectedCategory].label,

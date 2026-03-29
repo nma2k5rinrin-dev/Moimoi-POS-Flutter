@@ -16,7 +16,7 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   String _timeRange = 'range';
-  DateTime _dateFrom = DateTime.now();
+  DateTime _dateFrom = DateTime(DateTime.now().year, DateTime.now().month, 1);
   DateTime _dateTo = DateTime.now();
 
   @override
@@ -31,6 +31,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final filteredOrders = _filterByTime(completedPaidOrders);
     final cancelledOrders =
         _filterByTime(allOrders.where((o) => o.status == 'cancelled').toList());
+
 
     final totalRevenue =
         filteredOrders.fold(0.0, (acc, o) => acc + o.calculatedTotal);

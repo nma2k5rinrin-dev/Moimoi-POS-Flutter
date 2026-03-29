@@ -344,8 +344,71 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
 
   Widget _buildBottomActions(AppStore store) {
     return Padding(
-      padding: const EdgeInsets.all(20),
-      child: ElevatedButton(onPressed: () => _saveStoreInfo(store), child: const Center(child: Text('Lưu thay đổi'))),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600),
+        child: Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  final info = store.currentStoreInfo;
+                  _nameController.text = info.name;
+                  _phoneController.text = info.phone;
+                  _addressController.text = info.address;
+                  _taxIdController.text = info.taxId;
+                  _openHoursController.text = info.openHours;
+                  _bankNameController.text = info.bankId;
+                  _bankAccountController.text = info.bankAccount;
+                  _bankOwnerController.text = info.bankOwner;
+                  setState(() => _qrImageUrl = info.qrImageUrl);
+                },
+                child: Container(
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: AppColors.slate50,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.slate200),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.close_rounded, size: 18, color: AppColors.slate500),
+                      SizedBox(width: 6),
+                      Text('Hủy bỏ',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
+                            color: AppColors.slate600)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _saveStoreInfo(store),
+                child: Container(
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: AppColors.emerald500,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.save_rounded, size: 18, color: Colors.white),
+                      SizedBox(width: 6),
+                      Text('Lưu thay đổi',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
+                            color: Colors.white)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

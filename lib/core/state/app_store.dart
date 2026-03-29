@@ -113,7 +113,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
   RealtimeChannel? _productsChannel;
   RealtimeChannel? _notiChannel;
   RealtimeChannel? _upgradeChannel;
-  RealtimeChannel? _thuChiChannel;
+  RealtimeChannel? _transactionsChannel;
   RealtimeChannel? _categoriesChannel;
   RealtimeChannel? _usersChannel;
   RealtimeChannel? _storeInfoChannel;
@@ -122,6 +122,15 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
   List<String>? _cachedStoreUsernames;
   List<OrderModel>? _cachedStoreOrders;
   List<OrderModel>? _cachedVisibleOrders;
+
+  @override
+  void notifyListeners() {
+    // Invalidate memoized caches on every state change
+    _cachedStoreUsernames = null;
+    _cachedStoreOrders = null;
+    _cachedVisibleOrders = null;
+    super.notifyListeners();
+  }
 
 
   // ── Offline-First Helper ──────────────────────────────
@@ -220,7 +229,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
               : user.username;
 
       final isPremium = user.isPremium || user.role == 'sadmin';
-      final daysToKeep = isPremium ? 365 : 3;
+      final daysToKeep = isPremium ? 365 : 30;
       final cutoff = DateTime.now().subtract(Duration(days: daysToKeep));
 
       // Build orders query
@@ -230,10 +239,10 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
       }
       ordersQuery = ordersQuery.gte('time', cutoff.toIso8601String());
 
-      // Build thu_chi query
-      var thuChiQuery = _supabase.from('thu_chi_transactions').select();
+      // Build transactions query
+      var txnQuery = _supabase.from('transactions').select();
       if (storeId != null) {
-        thuChiQuery = thuChiQuery.eq('store_id', storeId);
+        txnQuery = txnQuery.eq('store_id', storeId);
       }
 
       // Build store info query
@@ -261,7 +270,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
             .order('time', ascending: false),                     // 6
         _supabase.from('upgrade_requests').select()
             .order('time', ascending: false),                     // 7
-        thuChiQuery.order('time', ascending: false),              // 8
+        txnQuery.order('time', ascending: false),                 // 8
       ]);
 
       // Process results
@@ -318,8 +327,8 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
           .map((r) => UpgradeRequestModel.fromMap(r))
           .toList();
 
-      thuChiTransactions = (results[8])
-          .map((r) => ThuChiTransaction.fromMap(r))
+      transactions = (results[8])
+          .map((r) => Transaction.fromMap(r))
           .toList();
 
       try {
@@ -334,6 +343,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
       }
 
       // ── Cache into Drift for offline use ──
+      try {
       if (_db != null) {
         final sid = storeId ?? 'sadmin';
         // Cache orders
@@ -390,8 +400,8 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
         if (catCompanions.isNotEmpty) {
           await _db!.replaceAllCategories(sid, catCompanions);
         }
-        // Cache thu chi
-        for (final t in thuChiTransactions) {
+        // Cache transactions
+        for (final t in transactions) {
           await _db!.upsertThuChi(LocalThuChiCompanion(
             id: Value(t.id),
             storeId: Value(t.storeId),
@@ -408,7 +418,10 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
         final now = DateTime.now().toIso8601String();
         await _db!.setKv('last_pull_orders_at', now);
         await _db!.setKv('last_pull_thuchi_at', now);
-        debugPrint('[Drift] Cached ${orders.length} orders, ${prodCompanions.length} products, ${catCompanions.length} categories, ${thuChiTransactions.length} thu/chi');
+        debugPrint('[Drift] Cached ${orders.length} orders, ${prodCompanions.length} products, ${catCompanions.length} categories, ${transactions.length} transactions');
+      }
+      } catch (driftErr) {
+        debugPrint('[Drift Cache] Error (non-fatal): $driftErr');
       }
 
       isLoading = false;
@@ -427,21 +440,27 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
   @override
   Future<String> login(String username, String password) async {
     final cleanUsername = username.toLowerCase().replaceAll(RegExp(r'\s'), '');
+    final fakeEmail = '$cleanUsername@moimoi.local';
+
     try {
-      final response = await _supabase
+      // Đăng nhập qua Supabase Auth (JWT Token)
+      final authResponse = await _supabase.auth.signInWithPassword(
+        email: fakeEmail,
+        password: password,
+      );
+
+      if (authResponse.user == null) return 'invalid';
+
+      // Lấy Profile từ public.users (RLS sẽ chỉ trả về row của chính mình)
+      final userResponse = await _supabase
           .from('users')
           .select()
-          .ilike('username', cleanUsername);
+          .eq('id', authResponse.user!.id)
+          .maybeSingle();
 
-      if (response.isEmpty) return 'invalid';
+      if (userResponse == null) return 'invalid';
 
-      final rawUser = (response as List).cast<Map<String, dynamic>>().firstWhere(
-        (u) => u['pass'] == password,
-        orElse: () => {},
-      );
-      if (rawUser.isEmpty) return 'invalid';
-
-      var user = UserModel.fromMap(rawUser);
+      var user = UserModel.fromMap(userResponse);
 
       // Check VIP expiration
       if (user.role == 'admin' && user.expiresAt != null) {
@@ -521,6 +540,10 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     await prefs.remove(_kBioPass);
   }
 
+  /// Aliases for mixin compatibility
+  Future<Map<String, String>?> getCachedCredentials() => getSavedCredentials();
+  Future<void> clearCachedCredentials() => clearSavedCredentials();
+
   /// Login using saved credentials after biometric verification.
   @override
   Future<String> loginWithBiometric() async {
@@ -540,18 +563,24 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     required String password,
     String address = '',
   }) async {
+    final cleanUsername = username.toLowerCase().replaceAll(RegExp(r'\s'), '');
+    final fakeEmail = '$cleanUsername@moimoi.local';
+
     try {
-      final existing = await _supabase
-          .from('users')
-          .select('username')
-          .eq('username', username);
-      if ((existing as List).isNotEmpty) {
-        showToast('Tên đăng nhập đã tồn tại', 'error');
-        return 'exists';
+      // Đăng ký qua Supabase Auth
+      final authResponse = await _supabase.auth.signUp(
+        email: fakeEmail,
+        password: password,
+      );
+
+      if (authResponse.user == null) {
+        showToast('Tên đăng nhập đã tồn tại hoặc lỗi mạng', 'error');
+        return 'error';
       }
 
       final newUser = {
-        'username': username,
+        'id': authResponse.user!.id,
+        'username': cleanUsername,
         'pass': password,
         'role': 'admin',
         'fullname': fullname,
@@ -560,8 +589,9 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
       };
 
       await _supabase.from('users').insert(newUser);
+
       final storeData = <String, dynamic>{
-        'store_id': username,
+        'store_id': cleanUsername,
         'name': storeName.isNotEmpty ? storeName : fullname,
         'phone': phone,
         'is_premium': false,
@@ -576,6 +606,14 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
       notifyListeners();
       await loadInitialData(mappedUser);
       return 'success';
+    } on AuthException catch (e) {
+      debugPrint('[register] AuthException: $e');
+      if (e.message.contains('already registered') || e.message.contains('User already registered')) {
+        showToast('Tên đăng nhập đã tồn tại', 'error');
+        return 'exists';
+      }
+      showToast('Đăng ký thất bại: ${e.message}', 'error');
+      return 'error';
     } catch (e) {
       debugPrint('[register] $e');
       showToast('Đăng ký thất bại', 'error');
@@ -596,7 +634,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     orders = [];
     notifications = [];
     upgradeRequests = [];
-    thuChiTransactions = [];
+    transactions = [];
     cart = [];
     selectedTable = '';
     authNotifier.notify();
@@ -659,12 +697,16 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
 
   // ── Delete User ─────────────────────────────────────────
   void deleteUser(String username) {
+    if (username == currentUser?.username) {
+        showToast('Không thể tự xóa bản thân', 'error');
+        return;
+    }
     final oldUsers = List<UserModel>.from(users);
     optimistic(
       apply: () {
         users.removeWhere((u) => u.username == username);
       },
-      remote: () => _supabase.from('users').delete().eq('username', username),
+      remote: () => _supabase.rpc('admin_delete_user', params: {'p_username': username}),
       rollback: () { users = oldUsers; },
       errorMsg: 'Xoá người dùng thất bại, đã hoàn tác',
     );
@@ -694,19 +736,30 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     }
 
 
-    final newStaffRow = {
-      'username': username,
-      'pass': password,
-      'role': role,
-      'fullname': fullname,
-      'phone': phone,
-      'avatar': '',
-      'is_premium': false,
-      'created_by': createdBy ?? currentUser?.username,
-    };
-
     try {
-      await _supabase.from('users').insert(newStaffRow);
+      final response = await _supabase.rpc('admin_create_user', params: {
+        'p_username': username,
+        'p_password': password,
+        'p_role': role,
+        'p_fullname': fullname,
+        'p_phone': phone,
+        'p_created_by': createdBy ?? currentUser?.username,
+      });
+      
+      final newUserId = response.toString(); // uuid
+
+      final newStaffRow = {
+        'id': newUserId,
+        'username': username,
+        'pass': password,
+        'role': role,
+        'fullname': fullname,
+        'phone': phone,
+        'avatar': '',
+        'is_premium': false,
+        'created_by': createdBy ?? currentUser?.username,
+      };
+
       if (role == 'admin') {
         final newStoreInfo = {
           'store_id': username,
@@ -804,10 +857,10 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
       remote: () async {
         // Delete staff users first
         for (final staffUsername in staffToDelete) {
-          await _supabase.from('users').delete().eq('username', staffUsername);
+          await _supabase.rpc('admin_delete_user', params: {'p_username': staffUsername});
         }
         // Delete admin user
-        await _supabase.from('users').delete().eq('username', storeId);
+        await _supabase.rpc('admin_delete_user', params: {'p_username': storeId});
         // Delete store info
         await _supabase.from('store_infos').delete().eq('store_id', storeId);
       },
@@ -1390,27 +1443,26 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     );
   }
 
-  // ── Thu Chi Transactions ────────────────────────────────
-  Future<void> loadThuChiTransactions(String? storeId) async {
+  // ── Transactions ────────────────────────────────────────
+  Future<void> loadTransactions(String? storeId) async {
     try {
       PostgrestFilterBuilder query = _supabase
-          .from('thu_chi_transactions')
+          .from('transactions')
           .select();
       if (storeId != null) {
         query = query.eq('store_id', storeId);
       }
       final data = await query.order('time', ascending: false);
-      thuChiTransactions = (data as List)
-          .map((r) => ThuChiTransaction.fromMap(r))
+      transactions = (data as List)
+          .map((r) => Transaction.fromMap(r))
           .toList();
     } catch (e) {
-      debugPrint('[loadThuChiTransactions] $e');
-      // Table may not exist yet — silently ignore
-      thuChiTransactions = [];
+      debugPrint('[loadTransactions] $e');
+      transactions = [];
     }
   }
 
-  Future<void> addThuChiTransaction({
+  Future<void> addTransaction({
     required String type,
     required double amount,
     required String category,
@@ -1419,9 +1471,9 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
   }) async {
     // Quota check for Basic tier
     final quota = QuotaHelper(this);
-    if (!quota.canUseThuChi) {
+    if (!quota.canUseTransactions) {
       final ctx = rootContext;
-      if (ctx != null) await showUpgradePrompt(ctx, quota.thuChiLimitMsg);
+      if (ctx != null) await showUpgradePrompt(ctx, quota.transactionLimitMsg);
       return;
     }
     final storeId = getStoreId();
@@ -1441,13 +1493,13 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
       'time': txnTime,
       'created_by': createdBy,
     };
-    final txnModel = ThuChiTransaction.fromMap(newTxn);
+    final txnModel = Transaction.fromMap(newTxn);
     await _offlineFirst(
-      table: 'thu_chi_transactions',
+      table: 'transactions',
       operation: 'INSERT',
       recordId: txnId,
       payload: newTxn,
-      applyInMemory: () { thuChiTransactions.insert(0, txnModel); },
+      applyInMemory: () { transactions.insert(0, txnModel); },
       applyDrift: () => _db!.upsertThuChi(LocalThuChiCompanion(
         id: Value(txnId),
         storeId: Value(storeId),
@@ -1459,10 +1511,19 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
         createdBy: Value(createdBy),
         isSynced: const Value(false),
       )),
-      rollback: () { thuChiTransactions.removeWhere((t) => t.id == txnId); },
+      rollback: () { transactions.removeWhere((t) => t.id == txnId); },
       errorMsg: 'Lưu giao dịch thất bại, đã hoàn tác',
     );
   }
+
+  // Backward compat alias
+  Future<void> addThuChiTransaction({
+    required String type,
+    required double amount,
+    required String category,
+    String note = '',
+    DateTime? date,
+  }) => addTransaction(type: type, amount: amount, category: category, note: note, date: date);
 
   // ── Cart ────────────────────────────────────────────────
   void addToCart(ProductModel product) {
@@ -1762,8 +1823,21 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     }).eq('username', req.username);
     await _supabase
         .from('store_infos')
-        .update({'is_premium': true})
+        .update({
+          'is_premium': true,
+          'premium_expires_at': baseDate.toIso8601String(),
+          'premium_activated_at': DateTime.now().toIso8601String(),
+        })
         .eq('store_id', req.username);
+
+    // Update local storeInfos cache
+    if (storeInfos.containsKey(req.username)) {
+      storeInfos[req.username] = storeInfos[req.username]!.copyWith(
+        isPremium: true,
+        premiumExpiresAt: baseDate,
+        premiumActivatedAt: DateTime.now(),
+      );
+    }
 
     // ── Record premium payment history ──
     final paymentId = 'pp_${DateTime.now().millisecondsSinceEpoch}';
@@ -1998,11 +2072,11 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
       },
     ).subscribe();
 
-    // Thu Chi Transactions realtime
-    _thuChiChannel = _supabase.channel('thu-chi-changes').onPostgresChanges(
+    // Transactions realtime
+    _transactionsChannel = _supabase.channel('transactions-changes').onPostgresChanges(
       event: PostgresChangeEvent.all,
       schema: 'public',
-      table: 'thu_chi_transactions',
+      table: 'transactions',
       filter: storeId != null
           ? PostgresChangeFilter(
               type: PostgresChangeFilterType.eq,
@@ -2013,19 +2087,19 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
       callback: (payload) {
         if (storeId == null && user.role == 'sadmin') return; 
         if (payload.eventType == PostgresChangeEvent.insert) {
-          final t = ThuChiTransaction.fromMap(payload.newRecord);
-          if (!thuChiTransactions.any((x) => x.id == t.id)) {
-            thuChiTransactions = [t, ...thuChiTransactions];
+          final t = Transaction.fromMap(payload.newRecord);
+          if (!transactions.any((x) => x.id == t.id)) {
+            transactions = [t, ...transactions];
             notifyListeners();
           }
         } else if (payload.eventType == PostgresChangeEvent.update) {
-          final t = ThuChiTransaction.fromMap(payload.newRecord);
-          thuChiTransactions = thuChiTransactions
+          final t = Transaction.fromMap(payload.newRecord);
+          transactions = transactions
               .map((x) => x.id == t.id ? t : x)
               .toList();
           notifyListeners();
         } else if (payload.eventType == PostgresChangeEvent.delete) {
-          thuChiTransactions = thuChiTransactions
+          transactions = transactions
               .where((x) => x.id != payload.oldRecord['id'])
               .toList();
           notifyListeners();
@@ -2146,7 +2220,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     if (_productsChannel != null) _supabase.removeChannel(_productsChannel!);
     if (_notiChannel != null) _supabase.removeChannel(_notiChannel!);
     if (_upgradeChannel != null) _supabase.removeChannel(_upgradeChannel!);
-    if (_thuChiChannel != null) _supabase.removeChannel(_thuChiChannel!);
+    if (_transactionsChannel != null) _supabase.removeChannel(_transactionsChannel!);
     if (_categoriesChannel != null) _supabase.removeChannel(_categoriesChannel!);
     if (_usersChannel != null) _supabase.removeChannel(_usersChannel!);
     if (_storeInfoChannel != null) _supabase.removeChannel(_storeInfoChannel!);
@@ -2154,7 +2228,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     _productsChannel = null;
     _notiChannel = null;
     _upgradeChannel = null;
-    _thuChiChannel = null;
+    _transactionsChannel = null;
     _categoriesChannel = null;
     _usersChannel = null;
     _storeInfoChannel = null;

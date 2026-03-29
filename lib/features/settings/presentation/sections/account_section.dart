@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase_auth;
 import 'package:moimoi_pos/core/state/app_store.dart';
 import 'package:moimoi_pos/features/auth/models/user_model.dart';
 import 'package:moimoi_pos/features/settings/models/store_info_model.dart';
@@ -388,19 +389,69 @@ class _AccountSectionState extends State<AccountSection> {
         child: Row(
           children: [
             Expanded(
-              child: OutlinedButton(
-                onPressed: () => _phoneController.text = user?.phone ?? '',
-                child: const Text('Hủy bỏ'),
+              child: GestureDetector(
+                onTap: () {
+                  _phoneController.text = user?.phone ?? '';
+                  if (user?.role == 'sadmin') {
+                    final sadminInfo = store.storeInfos['sadmin'] ?? const StoreInfoModel();
+                    _bankNameController.text = sadminInfo.bankId;
+                    _bankAccountController.text = sadminInfo.bankAccount;
+                    _bankOwnerController.text = sadminInfo.bankOwner;
+                  }
+                },
+                child: Container(
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: AppColors.slate50,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.slate200),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.close_rounded, size: 18, color: AppColors.slate500),
+                      SizedBox(width: 6),
+                      Text('Hủy bỏ',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
+                            color: AppColors.slate600)),
+                    ],
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                   store.updateUser(user!.username, {'phone': _phoneController.text});
-                   store.showToast('Đã lưu thay đổi');
+              child: GestureDetector(
+                onTap: () {
+                  final updates = <String, dynamic>{'phone': _phoneController.text};
+                  store.updateUser(user!.username, updates);
+                  if (user.role == 'sadmin') {
+                    final info = store.storeInfos['sadmin'] ?? const StoreInfoModel();
+                    store.updateStoreInfo(info.copyWith(
+                      bankId: _bankNameController.text.trim(),
+                      bankAccount: _bankAccountController.text.trim(),
+                      bankOwner: _bankOwnerController.text.trim(),
+                    ));
+                  }
+                  store.showToast('Đã lưu thay đổi');
                 },
-                child: const Text('Lưu thay đổi'),
+                child: Container(
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: AppColors.emerald500,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.save_rounded, size: 18, color: Colors.white),
+                      SizedBox(width: 6),
+                      Text('Lưu thay đổi',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
+                            color: Colors.white)),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
@@ -432,10 +483,307 @@ class _AccountSectionState extends State<AccountSection> {
   }
 
   void _showEditFullnameDialog(BuildContext context, AppStore store, UserModel? user) {
-     // TODO: Implement edit fullname dialog
+    final ctrl = TextEditingController(text: user?.fullname ?? '');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Icon(Icons.edit_outlined, size: 22, color: AppColors.emerald500),
+            SizedBox(width: 8),
+            Text('Đổi tên hiển thị', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.slate800)),
+          ],
+        ),
+        content: SizedBox(
+          width: 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Tên hiển thị', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate700)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: ctrl,
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(
+                  hintText: 'VD: Nguyễn Văn A',
+                  hintStyle: const TextStyle(color: AppColors.slate400, fontSize: 14),
+                  filled: true,
+                  fillColor: AppColors.slate50,
+                  prefixIcon: const Icon(Icons.person_outline, size: 20, color: AppColors.slate400),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.slate200)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.slate200)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.emerald500, width: 2)),
+                ),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: AppColors.slate50,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.slate200),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.close_rounded, size: 18, color: AppColors.slate500),
+                            SizedBox(width: 6),
+                            Text('Hủy bỏ', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.slate600)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        final name = ctrl.text.trim();
+                        if (name.isEmpty) {
+                          store.showToast('Vui lòng nhập tên', 'error');
+                          return;
+                        }
+                        store.updateUser(user!.username, {'fullname': name});
+                        store.showToast('Đã cập nhật tên hiển thị');
+                        Navigator.pop(ctx);
+                      },
+                      child: Container(
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: AppColors.emerald500,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.save_rounded, size: 18, color: Colors.white),
+                            SizedBox(width: 6),
+                            Text('Cập nhật', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
+
   void _showChangePasswordDialog(BuildContext context, AppStore store) {
-     // TODO: Implement change password dialog
+    final currentPassCtrl = TextEditingController();
+    final newPassCtrl = TextEditingController();
+    final confirmPassCtrl = TextEditingController();
+    bool obscureCurrent = true;
+    bool obscureNew = true;
+    bool obscureConfirm = true;
+    bool isLoading = false;
+
+    InputDecoration _buildDecor({required String hint, required IconData prefixIcon, required bool isObscure, required VoidCallback onToggle}) {
+      return InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: AppColors.slate400, fontSize: 14),
+        filled: true,
+        fillColor: AppColors.slate50,
+        prefixIcon: Icon(prefixIcon, size: 20, color: AppColors.slate400),
+        suffixIcon: IconButton(
+          icon: Icon(isObscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: AppColors.slate400),
+          onPressed: onToggle,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.slate200)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.slate200)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.emerald500, width: 2)),
+      );
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (stfCtx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Row(
+            children: [
+              Icon(Icons.lock_outline_rounded, size: 22, color: AppColors.emerald500),
+              SizedBox(width: 8),
+              Text('Đổi mật khẩu', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.slate800)),
+            ],
+          ),
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Current password
+                const Text('Mật khẩu hiện tại', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate700)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: currentPassCtrl,
+                  obscureText: obscureCurrent,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  decoration: _buildDecor(
+                    hint: 'Nhập mật khẩu hiện tại',
+                    prefixIcon: Icons.lock_outline,
+                    isObscure: obscureCurrent,
+                    onToggle: () => setDialogState(() => obscureCurrent = !obscureCurrent),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // New password
+                const Text('Mật khẩu mới', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate700)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: newPassCtrl,
+                  obscureText: obscureNew,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  decoration: _buildDecor(
+                    hint: 'Tối thiểu 6 ký tự',
+                    prefixIcon: Icons.lock_rounded,
+                    isObscure: obscureNew,
+                    onToggle: () => setDialogState(() => obscureNew = !obscureNew),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Confirm password
+                const Text('Xác nhận mật khẩu mới', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate700)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: confirmPassCtrl,
+                  obscureText: obscureConfirm,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  decoration: _buildDecor(
+                    hint: 'Nhập lại mật khẩu mới',
+                    prefixIcon: Icons.lock_rounded,
+                    isObscure: obscureConfirm,
+                    onToggle: () => setDialogState(() => obscureConfirm = !obscureConfirm),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: isLoading ? null : () => Navigator.pop(ctx),
+                        child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: AppColors.slate50,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.slate200),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.close_rounded, size: 18, color: AppColors.slate500),
+                              SizedBox(width: 6),
+                              Text('Hủy bỏ', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.slate600)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: isLoading ? null : () async {
+                          final currentPass = currentPassCtrl.text;
+                          final newPass = newPassCtrl.text;
+                          final confirmPass = confirmPassCtrl.text;
+                          final user = store.currentUser;
+
+                          // Validation
+                          if (currentPass.isEmpty || newPass.isEmpty || confirmPass.isEmpty) {
+                            store.showToast('Vui lòng điền đầy đủ thông tin', 'error');
+                            return;
+                          }
+                          if (currentPass != user?.pass) {
+                            store.showToast('Mật khẩu hiện tại không đúng', 'error');
+                            return;
+                          }
+                          if (newPass.length < 6) {
+                            store.showToast('Mật khẩu mới phải có ít nhất 6 ký tự', 'error');
+                            return;
+                          }
+                          if (newPass != confirmPass) {
+                            store.showToast('Mật khẩu xác nhận không khớp', 'error');
+                            return;
+                          }
+                          if (newPass == currentPass) {
+                            store.showToast('Mật khẩu mới phải khác mật khẩu cũ', 'error');
+                            return;
+                          }
+
+                          setDialogState(() => isLoading = true);
+
+                          try {
+                            // Update in users table
+                            store.updateUser(user!.username, {'pass': newPass});
+
+                            // Also update Supabase Auth password
+                            try {
+                              await supabase_auth.Supabase.instance.client.auth.updateUser(
+                                supabase_auth.UserAttributes(password: newPass),
+                              );
+                            } catch (e) {
+                              debugPrint('[ChangePassword] Auth update failed: $e');
+                              // Non-fatal: users table is the primary source
+                            }
+
+                            // Update cached credentials for biometric
+                            await store.saveLoginCredentials(user.username, newPass);
+
+                            if (!ctx.mounted) return;
+                            Navigator.pop(ctx);
+                            store.showToast('Đã đổi mật khẩu thành công');
+                          } catch (e) {
+                            setDialogState(() => isLoading = false);
+                            store.showToast('Lỗi đổi mật khẩu: $e', 'error');
+                          }
+                        },
+                        child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: AppColors.emerald500,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (isLoading)
+                                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              else ...[
+                                const Icon(Icons.save_rounded, size: 18, color: Colors.white),
+                                const SizedBox(width: 6),
+                                const Text('Đổi mật khẩu', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

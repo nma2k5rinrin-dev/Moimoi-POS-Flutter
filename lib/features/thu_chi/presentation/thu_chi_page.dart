@@ -69,7 +69,7 @@ class _ThuChiPageState extends State<ThuChiPage> {
     }
 
     // 2. Manual thu/chi transactions
-    for (final txn in store.thuChiTransactions) {
+    for (final txn in store.transactions) {
       final txnDate = DateTime.tryParse(txn.time);
       if (txnDate == null) continue;
       if (txnDate.isBefore(_dateFrom) ||
@@ -394,8 +394,8 @@ class _ThuChiPageState extends State<ThuChiPage> {
                     child: GestureDetector(
                       onTap: () async {
                         final quota = QuotaHelper(store);
-                        if (!quota.canUseThuChi) {
-                          await showUpgradePrompt(context, quota.thuChiLimitMsg);
+                        if (!quota.canUseTransactions) {
+                          await showUpgradePrompt(context, quota.transactionLimitMsg);
                           return;
                         }
                         if (widget.embedded) {
@@ -430,8 +430,8 @@ class _ThuChiPageState extends State<ThuChiPage> {
                     child: GestureDetector(
                       onTap: () async {
                         final quota = QuotaHelper(store);
-                        if (!quota.canUseThuChi) {
-                          await showUpgradePrompt(context, quota.thuChiLimitMsg);
+                        if (!quota.canUseTransactions) {
+                          await showUpgradePrompt(context, quota.transactionLimitMsg);
                           return;
                         }
                         if (widget.embedded) {

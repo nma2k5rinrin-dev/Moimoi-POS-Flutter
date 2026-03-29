@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:moimoi_pos/core/state/app_store.dart';
 import 'package:moimoi_pos/core/utils/constants.dart';
+import 'package:moimoi_pos/services/api/cloudflare_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 /// Shows the Account Dialog as a popup anchored near the avatar.
 /// For admin/sadmin: shows subscription section.
@@ -68,6 +70,60 @@ class _AccountDialogContent extends StatelessWidget {
       return null;
     }
   }
+  Widget _buildDialogAvatar() {
+    const double radius = 28;
+    final avatar = store.currentUser?.avatar ?? '';
+    final letter = _avatarLetter;
+
+    Widget fallback() => CircleAvatar(
+      radius: radius,
+      backgroundColor: AppColors.emerald100,
+      child: Text(
+        letter,
+        style: const TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w800,
+          color: AppColors.emerald600,
+        ),
+      ),
+    );
+
+    if (avatar.isEmpty) return fallback();
+
+    // Cloudflare / network URL
+    if (CloudflareService.isUrl(avatar)) {
+      return ClipOval(
+        child: CachedNetworkImage(
+          imageUrl: avatar,
+          width: radius * 2,
+          height: radius * 2,
+          fit: BoxFit.cover,
+          placeholder: (_, _) => const SizedBox(
+            width: 56, height: 56,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+          errorWidget: (_, _, _) => fallback(),
+        ),
+      );
+    }
+
+    // Base64
+    try {
+      final base64Part = avatar.contains(',') ? avatar.split(',').last : avatar;
+      final bytes = base64Decode(base64Part);
+      return ClipOval(
+        child: Image.memory(
+          bytes,
+          width: radius * 2,
+          height: radius * 2,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => fallback(),
+        ),
+      );
+    } catch (_) {
+      return fallback();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -104,15 +160,16 @@ class _AccountDialogContent extends StatelessWidget {
                   _divider(),
 
                   // ── Menu Items ──
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.qr_code_2,
-                    label: 'Xem QR thanh toán',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showQRDialog(context);
-                    },
-                  ),
+                  if (store.currentUser?.role != 'sadmin')
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.qr_code_2,
+                      label: 'Xem QR thanh toán',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showQRDialog(context);
+                      },
+                    ),
                   if (_isOwnerOrAdmin)
                     _buildMenuItem(
                       context,
@@ -154,39 +211,7 @@ class _AccountDialogContent extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
         child: Column(
           children: [
-            avatarBytes != null
-                ? ClipOval(
-                    child: Image.memory(
-                      avatarBytes,
-                      width: 56,
-                      height: 56,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => CircleAvatar(
-                        radius: 28,
-                        backgroundColor: AppColors.emerald100,
-                        child: Text(
-                          _avatarLetter,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.emerald600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  )
-                : CircleAvatar(
-                    radius: 28,
-                    backgroundColor: AppColors.emerald100,
-                    child: Text(
-                      _avatarLetter,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.emerald600,
-                      ),
-                    ),
-                  ),
+            _buildDialogAvatar(),
             const SizedBox(height: 8),
             Text(
               _displayName,
@@ -256,18 +281,22 @@ class _AccountDialogContent extends StatelessWidget {
     final isPremium = user.isPremium || user.role == 'sadmin';
     final planLabel = isPremium ? 'Premium' : 'Miễn phí';
 
-    // Calculate expiry
+    // Calculate expiry — prefer store_infos.premiumExpiresAt (same source as sadmin dashboard)
     String expiryDate = '—';
     int daysLeft = 0;
     bool hasExpiry = false;
-    if (user.expiresAt != null && user.expiresAt!.isNotEmpty) {
-      try {
-        final expiry = DateTime.parse(user.expiresAt!);
-        expiryDate =
-            '${expiry.day.toString().padLeft(2, '0')}/${expiry.month.toString().padLeft(2, '0')}/${expiry.year}';
-        daysLeft = expiry.difference(DateTime.now()).inDays;
-        hasExpiry = true;
-      } catch (_) {}
+    final storeInfo = store.currentStoreInfo;
+    DateTime? expiry;
+    if (storeInfo.premiumExpiresAt != null) {
+      expiry = storeInfo.premiumExpiresAt;
+    } else if (user.expiresAt != null && user.expiresAt!.isNotEmpty) {
+      try { expiry = DateTime.parse(user.expiresAt!); } catch (_) {}
+    }
+    if (expiry != null) {
+      expiryDate =
+          '${expiry.day.toString().padLeft(2, '0')}/${expiry.month.toString().padLeft(2, '0')}/${expiry.year}';
+      daysLeft = expiry.difference(DateTime.now()).inDays;
+      hasExpiry = true;
     }
 
     return Padding(

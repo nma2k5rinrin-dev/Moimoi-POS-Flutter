@@ -12,19 +12,19 @@ mixin ManagementStore on ChangeNotifier, BaseMixin {
   List<NotificationModel> notifications = [];
   List<UpgradeRequestModel> upgradeRequests = [];
   List<PremiumPaymentModel> premiumPayments = [];
-  List<ThuChiTransaction> thuChiTransactions = [];
+  List<Transaction> transactions = [];
 
   RealtimeChannel? _notiChannel;
   RealtimeChannel? _upgradeChannel;
-  RealtimeChannel? _thuChiChannel;
+  RealtimeChannel? _transactionsChannel;
 
   void clearManagementState() {
     notifications = [];
     upgradeRequests = [];
     premiumPayments = [];
-    thuChiTransactions = [];
+    transactions = [];
     _notiChannel?.unsubscribe();
     _upgradeChannel?.unsubscribe();
-    _thuChiChannel?.unsubscribe();
+    _transactionsChannel?.unsubscribe();
   }
 }

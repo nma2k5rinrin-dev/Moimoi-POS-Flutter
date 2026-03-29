@@ -32,22 +32,26 @@ mixin AuthStore on ChangeNotifier, BaseMixin {
 
   Future<String> login(String username, String password) async {
     final cleanUsername = username.toLowerCase().replaceAll(RegExp(r'\s'), '');
+    final fakeEmail = '$cleanUsername@moimoi.local';
+
     try {
-      final response = await _supabase
-          .from('users')
-          .select()
-          .ilike('username', cleanUsername);
-
-      if (response.isEmpty) return 'invalid';
-
-      final rawUser = (response as List).cast<Map<String, dynamic>>().firstWhere(
-        (u) => u['pass'] == password,
-        orElse: () => {},
+      final authResponse = await _supabase.auth.signInWithPassword(
+        email: fakeEmail,
+        password: password,
       );
 
-      if (rawUser.isEmpty) return 'invalid';
+      if (authResponse.user == null) return 'invalid';
 
-      var user = UserModel.fromMap(rawUser);
+      // Lấy Profile public.users
+      final userResponse = await _supabase
+          .from('users')
+          .select()
+          .eq('id', authResponse.user!.id)
+          .maybeSingle();
+
+      if (userResponse == null) return 'invalid';
+
+      var user = UserModel.fromMap(userResponse);
 
       // Check VIP expiration
       if (user.role == 'admin' && user.expiresAt != null) {
@@ -101,18 +105,23 @@ mixin AuthStore on ChangeNotifier, BaseMixin {
     required String password,
     String address = '',
   }) async {
+    final cleanUsername = username.toLowerCase().replaceAll(RegExp(r'\s'), '');
+    final fakeEmail = '$cleanUsername@moimoi.local';
+
     try {
-      final existing = await _supabase
-          .from('users')
-          .select('username')
-          .eq('username', username);
-      if ((existing as List).isNotEmpty) {
-        showToast('Tên đăng nhập đã tồn tại', 'error');
-        return 'exists';
+      final authResponse = await _supabase.auth.signUp(
+        email: fakeEmail,
+        password: password,
+      );
+
+      if (authResponse.user == null) {
+        showToast('Tên đăng nhập đã tồn tại hoặc lỗi mạng', 'error');
+        return 'error';
       }
 
       final newUser = {
-        'username': username,
+        'id': authResponse.user!.id,
+        'username': cleanUsername,
         'pass': password,
         'role': 'admin',
         'fullname': fullname,
@@ -121,8 +130,9 @@ mixin AuthStore on ChangeNotifier, BaseMixin {
       };
 
       await _supabase.from('users').insert(newUser);
+
       final storeData = <String, dynamic>{
-        'store_id': username,
+        'store_id': cleanUsername,
         'name': storeName.isNotEmpty ? storeName : fullname,
         'phone': phone,
         'is_premium': false,
@@ -137,9 +147,17 @@ mixin AuthStore on ChangeNotifier, BaseMixin {
       notifyListeners();
       await loadInitialData(mappedUser);
       return 'success';
+    } on AuthException catch (e) {
+      debugPrint('[Auth] Register error: $e');
+      if (e.message.contains('already registered') || e.message.contains('User already registered')) {
+        showToast('Tên đăng nhập đã tồn tại', 'error');
+        return 'exists';
+      }
+      showToast('Đăng ký thất bại: ${e.message}', 'error');
+      return 'error';
     } catch (e) {
       debugPrint('[Auth] Register error: $e');
-      showToast('Đăng ký thất bại', 'error');
+      showToast('Đăng ký thất bại: $e', 'error');
       return 'error';
     }
   }
@@ -192,7 +210,18 @@ mixin AuthStore on ChangeNotifier, BaseMixin {
            currentUser = users.firstWhere((u) => u.username == username, orElse: () => currentUser!);
         }
       },
-      remote: () => _supabase.from('users').update(dbData).eq('username', username),
+      remote: () async {
+        if (dbData.containsKey('pass')) {
+          await _supabase.rpc('update_user_password', params: {
+            'p_username': username,
+            'p_new_password': dbData['pass'],
+          });
+          dbData.remove('pass'); // `update_user_password` handles both `auth.users` and `public.users` pass column
+        }
+        if (dbData.isNotEmpty) {
+          await _supabase.from('users').update(dbData).eq('username', username);
+        }
+      },
       rollback: () {
         users = oldUsers;
         currentUser = oldCurrentUser;

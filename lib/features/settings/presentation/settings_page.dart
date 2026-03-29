@@ -38,7 +38,8 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  final List<_SettingMenu> _menus = [
+  // ── Store/Admin menus ──
+  final List<_SettingMenu> _storeMenus = [
     _SettingMenu(
       id: 'account',
       name: 'Tài Khoản & Bảo Mật',
@@ -108,6 +109,72 @@ class _SettingsPageState extends State<SettingsPage> {
     ),
   ];
 
+  // ── Sadmin menus with groups ──
+  final List<_SettingMenu> _sadminMenus = [
+    // 👤 TÀI KHOẢN CỦA TÔI
+    _SettingMenu(
+      id: 'account',
+      name: 'Thông Tin Cá Nhân',
+      desc: 'Tên, email, avatar, đổi mật khẩu',
+      icon: Icons.person_outline,
+      group: '👤  TÀI KHOẢN CỦA TÔI',
+    ),
+    _SettingMenu(
+      id: 'sa-security',
+      name: 'Bảo Mật & Xác Thực 2 Lớp',
+      desc: 'Mật khẩu, 2FA, phiên đăng nhập',
+      icon: Icons.shield_outlined,
+      group: '👤  TÀI KHOẢN CỦA TÔI',
+    ),
+    // 🏢 QUẢN TRỊ NỀN TẢNG
+    _SettingMenu(
+      id: 'sa-admins',
+      name: 'Quản Lý Nhân Sự Admin',
+      desc: 'Tài khoản admin cửa hàng, phân quyền',
+      icon: Icons.admin_panel_settings_outlined,
+      group: '🏢  QUẢN TRỊ NỀN TẢNG',
+    ),
+    _SettingMenu(
+      id: 'sa-audit',
+      name: 'Nhật Ký Hoạt Động',
+      desc: 'Audit logs, lịch sử thao tác hệ thống',
+      icon: Icons.history_outlined,
+      group: '🏢  QUẢN TRỊ NỀN TẢNG',
+    ),
+    // ⚙️ CẤU HÌNH HỆ THỐNG
+    _SettingMenu(
+      id: 'sa-pricing',
+      name: 'Bảng Giá & Gói Premium',
+      desc: 'Quản lý gói cước, bảng giá dịch vụ',
+      icon: Icons.price_change_outlined,
+      group: '⚙️  CẤU HÌNH HỆ THỐNG',
+    ),
+    _SettingMenu(
+      id: 'sa-notifications',
+      name: 'Mẫu Email & Thông Báo',
+      desc: 'Tùy chỉnh nội dung email, push notification',
+      icon: Icons.mark_email_unread_outlined,
+      group: '⚙️  CẤU HÌNH HỆ THỐNG',
+    ),
+    // 🔌 TÍCH HỢP
+    _SettingMenu(
+      id: 'sa-payment',
+      name: 'Cổng Thanh Toán',
+      desc: 'Cấu hình VNPay, MoMo, ZaloPay',
+      icon: Icons.payment_outlined,
+      group: '🔌  TÍCH HỢP',
+    ),
+    _SettingMenu(
+      id: 'sa-api',
+      name: 'API Keys & Webhooks',
+      desc: 'Quản lý API keys, webhook endpoints',
+      icon: Icons.api_outlined,
+      group: '🔌  TÍCH HỢP',
+    ),
+  ];
+
+  List<_SettingMenu> get _allMenus => [..._storeMenus, ..._sadminMenus];
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
@@ -115,15 +182,16 @@ class _SettingsPageState extends State<SettingsPage> {
     final isSadmin = store.currentUser?.role == 'sadmin';
     final hasStoreSelected = !isSadmin || store.sadminViewStoreId != 'all';
 
-    // Sadmin only sees: account
-    const sadminTabs = {'account'};
-
-    final menus = _menus.where((m) {
-      if (isSadmin) return sadminTabs.contains(m.id);
-      if (m.adminOnly && !isAdmin) return false;
-      if (m.requiresStore && !hasStoreSelected) return false;
-      return true;
-    }).toList();
+    final List<_SettingMenu> menus;
+    if (isSadmin) {
+      menus = _sadminMenus;
+    } else {
+      menus = _storeMenus.where((m) {
+        if (m.adminOnly && !isAdmin) return false;
+        if (m.requiresStore && !hasStoreSelected) return false;
+        return true;
+      }).toList();
+    }
 
     final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
 
@@ -160,7 +228,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildSection(String id, {VoidCallback? onBack}) {
-    final menu = _menus.firstWhere((m) => m.id == id, orElse: () => _menus.first);
+    final menu = _allMenus.firstWhere((m) => m.id == id, orElse: () => _allMenus.first);
     final sectionWidget = _buildSectionContent(id);
     return Column(
       children: [
@@ -233,6 +301,84 @@ class _SettingsPageState extends State<SettingsPage> {
         return const ThuChiPage(embedded: true);
       case 'premium':
         return const PremiumPage();
+      // ── Sadmin sections ──
+      case 'sa-security':
+        return _ComingSoonSection(
+          icon: Icons.shield_outlined,
+          title: 'Bảo Mật & Xác Thực 2 Lớp',
+          features: const [
+            'Xác thực 2 lớp (2FA) qua Authenticator',
+            'Quản lý phiên đăng nhập đang hoạt động',
+            'Đặt lại mật khẩu từ xa',
+            'Lịch sử đăng nhập & IP',
+          ],
+        );
+      case 'sa-admins':
+        return _ComingSoonSection(
+          icon: Icons.admin_panel_settings_outlined,
+          title: 'Quản Lý Nhân Sự Admin',
+          features: const [
+            'Danh sách tài khoản admin cửa hàng',
+            'Khóa / mở khóa tài khoản',
+            'Reset mật khẩu admin',
+            'Phân quyền truy cập nâng cao',
+          ],
+        );
+      case 'sa-audit':
+        return _ComingSoonSection(
+          icon: Icons.history_outlined,
+          title: 'Nhật Ký Hoạt Động',
+          features: const [
+            'Theo dõi thao tác tạo / xóa cửa hàng',
+            'Lịch sử duyệt Premium',
+            'Nhật ký đăng nhập hệ thống',
+            'Xuất báo cáo audit (CSV / PDF)',
+          ],
+        );
+      case 'sa-pricing':
+        return _ComingSoonSection(
+          icon: Icons.price_change_outlined,
+          title: 'Bảng Giá & Gói Premium',
+          features: const [
+            'Tùy chỉnh gói cước (Tháng / Năm)',
+            'Thiết lập giá & khuyến mãi',
+            'Coupon & mã giảm giá',
+            'Giới hạn tính năng theo gói',
+          ],
+        );
+      case 'sa-notifications':
+        return _ComingSoonSection(
+          icon: Icons.mark_email_unread_outlined,
+          title: 'Mẫu Email & Thông Báo',
+          features: const [
+            'Tùy chỉnh email chào mừng',
+            'Thông báo hết hạn Premium',
+            'Template email thanh toán',
+            'Push notification hàng loạt',
+          ],
+        );
+      case 'sa-payment':
+        return _ComingSoonSection(
+          icon: Icons.payment_outlined,
+          title: 'Cổng Thanh Toán',
+          features: const [
+            'Tích hợp VNPay / MoMo / ZaloPay',
+            'Cấu hình tự động gia hạn',
+            'Quản lý webhook callback',
+            'Lịch sử giao dịch thanh toán',
+          ],
+        );
+      case 'sa-api':
+        return _ComingSoonSection(
+          icon: Icons.api_outlined,
+          title: 'API Keys & Webhooks',
+          features: const [
+            'Tạo & quản lý API keys',
+            'Cấu hình webhook endpoints',
+            'Rate limiting & quota',
+            'Tài liệu API (Swagger / OpenAPI)',
+          ],
+        );
       default:
         return const Center(child: Text('Coming soon'));
     }
@@ -246,6 +392,7 @@ class _SettingMenu {
   final IconData icon;
   final bool adminOnly;
   final bool requiresStore;
+  final String? group;
   const _SettingMenu({
     required this.id,
     required this.name,
@@ -253,6 +400,7 @@ class _SettingMenu {
     required this.icon,
     this.adminOnly = false,
     this.requiresStore = false,
+    this.group,
   });
 }
 
@@ -269,6 +417,91 @@ class _SettingsMenuList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Build items with group headers
+    final items = <Widget>[];
+    String? lastGroup;
+    for (final menu in menus) {
+      if (menu.group != null && menu.group != lastGroup) {
+        lastGroup = menu.group;
+        items.add(
+          Padding(
+            padding: EdgeInsets.fromLTRB(8, items.isEmpty ? 0 : 16, 8, 8),
+            child: Text(
+              menu.group!,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: AppColors.slate400,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        );
+      }
+      final isActive = selected == menu.id;
+      items.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => onSelect(menu.id),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isActive ? AppColors.emerald50 : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isActive ? AppColors.emerald200 : AppColors.slate200,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: isActive ? AppColors.emerald100 : AppColors.slate100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        menu.icon,
+                        color: isActive ? AppColors.emerald600 : AppColors.slate500,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            menu.name,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: isActive ? AppColors.emerald700 : AppColors.slate800,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            menu.desc,
+                            style: const TextStyle(fontSize: 12, color: AppColors.slate500),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, color: AppColors.slate400),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Container(
       color: AppColors.slate50,
       child: Column(
@@ -286,89 +519,140 @@ class _SettingsMenuList extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: ListView.builder(
+            child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemCount: menus.length,
-              itemBuilder: (_, i) {
-                final menu = menus[i];
-                final isActive = selected == menu.id;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Material(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(16),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () => onSelect(menu.id),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: isActive
-                              ? AppColors.emerald50
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isActive
-                                ? AppColors.emerald200
-                                : AppColors.slate200,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: isActive
-                                    ? AppColors.emerald100
-                                    : AppColors.slate100,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                menu.icon,
-                                color: isActive
-                                    ? AppColors.emerald600
-                                    : AppColors.slate500,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    menu.name,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      color: isActive
-                                          ? AppColors.emerald700
-                                          : AppColors.slate800,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    menu.desc,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.slate500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(Icons.chevron_right,
-                                color: AppColors.slate400),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
+              children: items,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════
+// Coming Soon Placeholder Section (for sadmin)
+// ═════════════════════════════════════════════════════════
+class _ComingSoonSection extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final List<String> features;
+
+  const _ComingSoonSection({
+    required this.icon,
+    required this.title,
+    required this.features,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Icon badge
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFECFDF5), Color(0xFFD1FAE5)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(icon, size: 36, color: AppColors.emerald600),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.slate800,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.construction_rounded, size: 14, color: Color(0xFFF59E0B)),
+                  SizedBox(width: 6),
+                  Text(
+                    'Đang phát triển',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFF59E0B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+            // Features list
+            Container(
+              constraints: const BoxConstraints(maxWidth: 400),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.slate200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Tính năng sắp ra mắt',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.slate600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ...features.map((f) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: AppColors.emerald50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.check_rounded, size: 14, color: AppColors.emerald500),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            f,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.slate700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

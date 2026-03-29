@@ -104,7 +104,7 @@ class SyncEngine {
         if (op.operation != 'DELETE') {
           if (table == 'orders') {
             await db.markOrderSynced(op.recordId);
-          } else if (table == 'thu_chi_transactions') {
+          } else if (table == 'transactions') {
             await db.markThuChiSynced(op.recordId);
           }
         }
@@ -122,7 +122,7 @@ class SyncEngine {
   // ═══════════════════════════════════════════════════════════
   Future<void> _pullServerChanges() async {
     await _pullOrders();
-    await _pullThuChi();
+    await _pullTransactions();
   }
 
   Future<void> _pullOrders() async {
@@ -180,13 +180,13 @@ class SyncEngine {
     }
   }
 
-  Future<void> _pullThuChi() async {
+  Future<void> _pullTransactions() async {
     try {
       final lastPull = await db.getKv('last_pull_thuchi_at');
       final since = lastPull ?? '2000-01-01T00:00:00Z';
 
       final data = await _supabase
-          .from('thu_chi_transactions')
+          .from('transactions')
           .select()
           .gt('time', since)
           .order('time', ascending: true);
@@ -215,7 +215,7 @@ class SyncEngine {
 
       await db.setKv('last_pull_thuchi_at', DateTime.now().toIso8601String());
     } catch (e) {
-      debugPrint('[SyncEngine] Pull thu/chi error: $e');
+      debugPrint('[SyncEngine] Pull transactions error: $e');
     }
   }
 

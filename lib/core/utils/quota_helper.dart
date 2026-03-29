@@ -85,12 +85,14 @@ class QuotaHelper {
       'Còn lại: ${remainingOrdersToday < 0 ? 0 : remainingOrdersToday} đơn. '
       'Nâng cấp Premium để không giới hạn.';
 
-  // ── Thu Chi (Premium only) ──────────────────────────────
-  bool get canUseThuChi => _isPremium;
+  // ── Transactions (Premium only) ─────────────────────────
+  bool get canUseTransactions => _isPremium;
+  bool get canUseThuChi => canUseTransactions; // backward compat
 
-  String get thuChiLimitMsg =>
+  String get transactionLimitMsg =>
       'Tính năng Thu/Chi chỉ dành cho gói Premium. '
       'Nâng cấp Premium để sử dụng.';
+  String get thuChiLimitMsg => transactionLimitMsg; // backward compat
 
   // ── Menu QR & Order (Premium only) ─────────────────────
   bool get canUseMenuOrder => _isPremium;

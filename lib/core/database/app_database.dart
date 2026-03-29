@@ -33,7 +33,7 @@ class LocalOrders extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// Thu Chi Transactions — Mirror bảng Supabase `thu_chi_transactions`
+/// Transactions — Mirror of Supabase `transactions` table
 class LocalThuChi extends Table {
   TextColumn get id => text()();
   TextColumn get storeId => text()();
@@ -97,7 +97,7 @@ class LocalCategories extends Table {
 class SyncQueue extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get txId => text()(); // UUID v4 — idempotency key
-  TextColumn get targetTable => text()(); // 'orders' | 'thu_chi_transactions'
+  TextColumn get targetTable => text()(); // 'orders' | 'transactions'
   TextColumn get operation =>
       text()(); // 'INSERT' | 'UPDATE' | 'DELETE'
   TextColumn get recordId => text()(); // target record ID
