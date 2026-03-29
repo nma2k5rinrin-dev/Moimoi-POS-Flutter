@@ -16,7 +16,7 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   String _timeRange = 'range';
-  DateTime _dateFrom = DateTime(DateTime.now().year, DateTime.now().month, 1);
+  DateTime _dateFrom = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
   DateTime _dateTo = DateTime.now();
 
   @override
@@ -87,11 +87,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
                 const SizedBox(height: 20),
 
-                // ── Date Picker ──────────────────
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: _buildDatePicker(),
-                ),
+                _buildDatePicker(),
 
                 const SizedBox(height: 20),
 
@@ -314,7 +310,7 @@ class _DashboardPageState extends State<DashboardPage> {
           border: Border.all(color: AppColors.slate200),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           children: [
             const Icon(Icons.calendar_today_rounded,
                 size: 16, color: AppColors.emerald600),
@@ -330,7 +326,7 @@ class _DashboardPageState extends State<DashboardPage> {
               '${_dateTo.day.toString().padLeft(2, '0')}/${_dateTo.month.toString().padLeft(2, '0')}/${_dateTo.year}',
               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.slate800),
             ),
-            const SizedBox(width: 8),
+            const Spacer(),
             const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.slate400),
           ],
         ),

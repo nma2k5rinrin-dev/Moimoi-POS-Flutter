@@ -106,6 +106,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
 
   // ── Private Internal State ──────────────────────────────
   Timer? _searchDebounce;
+  Timer? _qrOrderPollTimer;
   late AudioPlayer _orderSoundPlayer;
   
   // Realtime Channels
@@ -148,19 +149,10 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
   }) async {
     if (_db == null) {
       // Fallback: no local DB → direct to Supabase
-      optimistic(
-        apply: applyInMemory,
-        remote: () async {
-          if (operation == 'INSERT') {
-            await _supabase.from(table).upsert(payload);
-          } else if (operation == 'UPDATE') {
-            await _supabase.from(table).update(payload).eq('id', recordId);
-          } else if (operation == 'DELETE') {
-            await _supabase.from(table).delete().eq('id', recordId);
-          }
-        },
-        rollback: rollback ?? () {},
-        errorMsg: errorMsg,
+      _supabaseFallback(
+        table: table, operation: operation, recordId: recordId,
+        payload: payload, applyInMemory: applyInMemory,
+        rollback: rollback, errorMsg: errorMsg,
       );
       return;
     }
@@ -187,11 +179,43 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
       // 4. Try sync immediately (fire-and-forget)
       _syncEngine?.tryImmediateSync();
     } catch (e) {
-      debugPrint('[_offlineFirst] Error: $e');
+      debugPrint('[_offlineFirst] Drift failed: $e — falling back to Supabase');
+      // Drift crashed at runtime (e.g. WebAssembly on web)
+      // → fallback to direct Supabase instead of showing error
       rollback?.call();
       notifyListeners();
-      showToast(errorMsg, 'error');
+      _supabaseFallback(
+        table: table, operation: operation, recordId: recordId,
+        payload: payload, applyInMemory: applyInMemory,
+        rollback: rollback, errorMsg: errorMsg,
+      );
     }
+  }
+
+  /// Direct Supabase fallback when Drift is unavailable or crashes.
+  void _supabaseFallback({
+    required String table,
+    required String operation,
+    required String recordId,
+    required Map<String, dynamic> payload,
+    required VoidCallback applyInMemory,
+    VoidCallback? rollback,
+    required String errorMsg,
+  }) {
+    optimistic(
+      apply: applyInMemory,
+      remote: () async {
+        if (operation == 'INSERT') {
+          await _supabase.from(table).upsert(payload);
+        } else if (operation == 'UPDATE') {
+          await _supabase.from(table).update(payload).eq('id', recordId);
+        } else if (operation == 'DELETE') {
+          await _supabase.from(table).delete().eq('id', recordId);
+        }
+      },
+      rollback: rollback ?? () {},
+      errorMsg: errorMsg,
+    );
   }
 
   // ── Derived: getStoreId ─────────────────────────────────
@@ -948,14 +972,14 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
     final oldTables = List<String>.from(storeTables[storeId] ?? []);
     final oldSelectedTable = selectedTable;
     final tablesList = storeTables[storeId] ?? [];
-    final prefix = '$oldArea::';
+    final prefix = '$oldArea · ';
     // Collect rename pairs for batch Supabase calls
     final renamePairs = <MapEntry<String, String>>[];
     for (int i = 0; i < tablesList.length; i++) {
       if (tablesList[i].startsWith(prefix)) {
         final tablePart = tablesList[i].substring(prefix.length);
         final oldFullName = tablesList[i];
-        final newFullName = '$newArea::$tablePart';
+        final newFullName = '$newArea · $tablePart';
         renamePairs.add(MapEntry(oldFullName, newFullName));
       }
     }
@@ -1388,8 +1412,9 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
 
     final totalAmount = getCartTotal();
     final storeId = getStoreId();
+    final now = DateTime.now();
     final orderId =
-        'ORD-${Random().nextInt(10000).toString().padLeft(4, '0')}';
+        'ORD-${now.millisecondsSinceEpoch}-${Random().nextInt(1000).toString().padLeft(3, '0')}';
     final itemsList = cart.map((item) => item.copyWith(isDone: false).toMap()).toList();
     final timeStr = DateTime.now().toIso8601String();
     final createdByStr = (currentUser?.fullname.isNotEmpty == true ? currentUser!.fullname : currentUser?.username) ?? 'unknown';
@@ -1898,6 +1923,7 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
   // ── Realtime ────────────────────────────────────────────
   void _setupRealtime(UserModel user, String? storeId) {
     _removeRealtimeChannels();
+    debugPrint('[Realtime] Setting up realtime for user=${user.username} role=${user.role} storeId=$storeId');
 
     // Orders realtime
     _ordersChannel = _supabase.channel('orders-changes').onPostgresChanges(
@@ -1974,6 +2000,24 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
             // Update Drift too
             if (_db != null) await _updateOrderInDrift(id);
             notifyListeners();
+          } else {
+            // Order not in memory (e.g. QR order where INSERT event was missed)
+            // → Fetch full order from Supabase and add it
+            debugPrint('[Realtime] 🔄 Order $id not in memory, fetching from Supabase...');
+            try {
+              final data = await _supabase.from('orders').select().eq('id', id).maybeSingle();
+              if (data != null) {
+                final newOrder = OrderModel.fromMap(data);
+                if (!orders.any((o) => o.id == newOrder.id)) {
+                  orders.insert(0, newOrder);
+                  _playNewOrderSound();
+                  notifyListeners();
+                  debugPrint('[Realtime] ✅ QR order fetched and added: ${newOrder.id} | table=${newOrder.table}');
+                }
+              }
+            } catch (e) {
+              debugPrint('[Realtime] ❌ Failed to fetch order $id: $e');
+            }
           }
         } else if (payload.eventType == PostgresChangeEvent.delete) {
           final deletedId = payload.oldRecord['id']?.toString() ?? '';
@@ -1984,7 +2028,42 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
           notifyListeners();
         }
       },
-    ).subscribe();
+    ).subscribe((status, [error]) {
+      debugPrint('[Realtime] Orders channel status: $status ${error != null ? '| error: $error' : ''}');
+    });
+
+    // ── QR Order Polling (fallback for Realtime INSERT miss) ──
+    // Supabase Realtime may not deliver INSERT events from anonymous users
+    // due to RLS evaluation. Poll every 15s to catch QR orders.
+    _qrOrderPollTimer?.cancel();
+    if (storeId != null && user.role != 'sadmin') {
+      _qrOrderPollTimer = Timer.periodic(const Duration(seconds: 15), (_) async {
+        try {
+          final latestTime = orders.isNotEmpty ? orders.first.time : '';
+          var query = _supabase.from('orders').select().eq('store_id', storeId);
+          if (latestTime.isNotEmpty) {
+            query = query.gt('time', latestTime);
+          }
+          final newRows = await query.order('time', ascending: false);
+          if (newRows.isEmpty) return;
+          int added = 0;
+          for (final row in newRows) {
+            final o = OrderModel.fromMap(row);
+            if (!orders.any((e) => e.id == o.id)) {
+              orders.insert(0, o);
+              added++;
+            }
+          }
+          if (added > 0) {
+            _playNewOrderSound();
+            notifyListeners();
+            debugPrint('[QR Poll] ✅ Added $added new order(s)');
+          }
+        } catch (e) {
+          debugPrint('[QR Poll] Error: $e');
+        }
+      });
+    }
 
     // Products realtime
     _productsChannel = _supabase.channel('products-changes').onPostgresChanges(
@@ -2216,6 +2295,8 @@ class AppStore extends ChangeNotifier with BaseMixin, AuthStore, InventoryStore,
   }
 
   void _removeRealtimeChannels() {
+    _qrOrderPollTimer?.cancel();
+    _qrOrderPollTimer = null;
     if (_ordersChannel != null) _supabase.removeChannel(_ordersChannel!);
     if (_productsChannel != null) _supabase.removeChannel(_productsChannel!);
     if (_notiChannel != null) _supabase.removeChannel(_notiChannel!);

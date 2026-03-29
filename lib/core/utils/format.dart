@@ -13,9 +13,9 @@ String formatCurrency(double amount) {
 String displayTableName(String raw) {
   if (raw.isEmpty) return 'Mang về';
   final clean = raw.startsWith('★') ? raw.substring(1) : raw;
-  if (clean.contains('::')) {
-    final parts = clean.split('::');
-    return '${parts.sublist(1).join('::')} · ${parts[0]}';
+  if (clean.contains(' · ')) {
+    final parts = clean.split(' · ');
+    return '${parts.sublist(1).join(' · ')} · ${parts[0]}';
   }
   return clean;
 }

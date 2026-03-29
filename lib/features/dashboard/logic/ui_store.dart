@@ -7,7 +7,7 @@ mixin UIStore on ChangeNotifier, BaseMixin {
   ConfirmDialogData? confirmDialog;
 
   // POS Order state
-  String selectedCategory = '';
+  String selectedCategory = 'all';
   String searchQuery = '';
 
   void setUpgradeModalOpen(bool open) {

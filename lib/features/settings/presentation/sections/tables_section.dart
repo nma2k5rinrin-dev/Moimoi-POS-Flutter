@@ -40,17 +40,17 @@ class _TablesSectionState extends State<TablesSection> {
   static String _stripDefault(String raw) => raw.startsWith(_defaultPrefix) ? raw.substring(1) : raw;
   static String _makeDefault(String raw) => '$_defaultPrefix$raw';
 
-  // ── Parse area::table name ──────────────────────────
+  // ── Parse area · table name ──────────────────────────
   static String _areaOf(String raw) {
     final clean = _stripDefault(raw);
-    final parts = clean.split('::');
+    final parts = clean.split(' · ');
     return parts.length > 1 ? parts[0] : 'Mặc định';
   }
 
   static String _nameOf(String raw) {
     final clean = _stripDefault(raw);
-    final parts = clean.split('::');
-    return parts.length > 1 ? parts.sublist(1).join('::') : clean;
+    final parts = clean.split(' · ');
+    return parts.length > 1 ? parts.sublist(1).join(' · ') : clean;
   }
 
   static final _tableAvatarColors = [
@@ -526,7 +526,7 @@ class _TablesSectionState extends State<TablesSection> {
                                 final allTables = store.currentTables;
                                 final existingAreas = <String>{};
                                 for (final t in allTables) {
-                                  final parts = t.split('::');
+                                  final parts = t.split(' · ');
                                   if (parts.length > 1) existingAreas.add(parts[0]);
                                 }
                                 final areaList = existingAreas.toList()..sort();
@@ -636,7 +636,7 @@ class _TablesSectionState extends State<TablesSection> {
     if (name.isEmpty) { store.showToast('Vui lòng nhập tên bàn', 'error'); return; }
 
     var area = _newAreaName == 'NEW' ? _newAreaCtrl.text.trim() : _areaCtrl.text.trim();
-    final String fullName = (area.isNotEmpty && area != 'Mặc định') ? '$area::$name' : name;
+    final String fullName = (area.isNotEmpty && area != 'Mặc định') ? '$area · $name' : name;
     final finalName = _isDefault ? _makeDefault(fullName) : fullName;
 
     if (_editingTable != null) {

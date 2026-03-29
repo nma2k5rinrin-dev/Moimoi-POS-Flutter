@@ -426,7 +426,7 @@ class _OrderCardState extends State<_OrderCard> {
                           children: [
                             Text(
                               order.table.isNotEmpty && !isDefaultTable(order.table)
-                                  ? order.table.replaceAll('::', ' · ')
+                                  ? order.table
                                   : '🛍️ ${displayTableName(order.table)}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
@@ -1019,7 +1019,7 @@ class _OrderCardState extends State<_OrderCard> {
 
     final Map<String, List<String>> areaGroups = {};
     for (final t in nonDefaultTables) {
-      final parts = t.split('::');
+      final parts = t.split(' · ');
       final area = parts.length > 1 ? parts[0] : 'Mặc định';
       areaGroups.putIfAbsent(area, () => []);
       areaGroups[area]!.add(t);
@@ -1099,8 +1099,8 @@ class _OrderCardState extends State<_OrderCard> {
                               ),
                             ),
                             ...areaTables.map((t) {
-                              final parts = t.split('::');
-                              final tableName = parts.length > 1 ? parts.sublist(1).join('::') : t;
+                              final parts = t.split(' · ');
+                              final tableName = parts.length > 1 ? parts.sublist(1).join(' · ') : t;
                               final isCurrent = order.table == t;
                               return ListTile(
                                 leading: Icon(
@@ -1536,7 +1536,6 @@ class _OrderCardState extends State<_OrderCard> {
                                       Text(
                                         order.table.isNotEmpty
                                             ? order.table
-                                                .replaceAll('::', ' · ')
                                             : displayTableName(order.table),
                                         style: const TextStyle(
                                           fontSize: 12,

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:moimoi_pos/core/state/app_store.dart';
 import 'package:moimoi_pos/core/utils/constants.dart';
@@ -55,6 +56,18 @@ class _ProductGrid extends StatefulWidget {
 
 class _ProductGridState extends State<_ProductGrid> {
   final _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Reset category to 'all' when entering POS tab
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final store = context.read<AppStore>();
+      if (store.selectedCategory != 'all') {
+        store.setCategory('all');
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -749,15 +762,15 @@ class _TableSelectorBtn extends StatelessWidget {
   const _TableSelectorBtn({required this.store, required this.tables});
 
   static String _areaOf(String raw) {
-    final parts = raw.split('::');
+    final parts = raw.split(' · ');
     return parts.length > 1 ? parts[0] : '';
   }
 
   static String _nameOf(String raw) {
     // Strip ★ prefix for default tables
     final clean = raw.startsWith('★') ? raw.substring(1) : raw;
-    final parts = clean.split('::');
-    return parts.length > 1 ? parts.sublist(1).join('::') : clean;
+    final parts = clean.split(' · ');
+    return parts.length > 1 ? parts.sublist(1).join(' · ') : clean;
   }
 
   static String _displayText(String raw) {
@@ -1233,6 +1246,9 @@ void _showPaymentConfirmation(BuildContext context, AppStore store) {
       store.checkoutOrder(paymentStatus: 'unpaid');
       store.showToast('Đơn đã tạo, chưa thu tiền');
       _autoPrintReceipt(store, orderForPrint);
+      
+      // Auto navigate to Orders (Sales) tab
+      context.go('/orders');
     },
   );
 }

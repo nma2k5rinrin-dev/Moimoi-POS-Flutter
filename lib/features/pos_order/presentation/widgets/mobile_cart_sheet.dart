@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:moimoi_pos/core/state/app_store.dart';
 import 'package:moimoi_pos/core/utils/constants.dart';
@@ -522,7 +523,7 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
     // Group non-default tables by area
     final Map<String, List<String>> areaGroups = {};
     for (final t in nonDefaultTables) {
-      final parts = t.split('::');
+      final parts = t.split(' · ');
       final area = parts.length > 1 ? parts[0] : 'Mặc định';
       areaGroups.putIfAbsent(area, () => []);
       areaGroups[area]!.add(t);
@@ -627,8 +628,8 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
                                   spacing: spacing,
                                   runSpacing: spacing,
                                   children: areaTables.map((t) {
-                                    final parts = t.split('::');
-                                    final tableName = parts.length > 1 ? parts.sublist(1).join('::') : t;
+                                    final parts = t.split(' · ');
+                                    final tableName = parts.length > 1 ? parts.sublist(1).join(' · ') : t;
                                     final isBusy = occupiedTables.contains(t);
                                     final isSelected = widget.store.selectedTable == t;
                                     return SizedBox(
@@ -861,8 +862,8 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
                 hasSelection
                     ? (selected.startsWith('★')
                         ? selected.substring(1)
-                        : selected.contains('::')
-                            ? '${selected.split('::').sublist(1).join('::')} · ${selected.split('::')[0]}'
+                        : selected.contains(' · ')
+                            ? '${selected.split(' · ').sublist(1).join(' · ')} · ${selected.split(' · ')[0]}'
                             : selected)
                     : 'Chọn bàn',
                 style: TextStyle(
@@ -907,6 +908,9 @@ void _showPaymentConfirmation(BuildContext context, AppStore store, {bool embedd
       if (!embedded) Navigator.pop(context); // close cart sheet (only if bottom sheet)
       store.checkoutOrder(paymentStatus: 'unpaid');
       store.showToast('Đơn đã tạo, chưa thu tiền');
+      
+      // Auto navigate to Orders (Sales) tab
+      context.go('/orders');
     },
   );
 }

@@ -32,7 +32,9 @@ mixin BaseMixin on ChangeNotifier {
       debugPrint('[Optimistic rollback] $e');
       rollback();
       notifyListeners();
-      showToast(errorMsg, 'error');
+      // Show detailed error for debugging
+      final detail = e.toString();
+      showToast('$errorMsg\n$detail', 'error');
     });
   }
 

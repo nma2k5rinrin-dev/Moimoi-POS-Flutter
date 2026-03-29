@@ -478,7 +478,7 @@ class _OrderCardState extends State<_OrderCard> {
                           children: [
                             Text(
                               order.table.isNotEmpty && !isDefaultTable(order.table)
-                                  ? order.table.replaceAll('::', ' · ')
+                                  ? order.table
                                   : '🛍️ ${displayTableName(order.table)}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
@@ -1099,7 +1099,7 @@ class _OrderCardState extends State<_OrderCard> {
 
     final Map<String, List<String>> areaGroups = {};
     for (final t in nonDefaultTables) {
-      final parts = t.split('::');
+      final parts = t.split(' · ');
       final area = parts.length > 1 ? parts[0] : 'Mặc định';
       areaGroups.putIfAbsent(area, () => []);
       areaGroups[area]!.add(t);
@@ -1276,8 +1276,8 @@ class _OrderCardState extends State<_OrderCard> {
                                             spacing: spacing,
                                             runSpacing: spacing,
                                             children: areaTables.map((t) {
-                                              final parts = t.split('::');
-                                              final tableName = parts.length > 1 ? parts.sublist(1).join('::') : t;
+                                              final parts = t.split(' · ');
+                                              final tableName = parts.length > 1 ? parts.sublist(1).join(' · ') : t;
                                               final isCurrent = order.table == t;
                                               final isBusy = occupiedTables.contains(t);
                                               return SizedBox(
@@ -1441,7 +1441,7 @@ class _OrderCardState extends State<_OrderCard> {
                                 const SizedBox(height: 2),
                                 Text(
                                   order.table.isNotEmpty && !isDefaultTable(order.table)
-                                      ? order.table.replaceAll('::', ' · ')
+                                      ? order.table
                                       : '🛍️ ${displayTableName(order.table)}',
                                   style: const TextStyle(
                                     fontSize: 13,
@@ -2022,7 +2022,6 @@ class _OrderCardState extends State<_OrderCard> {
                                       Text(
                                         order.table.isNotEmpty
                                             ? order.table
-                                                .replaceAll('::', ' · ')
                                             : displayTableName(order.table),
                                         style: const TextStyle(
                                           fontSize: 12,
