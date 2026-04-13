@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:moimoi_pos/core/state/app_store.dart';
-import 'package:moimoi_pos/core/state/audio_store_standalone.dart' as standalone_audio;
+import 'package:moimoi_pos/core/state/ui_store.dart';
+import 'package:moimoi_pos/core/state/audio_store_standalone.dart';
 import 'package:moimoi_pos/core/utils/constants.dart';
 
 class NotificationsSection extends StatefulWidget {
@@ -60,7 +60,7 @@ class _NotificationsSectionState extends State<NotificationsSection> {
   }
 
   void _loadCustomSoundNames() {
-    final audioStore = context.read<standalone_audio.AudioStore>();
+    final audioStore = context.read<AudioStore>();
     final notifSound = audioStore.notificationSound;
     final paySound = audioStore.paymentSound;
 
@@ -105,7 +105,7 @@ class _NotificationsSectionState extends State<NotificationsSection> {
         });
 
         // Preview the picked sound
-        final audioStore = context.read<standalone_audio.AudioStore>();
+        final audioStore = context.read<AudioStore>();
         audioStore.previewNotificationSound(devicePath);
       }
     } catch (e) {
@@ -115,8 +115,8 @@ class _NotificationsSectionState extends State<NotificationsSection> {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
-    final audioStore = context.watch<standalone_audio.AudioStore>();
+    final uiStore = context.read<UIStore>();
+    final audioStore = context.watch<AudioStore>();
 
     final currentNotifSound =
         _selectedNotificationSound ?? audioStore.notificationSound;
@@ -372,7 +372,7 @@ class _NotificationsSectionState extends State<NotificationsSection> {
             ),
           ),
         ),
-        if (widget.onCancel != null) _buildBottomActions(store, audioStore, hasChanges),
+        if (widget.onCancel != null) _buildBottomActions(uiStore, audioStore, hasChanges),
       ],
     );
   }
@@ -454,7 +454,7 @@ class _NotificationsSectionState extends State<NotificationsSection> {
     );
   }
 
-  Widget _buildBottomActions(AppStore store, standalone_audio.AudioStore audioStore, bool hasChanges) {
+  Widget _buildBottomActions(UIStore store, AudioStore audioStore, bool hasChanges) {
     return Padding(
       padding: EdgeInsets.fromLTRB(9, 8, 9, 16),
       child: ConstrainedBox(

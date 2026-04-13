@@ -186,66 +186,9 @@ class _PricingDialogState extends State<_PricingDialog> {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<PremiumStore>();
-    final isIapAvailable = store.isIapAvailable;
-    final storeProducts = store.storeProducts;
 
-    List<_PlanInfo> displayPlans = [];
-    if (isIapAvailable && storeProducts.isNotEmpty) {
-      for (final p in storeProducts) {
-        String name = p.title;
-        String badge = '';
-        String savings = '';
-        String ppm = p.price;
+    List<_PlanInfo> displayPlans = _fallbackPlans.toList();
 
-        if (p.id == 'premium_1_month') {
-          name = '1 Tháng';
-          ppm = '${p.price}/tháng';
-        } else if (p.id == 'premium_3_months') {
-          name = '3 Tháng';
-          badge = 'Phổ biến';
-          savings = 'Tiết kiệm 20%';
-          ppm = 'Gia hạn mỗi 3 tháng';
-        } else if (p.id == 'premium_6_months') {
-          name = '6 Tháng';
-          badge = 'Tốt nhất';
-          savings = 'Tiết kiệm 40%';
-          ppm = 'Gia hạn mỗi 6 tháng';
-        } else if (p.id == 'premium_12_months') {
-          name = '1 Năm';
-          badge = 'Siêu tiết kiệm';
-          savings = 'Tiết kiệm 50%';
-          ppm = 'Gia hạn mỗi năm';
-        }
-
-        displayPlans.add(
-          _PlanInfo(
-            id: p.id,
-            name: name,
-            price: p.price,
-            pricePerMonth: ppm,
-            badge: badge,
-            savings: savings,
-          ),
-        );
-      }
-
-      final order = [
-        'premium_1_month',
-        'premium_3_months',
-        'premium_6_months',
-        'premium_12_months',
-      ];
-      displayPlans.sort((a, b) {
-        final aIdx = order.indexOf(a.id);
-        final bIdx = order.indexOf(b.id);
-        if (aIdx == -1 && bIdx == -1) return 0;
-        if (aIdx == -1) return 1;
-        if (bIdx == -1) return -1;
-        return aIdx.compareTo(bIdx);
-      });
-    } else {
-      displayPlans = _fallbackPlans.toList();
-    }
 
     if (_selectedPlan >= displayPlans.length) {
       _selectedPlan = 0;
@@ -455,26 +398,11 @@ class _PricingDialogState extends State<_PricingDialog> {
                     onPressed: store.isLoading
                         ? null
                         : () {
-                            final selected = displayPlans[_selectedPlan];
-                            if (isIapAvailable && storeProducts.isNotEmpty) {
-                              try {
-                                final product = storeProducts.firstWhere(
-                                  (p) => p.id == selected.id,
-                                );
-                                store.requestInAppPurchase(product);
-                              } catch (e) {
-                                store.showToast(
-                                  'Vui lòng thử lại sau.',
-                                  'error',
-                                );
-                              }
-                            } else {
-                              // Fallback show info to contact Admin
-                              store.showToast(
-                                'Không thể tải IAP. Vui lòng liên hệ Hotline/Zalo kỹ thuật 033.9524.898 để được hỗ trợ kích hoạt gói.',
-                                'info',
-                              );
-                            }
+                            // Bank transfer flow — contact admin
+                            store.showToast(
+                              'Vui lòng liên hệ Hotline/Zalo kỹ thuật 033.9524.898 để được hỗ trợ kích hoạt gói.',
+                              'info',
+                            );
                             Navigator.pop(context);
                           },
                     style: ElevatedButton.styleFrom(
@@ -509,33 +437,7 @@ class _PricingDialogState extends State<_PricingDialog> {
                 'Hủy bất kỳ lúc nào. Không tự động gia hạn.',
                 style: TextStyle(fontSize: 11, color: AppColors.slate400),
               ),
-              if (isIapAvailable) ...[
-                SizedBox(height: 12),
-                TextButton(
-                  onPressed: store.isLoading
-                      ? null
-                      : () async {
-                          await store.restorePurchases();
-                          if (context.mounted) {
-                            store.showToast(
-                              'Đã khôi phục các giao dịch mua',
-                              'success',
-                            );
-                            Navigator.pop(context);
-                          }
-                        },
-                  child: Text(
-                    'Khôi phục giao dịch mua (Restore Purchases)',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.emerald600,
-                      decoration: TextDecoration.underline,
-                      decorationColor: AppColors.emerald600,
-                    ),
-                  ),
-                ),
-              ],
+
 
               SizedBox(height: 16),
               Container(
