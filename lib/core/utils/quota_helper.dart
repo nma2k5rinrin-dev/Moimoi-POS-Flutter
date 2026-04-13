@@ -1,0 +1,123 @@
+import 'package:moimoi_pos/features/auth/models/user_model.dart';
+import 'package:moimoi_pos/features/settings/models/store_info_model.dart';
+import 'package:moimoi_pos/features/inventory/models/category_model.dart';
+import 'package:moimoi_pos/features/inventory/models/product_model.dart';
+import 'package:moimoi_pos/features/pos_order/models/order_model.dart';
+
+/// Quota limits for the free (Cơ bản) tier.
+/// Premium users have no limits.
+class QuotaLimits {
+  static const int maxStaff = 1;
+  static const int maxTables = 2;
+  static const int maxCategories = 2;
+  static const int maxProducts = 5;
+  static const int maxOrdersPerDay = 10;
+}
+
+/// Interface for accessing data needed for quota checks.
+/// Implemented by AppStore (and future standalone stores).
+abstract class QuotaDataProvider {
+  UserModel? get currentUser;
+  StoreInfoModel get currentStoreInfo;
+  List<UserModel> get users;
+  List<CategoryModel> get currentCategories;
+  List<ProductModel> get currentProducts;
+  List<OrderModel> get orders;
+  List<String> get currentTables;
+  String getStoreId();
+}
+
+class QuotaHelper {
+  final QuotaDataProvider provider;
+  const QuotaHelper(this.provider);
+
+  bool get _isPremium =>
+      provider.currentUser?.role == 'sadmin' || provider.currentStoreInfo.isPremium;
+
+  // ── Staff ──────────────────────────────────────────────
+  int get currentStaffCount {
+    final storeId = provider.getStoreId();
+    return provider.users
+        .where(
+          (u) =>
+              u.role != 'admin' && u.role != 'sadmin' && u.createdBy == storeId,
+        )
+        .length;
+  }
+
+  bool get canAddStaff =>
+      _isPremium || currentStaffCount < QuotaLimits.maxStaff;
+
+  String get staffLimitMsg =>
+      'Gói Cơ bản chỉ cho phép tối đa ${QuotaLimits.maxStaff} nhân viên. '
+      'Nâng cấp Premium để thêm không giới hạn.';
+
+  // ── Tables ─────────────────────────────────────────────
+  int get currentTableCount => provider.currentTables.length;
+
+  bool get canAddTable =>
+      _isPremium || currentTableCount < QuotaLimits.maxTables;
+
+  String get tableLimitMsg =>
+      'Gói Cơ bản chỉ cho phép tối đa ${QuotaLimits.maxTables} bàn. '
+      'Nâng cấp Premium để thêm không giới hạn.';
+
+  // ── Categories (danh mục sản phẩm) ─────────────────────
+  int get currentCategoryCount => provider.currentCategories.length;
+
+  bool get canAddCategory =>
+      _isPremium || currentCategoryCount < QuotaLimits.maxCategories;
+
+  String get categoryLimitMsg =>
+      'Gói Cơ bản chỉ cho phép tối đa ${QuotaLimits.maxCategories} danh mục. '
+      'Nâng cấp Premium để thêm không giới hạn.';
+
+  // ── Products ───────────────────────────────────────────
+  int get currentProductCount => provider.currentProducts.length;
+
+  bool get canAddProduct =>
+      _isPremium || currentProductCount < QuotaLimits.maxProducts;
+
+  String get productLimitMsg =>
+      'Gói Cơ bản chỉ cho phép tối đa ${QuotaLimits.maxProducts} sản phẩm. '
+      'Nâng cấp Premium để thêm không giới hạn.';
+
+  // ── Orders / day ───────────────────────────────────────
+  int get todayOrderCount {
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    final storeId = provider.getStoreId();
+    return provider.orders.where((o) {
+      if (o.storeId != storeId) return false;
+      final orderTime = DateTime.tryParse(o.time);
+      return orderTime != null && orderTime.isAfter(startOfDay);
+    }).length;
+  }
+
+  bool get canPlaceOrder =>
+      _isPremium || todayOrderCount < QuotaLimits.maxOrdersPerDay;
+
+  int get remainingOrdersToday =>
+      _isPremium ? -1 : QuotaLimits.maxOrdersPerDay - todayOrderCount;
+
+  String get orderLimitMsg =>
+      'Gói Cơ bản chỉ cho phép tối đa ${QuotaLimits.maxOrdersPerDay} đơn/ngày. '
+      'Còn lại: ${remainingOrdersToday < 0 ? 0 : remainingOrdersToday} đơn. '
+      'Nâng cấp Premium để không giới hạn.';
+
+  // ── Transactions (Premium only) ─────────────────────────
+  bool get canUseTransactions => _isPremium;
+  bool get canUseThuChi => canUseTransactions; // backward compat
+
+  String get transactionLimitMsg =>
+      'Tính năng Thu/Chi chỉ dành cho gói Premium. '
+      'Nâng cấp Premium để sử dụng.';
+  String get thuChiLimitMsg => transactionLimitMsg; // backward compat
+
+  // ── Menu QR & Order (Premium only) ─────────────────────
+  bool get canUseMenuOrder => _isPremium;
+
+  String get menuOrderLimitMsg =>
+      'Tính năng Menu QR & Order chỉ dành cho gói Premium. '
+      'Nâng cấp Premium để sử dụng.';
+}

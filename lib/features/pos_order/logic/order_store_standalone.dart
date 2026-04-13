@@ -1,0 +1,1027 @@
+import 'dart:convert' show jsonEncode;
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:drift/drift.dart' show Value;
+import 'package:moimoi_pos/features/pos_order/models/order_model.dart';
+import 'package:moimoi_pos/features/auth/models/user_model.dart';
+import 'package:moimoi_pos/core/state/base_mixin.dart';
+
+import 'package:moimoi_pos/core/database/app_database.dart';
+import 'package:moimoi_pos/core/utils/notification_helper.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:convert';
+import 'dart:async';
+
+import 'package:moimoi_pos/core/utils/quota_helper.dart';
+import 'package:moimoi_pos/features/premium/presentation/widgets/upgrade_dialog.dart';
+
+import 'package:moimoi_pos/features/pos_order/logic/cart_store_standalone.dart';
+
+/// Manages Orders CRUD, and order-related Drift helpers.
+class OrderStore extends ChangeNotifier with BaseMixin {
+  final QuotaDataProvider quotaProvider;
+  final CartStore cartStore;
+  final UserModel? Function() getCurrentUser;
+  final VoidCallback onPlayNewOrderSound;
+  final void Function(OrderModel order)? onNewOrderAlert;
+
+  OrderStore({
+    required this.quotaProvider,
+    required this.cartStore,
+    required this.getCurrentUser,
+    required this.onPlayNewOrderSound,
+    this.onNewOrderAlert,
+  });
+
+  @override
+  String getStoreId() => quotaProvider.getStoreId();
+
+  // ── State ─────────────────────────────────────────────────
+  List<OrderModel> orders = [];
+
+  UserModel? get currentUser => getCurrentUser();
+
+  void clearOrderState() {
+    orders = [];
+  }
+
+  // ── Drift Helpers ─────────────────────────────────────────
+
+  Future<void> initOrderStore(String storeId, DateTime todayStart) async {
+    try {
+      final rows = await supabaseClient
+          .from('orders')
+          .select('id, store_id, table_name, items, status, payment_status, total_amount, time, created_by, payment_method, deleted_at')
+          .eq('store_id', storeId)
+          .isFilter('deleted_at', null)
+          .gte('time', todayStart.toIso8601String())
+          .order('time', ascending: false)
+          .limit(20);
+
+      final fetchedOrders = rows.map((e) => OrderModel.fromMap(e)).toList();
+
+      if (db != null) {
+        final List<OrderModel> resolvedOrders = [];
+        final localData = await db!.getOrdersByStore(storeId);
+        
+        for (final fetched in fetchedOrders) {
+          final hasPending = await db!.hasPendingSync(fetched.id);
+          
+          if (hasPending) {
+            // Local wins: preserve the current drift state which has the unsynced changes
+            final localRow = localData.firstWhere((o) => o.id == fetched.id, 
+                orElse: () => throw Exception('Missing local data for pending sync'));
+            final localModelData = jsonDecode(localRow.itemsJson);
+            // Reconstruct full item from local row
+            resolvedOrders.add(OrderModel(
+              id: localRow.id,
+              storeId: localRow.storeId,
+              table: localRow.orderTable,
+              items: (localModelData as List).map((i) => OrderItemModel.fromMap(i)).toList(),
+              status: localRow.status,
+              paymentStatus: localRow.paymentStatus,
+              totalAmount: localRow.totalAmount,
+              createdBy: localRow.createdBy,
+              time: localRow.time,
+              paymentMethod: localRow.paymentMethod,
+            ));
+          } else {
+            // No pending changes -> safe to overwrite with server state
+            resolvedOrders.add(fetched);
+            await db!.upsertOrder(
+              LocalOrdersCompanion(
+                id: Value(fetched.id),
+                storeId: Value(fetched.storeId),
+                orderTable: Value(fetched.table),
+                itemsJson: Value(
+                  jsonEncode(fetched.items.map((i) => i.toMap()).toList()),
+                ),
+                status: Value(fetched.status),
+                paymentStatus: Value(fetched.paymentStatus),
+                totalAmount: Value(fetched.totalAmount),
+                createdBy: Value(fetched.createdBy),
+                time: Value(fetched.time),
+                paymentMethod: Value(fetched.paymentMethod),
+                isSynced: const Value(true),
+              ),
+            );
+          }
+        }
+        
+        // ADD LOCAL PENDING ORDERS THAT WERE NOT FETCHED FROM SERVER
+        for (final local in localData) {
+          if (!resolvedOrders.any((o) => o.id == local.id)) {
+            final hasPending = await db!.hasPendingSync(local.id);
+            if (hasPending) {
+              final localModelData = jsonDecode(local.itemsJson);
+              resolvedOrders.add(OrderModel(
+                id: local.id,
+                storeId: local.storeId,
+                table: local.orderTable,
+                items: (localModelData as List).map((i) => OrderItemModel.fromMap(i)).toList(),
+                status: local.status,
+                paymentStatus: local.paymentStatus,
+                totalAmount: local.totalAmount,
+                createdBy: local.createdBy,
+                time: local.time,
+                paymentMethod: local.paymentMethod,
+              ));
+            }
+          }
+        }
+        
+        resolvedOrders.sort((a, b) => b.time.compareTo(a.time));
+        orders = resolvedOrders;
+      } else {
+        orders = fetchedOrders;
+      }
+    } catch (e) {
+      debugPrint('[initOrderStore] $e');
+    }
+
+    // Dọn dẹp đơn "ma" (xóa mềm nhưng chưa hủy) — chạy ngầm, không chặn UI
+    _cleanupGhostOrders(storeId);
+  }
+
+  /// Tự động dọn dẹp đơn bị xóa mềm nhưng status vẫn là pending/processing.
+  /// Đổi chúng thành cancelled để không bao giờ chặn đơn QR mới.
+  Future<void> _cleanupGhostOrders(String storeId) async {
+    try {
+      // 1. Tìm tất cả đơn "ma": đã xóa mềm nhưng status chưa cancel/complete
+      final ghostOrders = await supabaseClient
+          .from('orders')
+          .select('id')
+          .eq('store_id', storeId)
+          .not('deleted_at', 'is', null)
+          .inFilter('status', ['pending', 'processing']);
+
+      if (ghostOrders.isNotEmpty) {
+        final ghostIds = ghostOrders.map((e) => e['id'].toString()).toList();
+        debugPrint('[Cleanup] Tìm thấy ${ghostIds.length} đơn ma, đang xử lý...');
+
+        // 2. Chuyển tất cả sang cancelled
+        await supabaseClient
+            .from('orders')
+            .update({'status': 'cancelled'})
+            .inFilter('id', ghostIds);
+
+        debugPrint('[Cleanup] Đã hủy ${ghostIds.length} đơn ma thành công!');
+      }
+
+      // 3. Xóa cứng các đơn đã xóa mềm quá 7 ngày (giữ DB sạch)
+      final cutoff = DateTime.now().subtract(const Duration(days: 7)).toUtc().toIso8601String();
+      await supabaseClient
+          .from('orders')
+          .delete()
+          .eq('store_id', storeId)
+          .not('deleted_at', 'is', null)
+          .lt('deleted_at', cutoff);
+    } catch (e) {
+      debugPrint('[Cleanup] Ghost order cleanup error: $e');
+    }
+  }
+
+  void playNewOrderSound() => onPlayNewOrderSound();
+
+  RealtimeChannel? _ordersChannel;
+
+  void setupOrdersRealtime(String? storeId, String userRole) {
+    removeOrdersRealtime(); // Prevent duplicate listeners
+    if (storeId == null && userRole == 'sadmin') return;
+    _ordersChannel = supabaseClient
+        .channel('orders-changes-$storeId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'orders',
+          filter: storeId != null
+              ? PostgresChangeFilter(
+                  type: PostgresChangeFilterType.eq,
+                  column: 'store_id',
+                  value: storeId,
+                )
+              : null,
+          callback: (payload) async {
+            if (payload.eventType == PostgresChangeEvent.insert) {
+              final newOrder = OrderModel.fromMap(payload.newRecord);
+              
+              // Nếu INSERT event đến với deleted_at đã set (Realtime gửi trạng thái cuối)
+              // hoặc status đã bị cancelled -> đây là tín hiệu merge từ DB trigger!
+              // Phải query lại đơn cũ ngay lập tức để cập nhật UI.
+              if (newOrder.deletedAt != null || newOrder.status == 'cancelled') {
+                try {
+                  final existingData = await supabaseClient
+                      .from('orders')
+                      .select('id, store_id, table_name, items, status, payment_status, total_amount, time, created_by, payment_method, deleted_at')
+                      .eq('store_id', newOrder.storeId)
+                      .eq('table_name', newOrder.table)
+                      .isFilter('deleted_at', null)
+                      .inFilter('status', ['pending', 'processing'])
+                      .eq('payment_status', 'unpaid')
+                      .order('time', ascending: false)
+                      .limit(1)
+                      .maybeSingle();
+
+                  if (existingData != null) {
+                    final mergedOrder = OrderModel.fromMap(existingData);
+                    final mergeIdx = orders.indexWhere((o) => o.id == mergedOrder.id);
+                    if (mergeIdx != -1) {
+                      orders[mergeIdx] = mergedOrder;
+                    } else {
+                      orders.insert(0, mergedOrder);
+                    }
+                    
+                    showToast('${mergedOrder.table} vừa thêm sản phẩm vào đơn', 'warning');
+                    playNewOrderSound();
+                    NotificationHelper.showNewOrderNotification(mergedOrder, isUpdate: true);
+                    
+                    if (db != null) await updateOrderInDrift(mergedOrder.id);
+                    notifyListeners();
+                  }
+                } catch (e) {
+                  debugPrint('[Realtime] Lỗi query đơn gộp từ INSERT: $e');
+                }
+                return;
+              }
+              
+              if (orders.any((o) => o.id == newOrder.id)) return;
+
+              // Đợi để DB trigger kịp xử lý merge (nếu có)
+              // rồi kiểm tra lại xem đơn có bị cancelled chưa
+              await Future.delayed(const Duration(milliseconds: 800));
+
+              try {
+                final freshData = await supabaseClient
+                    .from('orders')
+                    .select('id, store_id, table_name, items, status, payment_status, total_amount, time, created_by, payment_method, deleted_at')
+                    .eq('id', newOrder.id)
+                    .maybeSingle();
+                
+                // Nếu đơn đã bị trigger cancelled/xóa -> đây là merge!
+                // Query lại đơn cũ đã được gộp để cập nhật UI
+                if (freshData == null || 
+                    freshData['deleted_at'] != null || 
+                    freshData['status'] == 'cancelled') {
+                  
+                  // Tìm đơn cũ đang active của cùng bàn đó
+                  final existingData = await supabaseClient
+                      .from('orders')
+                      .select('id, store_id, table_name, items, status, payment_status, total_amount, time, created_by, payment_method, deleted_at')
+                      .eq('store_id', newOrder.storeId)
+                      .eq('table_name', newOrder.table)
+                      .isFilter('deleted_at', null)
+                      .inFilter('status', ['pending', 'processing'])
+                      .eq('payment_status', 'unpaid')
+                      .order('time', ascending: false)
+                      .limit(1)
+                      .maybeSingle();
+
+                  if (existingData != null) {
+                    final mergedOrder = OrderModel.fromMap(existingData);
+                    final mergeIdx = orders.indexWhere((o) => o.id == mergedOrder.id);
+                    if (mergeIdx != -1) {
+                      orders[mergeIdx] = mergedOrder;
+                    } else {
+                      orders.insert(0, mergedOrder);
+                    }
+                    
+                    showToast('${mergedOrder.table} vừa thêm sản phẩm vào đơn', 'warning');
+                    playNewOrderSound();
+                    NotificationHelper.showNewOrderNotification(mergedOrder, isUpdate: true);
+                    
+                    if (db != null) await updateOrderInDrift(mergedOrder.id);
+                    notifyListeners();
+                  }
+                  return;
+                }
+                
+                // Đơn không bị cancelled -> đây là đơn mới thật sự
+                if (orders.any((o) => o.id == newOrder.id)) return;
+                
+                final confirmedOrder = OrderModel.fromMap(freshData);
+                orders.insert(0, confirmedOrder);
+                showToast('${confirmedOrder.table} có đơn hàng mới');
+                playNewOrderSound();
+                NotificationHelper.showNewOrderNotification(confirmedOrder);
+
+                if (db != null) {
+                  await db!.upsertOrder(
+                    LocalOrdersCompanion(
+                      id: Value(confirmedOrder.id),
+                      storeId: Value(confirmedOrder.storeId),
+                      orderTable: Value(confirmedOrder.table),
+                      itemsJson: Value(
+                        jsonEncode(
+                          confirmedOrder.items.map((i) => i.toMap()).toList(),
+                        ),
+                      ),
+                      status: Value(confirmedOrder.status),
+                      paymentStatus: Value(confirmedOrder.paymentStatus),
+                      totalAmount: Value(confirmedOrder.totalAmount),
+                      createdBy: Value(confirmedOrder.createdBy),
+                      time: Value(confirmedOrder.time),
+                      paymentMethod: Value(confirmedOrder.paymentMethod),
+                      isSynced: const Value(true),
+                    ),
+                  );
+                }
+                notifyListeners();
+              } catch (e) {
+                debugPrint('[Realtime] Lỗi xác nhận đơn mới: $e');
+              }
+            } else if (payload.eventType == PostgresChangeEvent.update) {
+              final rec = payload.newRecord;
+              if (rec['deleted_at'] != null) {
+                orders.removeWhere((o) => o.id == rec['id']?.toString());
+                if (db != null)
+                  db!.deleteOrderLocally(rec['id']?.toString() ?? '');
+                notifyListeners();
+                return;
+              }
+              final id = rec['id']?.toString() ?? '';
+              
+              if (db != null) {
+                final hasPending = await db!.hasPendingSync(id);
+                if (hasPending) {
+                  // Ignore Realtime UPDATE if local app is currently trying to push its own changes
+                  // Local wins. When SyncEngine succeeds, it will broadcast a fresh update.
+                  debugPrint('[Realtime] Đã bỏ qua UPDATE cho $id vì đang có pending sync.');
+                  return;
+                }
+              }
+
+              final idx = orders.indexWhere((o) => o.id == id);
+
+              if (idx != -1) {
+                final existing = orders[idx];
+                List<OrderItemModel> updatedItems = existing.items;
+
+                if (rec['items'] != null) {
+                  final incomingItems = (rec['items'] as List<dynamic>)
+                      .map((e) => OrderItemModel.fromMap(e as Map<String, dynamic>))
+                      .toList();
+                  
+                  final groupedItems = <OrderItemModel>[];
+                  for (final item in incomingItems) {
+                    final findIdx = groupedItems.indexWhere((i) {
+                      final isSameProduct = (i.id == item.id && i.id.isNotEmpty) || 
+                                            (i.name.trim().toLowerCase() == item.name.trim().toLowerCase() && i.name.trim().isNotEmpty);
+                      final isSameNote = i.note.trim().toLowerCase() == item.note.trim().toLowerCase();
+                      return isSameProduct && isSameNote;
+                    });
+                    if (findIdx != -1) {
+                      groupedItems[findIdx] = groupedItems[findIdx].copyWith(
+                        quantity: groupedItems[findIdx].quantity + item.quantity,
+                        doneQuantity: groupedItems[findIdx].doneQuantity + item.doneQuantity,
+                        isNewlyAdded: item.isNewlyAdded || groupedItems[findIdx].isNewlyAdded,
+                      );
+                    } else {
+                      // Giữ lại doneQuantity lớn hơn (phòng trường hợp event db đi chệch nhịp)
+                      final localMatch = existing.items.where((li) => li.id == item.id).firstOrNull ?? 
+                                         existing.items.where((li) => li.name.trim().toLowerCase() == item.name.trim().toLowerCase()).firstOrNull;
+                      int resolvedDoneQty = item.doneQuantity;
+                      if (localMatch != null && localMatch.doneQuantity > item.doneQuantity) {
+                         resolvedDoneQty = localMatch.doneQuantity;
+                      }
+                      groupedItems.add(item.copyWith(doneQuantity: resolvedDoneQty));
+                    }
+                  }
+                  updatedItems = groupedItems;
+                }
+
+                // Chống rollback trạng thái hoàn thành từ server dội lại
+                String safeStatus = rec['status'] ?? existing.status;
+                if (existing.status == 'completed' && safeStatus != 'completed') {
+                  safeStatus = 'completed'; // Local is already completed, keep it
+                }
+
+                orders[idx] = existing.copyWith(
+                  status: safeStatus,
+                  paymentStatus: rec['payment_status'] ?? existing.paymentStatus,
+                  paymentMethod:
+                      (rec['payment_method'] != null &&
+                          (rec['payment_method'] as String).isNotEmpty)
+                      ? rec['payment_method'] as String
+                      : existing.paymentMethod,
+                  totalAmount: rec['total_amount'] != null
+                      ? (rec['total_amount'] as num).toDouble()
+                      : null,
+                  items: updatedItems,
+                );
+                if (db != null) await updateOrderInDrift(id);
+                notifyListeners();
+              } else {
+                try {
+                  final data = await supabaseClient
+                      .from('orders')
+                      .select('id, store_id, table_name, items, status, payment_status, total_amount, time, created_by, payment_method, deleted_at')
+                      .eq('id', id)
+                      .maybeSingle();
+                  if (data != null) {
+                    final newOrder = OrderModel.fromMap(data);
+                    if (newOrder.deletedAt == null && !orders.any((o) => o.id == newOrder.id)) {
+                      orders.insert(0, newOrder);
+                      notifyListeners();
+                    }
+                  }
+                } catch (e) {
+                  debugPrint('[Realtime] Failed to fetch order $id: $e');
+                }
+              }
+            } else if (payload.eventType == PostgresChangeEvent.delete) {
+              final deletedId = payload.oldRecord['id']?.toString() ?? '';
+              orders.removeWhere((o) => o.id == deletedId);
+              if (db != null) {
+                await (db!.delete(
+                  db!.localOrders,
+                )..where((t) => t.id.equals(deletedId))).go();
+              }
+              notifyListeners();
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  void removeOrdersRealtime() {
+    if (_ordersChannel != null) supabaseClient.removeChannel(_ordersChannel!);
+    _ordersChannel = null;
+  }
+
+  Future<List<OrderModel>> fetchReportOrders(
+    DateTime from,
+    DateTime to, [
+    String? storeIdFilter,
+  ]) async {
+    final sid = storeIdFilter ?? getStoreId();
+    if (sid.isEmpty || sid == 'sadmin') return [];
+    final fromStr = DateTime(from.year, from.month, from.day).toIso8601String();
+    final toStr = DateTime(
+      to.year,
+      to.month,
+      to.day,
+      23,
+      59,
+      59,
+    ).toIso8601String();
+
+    try {
+      final response = await supabaseClient
+          .from('orders')
+          .select('id, table_name, items, status, payment_status, total_amount, time, created_by, store_id, payment_method')
+          .eq('store_id', sid)
+          .isFilter('deleted_at', null)
+          .gte('time', fromStr)
+          .lte('time', toStr)
+          .order('time', ascending: false);
+      return (response as List).map((o) => OrderModel.fromMap(o)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Build a Drift update for an existing in-memory order
+  Future<void> updateOrderInDrift(String orderId) async {
+    if (db == null) return;
+    final order = orders.firstWhere(
+      (o) => o.id == orderId,
+      orElse: () => const OrderModel(id: ''),
+    );
+    if (order.id.isEmpty) return;
+    await db!.upsertOrder(
+      LocalOrdersCompanion(
+        id: Value(orderId),
+        storeId: Value(order.storeId),
+        orderTable: Value(order.table),
+        itemsJson: Value(
+          jsonEncode(order.items.map((i) => i.toMap()).toList()),
+        ),
+        status: Value(order.status),
+        paymentStatus: Value(order.paymentStatus),
+        totalAmount: Value(order.totalAmount),
+        createdBy: Value(order.createdBy),
+        time: Value(order.time),
+        paymentMethod: Value(order.paymentMethod),
+        isSynced: const Value(false),
+      ),
+    );
+  }
+
+  // ── Orders CRUD ───────────────────────────────────────────
+  void updateOrderStatus(String orderId, String status) {
+    final oldOrders = List<OrderModel>.from(orders);
+    offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: orderId,
+      payload: {'status': status},
+      applyInMemory: () {
+        orders = orders
+            .map((o) => o.id == orderId ? o.copyWith(status: status) : o)
+            .toList();
+      },
+      applyDrift: () => updateOrderInDrift(orderId),
+      rollback: () {
+        orders = oldOrders;
+      },
+      errorMsg: 'Cập nhật trạng thái đơn thất bại, đã hoàn tác',
+    );
+  }
+
+  void completeOrderWithPayment(String orderId, String paymentMethod) {
+    final oldOrders = List<OrderModel>.from(orders);
+    offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: orderId,
+      payload: {
+        'status': 'completed',
+        'payment_status': 'paid',
+        'payment_method': paymentMethod,
+      },
+      applyInMemory: () {
+        orders = orders
+            .map(
+              (o) => o.id == orderId
+                  ? o.copyWith(
+                      status: 'completed',
+                      paymentStatus: 'paid',
+                      paymentMethod: paymentMethod,
+                    )
+                  : o,
+            )
+            .toList();
+      },
+      applyDrift: () => updateOrderInDrift(orderId),
+      rollback: () {
+        orders = oldOrders;
+      },
+      errorMsg: 'Thanh toán thất bại, đã hoàn tác',
+    );
+  }
+
+  void updateOrderTable(String orderId, String newTable) {
+    final oldOrders = List<OrderModel>.from(orders);
+    offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: orderId,
+      payload: {'table_name': newTable},
+      applyInMemory: () {
+        orders = orders
+            .map((o) => o.id == orderId ? o.copyWith(table: newTable) : o)
+            .toList();
+      },
+      applyDrift: () => updateOrderInDrift(orderId),
+      rollback: () {
+        orders = oldOrders;
+      },
+      errorMsg: 'Đổi bàn thất bại, đã hoàn tác',
+    );
+  }
+
+  void updateOrderPaymentStatus(
+    String orderId,
+    String paymentStatus, {
+    String paymentMethod = '',
+  }) {
+    final oldOrders = List<OrderModel>.from(orders);
+    final updateData = <String, dynamic>{'payment_status': paymentStatus};
+    if (paymentMethod.isNotEmpty) updateData['payment_method'] = paymentMethod;
+    offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: orderId,
+      payload: updateData,
+      applyInMemory: () {
+        orders = orders
+            .map(
+              (o) => o.id == orderId
+                  ? o.copyWith(
+                      paymentStatus: paymentStatus,
+                      paymentMethod: paymentMethod.isNotEmpty
+                          ? paymentMethod
+                          : null,
+                    )
+                  : o,
+            )
+            .toList();
+      },
+      applyDrift: () => updateOrderInDrift(orderId),
+      rollback: () {
+        orders = oldOrders;
+      },
+      errorMsg: 'Cập nhật thanh toán thất bại, đã hoàn tác',
+    );
+  }
+
+  void updateOrderItemStatus(OrderModel order, String itemId, bool isDone) {
+    if (order.id.isEmpty) return;
+
+    final newItems = order.items
+        .map((i) => i.id == itemId 
+            ? i.copyWith(
+                isDone: isDone,
+                isNewlyAdded: isDone ? false : i.isNewlyAdded,
+              ) 
+            : i)
+        .toList();
+    offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: order.id,
+      payload: {'items': newItems.map((i) => i.toMap()).toList()},
+      applyInMemory: () {
+        final orderExists = orders.any((o) => o.id == order.id);
+        if (orderExists) {
+          orders = orders
+              .map((o) => o.id == order.id ? o.copyWith(items: newItems) : o)
+              .toList();
+        } else {
+          orders = [...orders, order.copyWith(items: newItems)];
+        }
+      },
+      applyDrift: () => updateOrderInDrift(order.id),
+      rollback: () {
+        orders = orders
+            .map((o) => o.id == order.id ? o.copyWith(items: order.items) : o)
+            .toList();
+      },
+    );
+  }
+
+  void markProductDoneAcrossOrders(
+    String productName,
+    bool isDone, {
+    List<OrderModel>? targetOrders,
+  }) {
+    final processingOrders = targetOrders != null
+        ? List<OrderModel>.from(targetOrders)
+        : orders.where((o) => o.status == 'processing').toList();
+
+    processingOrders.sort((a, b) {
+      final tA = DateTime.tryParse(a.time) ?? DateTime(0);
+      final tB = DateTime.tryParse(b.time) ?? DateTime(0);
+      if (isDone) {
+        return tA.compareTo(tB);
+      } else {
+        return tB.compareTo(tA);
+      }
+    });
+
+    final oldOrders = List<OrderModel>.from(orders);
+
+    String? targetOrderId;
+    String? targetItemId;
+
+    for (final order in processingOrders) {
+      for (final item in order.items) {
+        if (item.name == productName) {
+          if (isDone && item.doneQuantity < item.quantity) {
+            targetOrderId = order.id;
+            targetItemId = item.id;
+            break;
+          } else if (!isDone && item.doneQuantity > 0) {
+            targetOrderId = order.id;
+            targetItemId = item.id;
+            break;
+          }
+        }
+      }
+      if (targetOrderId != null) break;
+    }
+    if (targetOrderId == null || targetItemId == null) return;
+
+    final targetOrder = processingOrders.firstWhere((o) => o.id == targetOrderId);
+    final targetItem = targetOrder.items.firstWhere(
+      (i) => i.id == targetItemId,
+    );
+    final newDoneQty = isDone
+        ? targetItem.doneQuantity + 1
+        : targetItem.doneQuantity - 1;
+
+    final updatedItems = targetOrder.items
+        .map(
+          (i) =>
+              i.id == targetItemId ? i.copyWith(doneQuantity: newDoneQty) : i,
+        )
+        .toList();
+
+    final capturedTargetOrderId = targetOrderId;
+    offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: capturedTargetOrderId,
+      payload: {'items': updatedItems.map((i) => i.toMap()).toList()},
+      applyInMemory: () {
+        orders = orders
+            .map(
+              (o) => o.id == capturedTargetOrderId
+                  ? o.copyWith(items: updatedItems)
+                  : o,
+            )
+            .toList();
+      },
+      applyDrift: () => updateOrderInDrift(capturedTargetOrderId),
+      rollback: () {
+        orders = oldOrders;
+      },
+      errorMsg: 'Cập nhật trạng thái sản phẩm thất bại, đã hoàn tác',
+    );
+  }
+
+  void setAllProductDoneAcrossOrders(
+    String productName,
+    bool isDone, {
+    List<OrderModel>? targetOrders,
+  }) {
+    final processingOrders = targetOrders != null
+        ? List<OrderModel>.from(targetOrders)
+        : orders.where((o) => o.status == 'processing').toList();
+    final oldOrders = List<OrderModel>.from(orders);
+
+    final updatedOrderMap = <String, List<OrderItemModel>>{};
+    for (final order in processingOrders) {
+      bool changed = false;
+      final newItems = order.items.map((i) {
+        if (i.name == productName) {
+          final targetQty = isDone ? i.quantity : 0;
+          if (i.doneQuantity != targetQty) {
+            changed = true;
+            return i.copyWith(doneQuantity: targetQty);
+          }
+        }
+        return i;
+      }).toList();
+      if (changed) {
+        updatedOrderMap[order.id] = newItems;
+      }
+    }
+    if (updatedOrderMap.isEmpty) return;
+
+    orders = orders.map((o) {
+      final updated = updatedOrderMap[o.id];
+      return updated != null ? o.copyWith(items: updated) : o;
+    }).toList();
+
+    for (final entry in updatedOrderMap.entries) {
+      offlineFirst(
+        table: 'orders',
+        operation: 'UPDATE',
+        recordId: entry.key,
+        payload: {'items': entry.value.map((i) => i.toMap()).toList()},
+        applyInMemory: () {},
+        applyDrift: () => updateOrderInDrift(entry.key),
+        rollback: () {
+          orders = oldOrders;
+        },
+        errorMsg: 'Cập nhật trạng thái sản phẩm thất bại, đã hoàn tác',
+      );
+    }
+    notifyListeners();
+  }
+
+  void updateOrderItemNote(String orderId, String itemId, String note) {
+    final order = orders.firstWhere(
+      (o) => o.id == orderId,
+      orElse: () => const OrderModel(id: ''),
+    );
+    if (order.id.isEmpty) return;
+    final newItems = order.items
+        .map((i) => i.id == itemId ? i.copyWith(note: note) : i)
+        .toList();
+    offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: orderId,
+      payload: {'items': newItems.map((i) => i.toMap()).toList()},
+      applyInMemory: () {
+        orders = orders
+            .map((o) => o.id == orderId ? o.copyWith(items: newItems) : o)
+            .toList();
+      },
+      applyDrift: () => updateOrderInDrift(orderId),
+      rollback: () {
+        orders = orders
+            .map((o) => o.id == orderId ? o.copyWith(items: order.items) : o)
+            .toList();
+      },
+    );
+  }
+
+  void updateOrderItems(
+    String orderId,
+    List<OrderItemModel> newItems,
+    double newTotal,
+  ) {
+    final oldOrders = List<OrderModel>.from(orders);
+    offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: orderId,
+      payload: {
+        'items': newItems.map((i) => i.toMap()).toList(),
+        'total_amount': newTotal,
+      },
+      applyInMemory: () {
+        orders = orders
+            .map(
+              (o) => o.id == orderId
+                  ? o.copyWith(items: newItems, totalAmount: newTotal)
+                  : o,
+            )
+            .toList();
+      },
+      applyDrift: () => updateOrderInDrift(orderId),
+      rollback: () {
+        orders = oldOrders;
+      },
+      errorMsg: 'Cập nhật đơn hàng thất bại, đã hoàn tác',
+    );
+  }
+
+  void removeOrderItem(String orderId, String itemId) {
+    final order = orders.firstWhere(
+      (o) => o.id == orderId,
+      orElse: () => orders.first,
+    );
+    final newItems = order.items.where((i) => i.id != itemId).toList();
+
+    if (newItems.isEmpty) {
+      deleteOrder(orderId);
+      return;
+    }
+
+    final newTotal = newItems.fold(0.0, (acc, i) => acc + i.price * i.quantity);
+    updateOrderItems(orderId, newItems, newTotal);
+  }
+
+  void cancelOrder(String orderId) {
+    final oldOrders = List<OrderModel>.from(orders);
+    offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: orderId,
+      payload: {'status': 'cancelled'},
+      applyInMemory: () {
+        final idx = orders.indexWhere((o) => o.id == orderId);
+        if (idx != -1) orders[idx] = orders[idx].copyWith(status: 'cancelled');
+      },
+      applyDrift: () => updateOrderInDrift(orderId),
+      rollback: () {
+        orders = oldOrders;
+      },
+      errorMsg: 'Huỷ đơn thất bại, đã hoàn tác',
+    );
+  }
+
+  void deleteOrder(String orderId) {
+    final oldOrders = List<OrderModel>.from(orders);
+    offlineFirst(
+      table: 'orders',
+      operation: 'UPDATE',
+      recordId: orderId,
+      payload: {
+        'deleted_at': DateTime.now().toUtc().toIso8601String(),
+        'status': 'cancelled',
+      },
+      applyInMemory: () {
+        orders.removeWhere((o) => o.id == orderId);
+      },
+      applyDrift: () async {
+        if (db != null) await db!.deleteOrderLocally(orderId);
+      },
+      rollback: () {
+        orders = oldOrders;
+      },
+      errorMsg: 'Xóa đơn hàng thất bại, đã hoàn tác',
+    );
+  }
+
+  Future<void> checkoutOrder({
+    String paymentStatus = 'unpaid',
+    String paymentMethod = '',
+  }) async {
+    if (cartStore.cart.isEmpty) return;
+
+    final quota = QuotaHelper(quotaProvider);
+    if (!quota.canPlaceOrder) {
+      final ctx = rootContext;
+      if (ctx != null) await showUpgradePrompt(ctx, quota.orderLimitMsg);
+      return;
+    }
+
+    final totalAmount = cartStore.getCartTotal();
+    final storeId = getStoreId();
+
+    if (cartStore.selectedTable.isNotEmpty &&
+        paymentStatus == 'unpaid' &&
+        !cartStore.selectedTable.trimLeft().startsWith('★')) {
+      final existingOrderIdx = orders.indexWhere(
+        (o) =>
+            o.storeId == storeId &&
+            o.table == cartStore.selectedTable &&
+            o.paymentStatus == 'unpaid' &&
+            (o.status == 'pending' || o.status == 'processing') &&
+            o.deletedAt == null,
+      );
+
+      if (existingOrderIdx != -1) {
+        final existingOrder = orders[existingOrderIdx];
+        final newItems = cartStore.cart
+            .map((item) => item.copyWith(isDone: false))
+            .toList();
+
+        final combinedItems = List<OrderItemModel>.from(existingOrder.items);
+        for (final newItem in newItems) {
+          final findIdx = combinedItems.indexWhere((i) {
+            final isSameProduct = (i.id == newItem.id && i.id.isNotEmpty) || 
+                                  (i.name.trim().toLowerCase() == newItem.name.trim().toLowerCase() && i.name.trim().isNotEmpty);
+            final isSameNote = i.note.trim().toLowerCase() == newItem.note.trim().toLowerCase();
+            return isSameProduct && isSameNote;
+          });
+          if (findIdx != -1) {
+            combinedItems[findIdx] = combinedItems[findIdx].copyWith(
+              quantity: combinedItems[findIdx].quantity + newItem.quantity,
+              doneQuantity: combinedItems[findIdx].doneQuantity + newItem.doneQuantity,
+            );
+          } else {
+            combinedItems.add(newItem);
+          }
+        }
+
+        final newTotal = existingOrder.totalAmount + totalAmount;
+
+        updateOrderItems(existingOrder.id, combinedItems, newTotal);
+
+        cartStore.clearCart();
+        return;
+      }
+    }
+
+    final now = DateTime.now();
+    final orderId =
+        'ORD-${now.millisecondsSinceEpoch}-${Random().nextInt(1000).toString().padLeft(3, '0')}';
+    final itemsList = cartStore.cart
+        .map((item) => item.copyWith(isDone: false).toMap())
+        .toList();
+    final timeStr = DateTime.now().toIso8601String();
+    final createdByStr =
+        (currentUser?.fullname.isNotEmpty == true
+            ? currentUser?.fullname
+            : currentUser?.username) ??
+        'unknown';
+
+    final newOrder = {
+      'id': orderId,
+      'store_id': storeId,
+      'table_name': cartStore.selectedTable,
+      'items': itemsList,
+      'status': 'pending',
+      'payment_status': paymentStatus,
+      'time': timeStr,
+      'total_amount': totalAmount,
+      'created_by': createdByStr,
+      'payment_method': paymentMethod,
+    };
+
+    final orderModel = OrderModel.fromMap(newOrder);
+    final savedCart = List<OrderItemModel>.from(cartStore.cart);
+    final savedTable = cartStore.selectedTable;
+
+    await offlineFirst(
+      table: 'orders',
+      operation: 'INSERT',
+      recordId: orderId,
+      payload: newOrder,
+      applyInMemory: () {
+        orders.insert(0, orderModel);
+        cartStore.clearCart();
+      },
+      applyDrift: () => db!.upsertOrder(
+        LocalOrdersCompanion(
+          id: Value(orderId),
+          storeId: Value(storeId),
+          orderTable: Value(newOrder['table_name'] as String),
+          itemsJson: Value(jsonEncode(itemsList)),
+          status: const Value('pending'),
+          paymentStatus: Value(paymentStatus),
+          totalAmount: Value(totalAmount),
+          createdBy: Value(createdByStr),
+          time: Value(timeStr),
+          paymentMethod: Value(paymentMethod),
+          isSynced: const Value(false),
+        ),
+      ),
+      rollback: () {
+        orders.removeWhere((o) => o.id == orderId);
+        cartStore.cart = savedCart;
+        cartStore.selectedTable = savedTable;
+        cartStore.notifyListeners();
+      },
+      errorMsg: 'Tạo đơn thất bại',
+    );
+  }
+
+  // ── Selection ───────────────────────────────────────────
+}

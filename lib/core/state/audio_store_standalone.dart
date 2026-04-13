@@ -1,0 +1,118 @@
+import 'package:flutter/foundation.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Standalone AudioStore — manages notification and payment sounds.
+/// Replaces the old AudioStore mixin on ChangeNotifier.
+class AudioStore extends ChangeNotifier {
+  final AudioPlayer _orderSoundPlayer = AudioPlayer();
+  final AudioPlayer _paymentSoundPlayer = AudioPlayer();
+
+  String _notificationSound = 'sounds/bell.wav';
+  String _paymentSound = 'sounds/buy_1.mp3';
+
+  String get notificationSound => _notificationSound;
+  String get paymentSound => _paymentSound;
+
+  void initAudio() {
+    if (!kIsWeb) {
+      try {
+        _orderSoundPlayer.setAudioContext(
+          AudioContext(
+            android: AudioContextAndroid(
+              usageType: AndroidUsageType.notification,
+              contentType: AndroidContentType.sonification,
+              audioFocus: AndroidAudioFocus.gainTransientMayDuck,
+            ),
+            iOS: AudioContextIOS(
+              category: AVAudioSessionCategory.ambient,
+              options: {AVAudioSessionOptions.mixWithOthers},
+            ),
+          ),
+        );
+      } catch (e) {
+        debugPrint('[AudioStore] initAudio error: $e');
+      }
+    }
+  }
+
+  Future<void> loadAudioPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _notificationSound =
+          prefs.getString('notification_sound') ?? 'sounds/bell.wav';
+      _paymentSound = prefs.getString('payment_sound') ?? 'sounds/buy_1.mp3';
+    } catch (e) {
+      debugPrint('[AudioStore] loadAudioPreferences error: $e');
+    }
+  }
+
+  Future<void> setNotificationSound(String soundPath) async {
+    _notificationSound = soundPath;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('notification_sound', soundPath);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[AudioStore] setNotificationSound error: $e');
+    }
+  }
+
+  Future<void> setPaymentSound(String soundPath) async {
+    _paymentSound = soundPath;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('payment_sound', soundPath);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[AudioStore] setPaymentSound error: $e');
+    }
+  }
+
+  void previewNotificationSound(String soundPath) async {
+    try {
+      if (_orderSoundPlayer.state == PlayerState.playing) {
+        await _orderSoundPlayer.stop();
+      }
+      if (soundPath == 'mute') return;
+      await _orderSoundPlayer.play(AssetSource(soundPath));
+    } catch (e) {
+      debugPrint('[AudioStore] previewNotificationSound error: $e');
+    }
+  }
+
+  void playNewOrderSound() async {
+    try {
+      if (_orderSoundPlayer.state == PlayerState.playing) {
+        await _orderSoundPlayer.stop();
+      }
+      if (_notificationSound == 'mute') return;
+      await _orderSoundPlayer.play(AssetSource(_notificationSound));
+    } catch (e) {
+      debugPrint('[AudioStore] playNewOrderSound error: $e');
+    }
+  }
+
+  void playPaymentSound() async {
+    try {
+      if (_paymentSoundPlayer.state == PlayerState.playing) {
+        await _paymentSoundPlayer.stop();
+      }
+      if (_paymentSound == 'mute') return;
+      await _paymentSoundPlayer.play(AssetSource(_paymentSound));
+    } catch (e) {
+      debugPrint('[AudioStore] playPaymentSound error: $e');
+    }
+  }
+
+  void disposeAudio() {
+    _orderSoundPlayer.dispose();
+    _paymentSoundPlayer.dispose();
+  }
+
+  @override
+  void dispose() {
+    disposeAudio();
+    super.dispose();
+  }
+}

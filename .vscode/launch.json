@@ -1,0 +1,40 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Moimoi POS (Windows)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "deviceId": "windows",
+            "toolArgs": [
+                "--dart-define-from-file",
+                ".env"
+            ]
+        },
+        {
+            "name": "Moimoi POS (Chrome)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "deviceId": "chrome",
+            "toolArgs": [
+                "--dart-define-from-file",
+                ".env",
+                "--web-port",
+                "3000"
+            ]
+        },
+        {
+            "name": "Moimoi POS (Android)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "deviceId": "android",
+            "toolArgs": [
+                "--dart-define-from-file",
+                ".env"
+            ]
+        }
+    ]
+}

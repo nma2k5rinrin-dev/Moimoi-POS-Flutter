@@ -1,0 +1,16 @@
+name = "moimoi-r2-worker"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# R2 bucket binding
+[[r2_buckets]]
+binding = "IMAGES_BUCKET"
+bucket_name = "moimoi-images"
+
+# Environment variables
+[vars]
+ALLOWED_ORIGINS = "http://localhost:3000"
+
+# Secret: set via command line
+# npx wrangler secret put UPLOAD_SECRET
+# (Nhập secret key khi được hỏi)

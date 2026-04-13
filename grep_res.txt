@@ -1,0 +1,1567 @@
+0: import 'package:flutter/material.dart';
+1: import 'package:go_router/go_router.dart';
+2: import 'package:provider/provider.dart';
+3: import 'package:moimoi_pos/core/state/app_store.dart';
+4: import 'package:moimoi_pos/core/utils/constants.dart';
+5: import 'package:moimoi_pos/core/utils/quota_helper.dart';
+6: import 'package:moimoi_pos/features/premium/presentation/widgets/upgrade_dialog.dart';
+7: import 'package:moimoi_pos/core/widgets/date_range_picker_dialog.dart';
+8: import 'package:moimoi_pos/features/pos_order/models/order_model.dart';
+9: import 'package:moimoi_pos/features/cashflow/models/transaction_model.dart';
+10: import 'package:moimoi_pos/features/cashflow/models/transaction_category_model.dart';
+11: import 'package:moimoi_pos/features/cashflow/presentation/income_page.dart';
+12: import 'package:moimoi_pos/features/cashflow/presentation/expense_page.dart';
+13: import 'package:flutter_slidable/flutter_slidable.dart';
+14: 
+15: class CashflowPage extends StatefulWidget {
+16:   final bool embedded;
+17:   final ValueChanged<bool>? onSubViewToggle;
+18: 
+19:   const CashflowPage({super.key, this.embedded = false, this.onSubViewToggle});
+20: 
+21:   @override
+22:   State<CashflowPage> createState() => _CashflowPageState();
+23: }
+24: 
+25: class _CashflowPageState extends State<CashflowPage> {
+26:   int _tabIndex = 0; // 0 = Tất cả, 1 = Thu, 2 = Chi
+27:   late DateTime _dateFrom;
+28:   late DateTime _dateTo;
+29:   // Sub-view: null = main list, 'thu' = nhập thu, 'chi' = nhập chi
+30:   String? _subView;
+31:   Transaction? _editTxn;
+32: 
+33:   bool _isLoading = false;
+34:   List<OrderModel>? _customOrders;
+35:   List<Transaction>? _customTxns;
+36: 
+37:   @override
+38:   void initState() {
+39:     super.initState();
+40:     final now = DateTime.now();
+41:     _dateFrom = DateTime(now.year, now.month, now.day);
+42:     _dateTo = DateTime.now();
+43:   }
+44: 
+45:   Future<void> _fetchData(AppStore store, DateTime start, DateTime end) async {
+46:     setState(() => _isLoading = true);
+47:     try {
+48:       final endOfDay = end.add(
+49:         Duration(hours: 23, minutes: 59, seconds: 59),
+50:       );
+51:       final orders = await store.fetchOrdersByDateRange(start, endOfDay);
+52:       final txns = await store.fetchTransactionsByDateRange(start, endOfDay);
+53:       if (mounted) {
+54:         setState(() {
+55:           _customOrders = orders;
+56:           _customTxns = txns;
+57:           _isLoading = false;
+58:         });
+59:       }
+60:     } catch (e) {
+61:       if (mounted) {
+62:         store.showToast('Lỗi tải dữ liệu: $e');
+63:         setState(() => _isLoading = false);
+64:       }
+65:     }
+66:   }
+67: 
+68:   @override
+69:   Widget build(BuildContext context) {
+70:     final store = context.watch<AppStore>();
+71: 
+72:     // If embedded and showing a sub-view, render inline
+73:     if (widget.embedded && _subView != null) {
+74:       if (_subView == 'thu') {
+75:         return IncomePage(
+76:           embedded: true,
+77:           initialTransaction: _editTxn,
+78:           onBack: () {
+79:             setState(() {
+80:               _subView = null;
+81:               _editTxn = null;
+82:             });
+83:             widget.onSubViewToggle?.call(false);
+84:           },
+85:         );
+86:       } else {
+87:         return ExpensePage(
+88:           embedded: true,
+89:           initialTransaction: _editTxn,
+90:           onBack: () {
+91:             setState(() {
+92:               _subView = null;
+93:               _editTxn = null;
+94:             });
+95:             widget.onSubViewToggle?.call(false);
+96:           },
+97:         );
+98:       }
+99:     }
+100: 
+101:     // ── Build unified transaction list ───────────────────
+102:     final List<_DisplayTxn> allTxns = [];
+103: 
+104:     final sourceOrders = _customOrders ?? store.orders;
+105:     final sourceTxns = _customTxns ?? store.transactions;
+106: 
+107:     // Helper to safely parse localized timestamp strings from Supabase without triggering timezone shifts
+108:     DateTime? parseLocal(String timeStr) {
+109:       var s = timeStr;
+110:       if (s.endsWith('Z')) s = s.substring(0, s.length - 1);
+111:       final plussIdx = s.indexOf('+');
+112:       if (plussIdx != -1) s = s.substring(0, plussIdx);
+113:       return DateTime.tryParse(s);
+114:     }
+115: 
+116:     // 1. Paid orders → income (store revenue)
+117:     final paidOrders = sourceOrders
+118:         .where((o) => o.paymentStatus == 'paid' && o.status != 'cancelled')
+119:         .toList();
+120: 
+121:     for (final order in paidOrders) {
+122:       final orderDate = parseLocal(order.time);
+123:       if (orderDate == null) continue;
+124:       if (orderDate.isBefore(_dateFrom) ||
+125:           orderDate.isAfter(_dateTo.add(Duration(days: 1)))) {
+126:         continue;
+127:       }
+128: 
+129:       int itemCount = 0;
+130:       for (final item in order.items) {
+131:         itemCount += item.quantity;
+132:       }
+133:       final String tableStr = order.table.isNotEmpty ? order.table : 'Mang về';
+134:       final String subtitle = '$tableStr • $itemCount món';
+135: 
+136:       allTxns.add(
+137:         _DisplayTxn(
+138:           title: 'Đơn hàng ${order.id}',
+139:           subtitle: subtitle,
+140:           category: 'Doanh thu',
+141:           date: orderDate,
+142:           amount: order.totalAmount,
+143:           isIncome: true,
+144:           icon: Icons.point_of_sale_rounded,
+145:           source: 'order',
+146:         ),
+147:       );
+148:     }
+149: 
+150:     // 2. Manual thu/chi transactions
+151:     for (final txn in sourceTxns) {
+152:       final txnDate = parseLocal(txn.time);
+153:       if (txnDate == null) continue;
+154:       if (txnDate.isBefore(_dateFrom) ||
+155:           txnDate.isAfter(_dateTo.add(Duration(days: 1)))) {
+156:         continue;
+157:       }
+158:       allTxns.add(
+159:         _DisplayTxn(
+160:           id: txn.id,
+161:           title: txn.category,
+162:           subtitle: txn.note.isNotEmpty ? txn.note : null,
+163:           category: txn.category,
+164:           date: txnDate,
+165:           amount: txn.amount,
+166:           isIncome: txn.type == 'thu',
+167:           icon: txn.type == 'thu'
+168:               ? Icons.trending_up_rounded
+169:               : Icons.trending_down_rounded,
+170:           source: txn.type == 'thu' ? 'manual_thu' : 'manual_chi',
+171:           originalTxn: txn,
+172:         ),
+173:       );
+174:     }
+175: 
+176:     // Sort by date descending
+177:     allTxns.sort((a, b) => b.date.compareTo(a.date));
+178: 
+179:     // Filter by tab
+180:     final List<_DisplayTxn> filteredTxns;
+181:     if (_tabIndex == 1) {
+182:       filteredTxns = allTxns.where((t) => t.isIncome).toList();
+183:     } else if (_tabIndex == 2) {
+184:       filteredTxns = allTxns.where((t) => !t.isIncome).toList();
+185:     } else {
+186:       filteredTxns = allTxns;
+187:     }
+188: 
+189:     // Calculate totals
+190:     final totalIncome = allTxns
+191:         .where((t) => t.isIncome)
+192:         .fold(0.0, (s, t) => s + t.amount);
+193:     final totalExpense = allTxns
+194:         .where((t) => !t.isIncome)
+195:         .fold(0.0, (s, t) => s + t.amount);
+196:     final balance = totalIncome - totalExpense;
+197: 
+198:     return Container(
+199:       color: widget.embedded ? Colors.transparent : AppColors.slate50,
+200:       child: Column(
+201:         children: [
+202:           // ── Header (only when not embedded) ──
+203:           if (!widget.embedded)
+204:             Container(
+205:               padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
+206:               child: Row(
+207:                 children: [
+208:                   Container(
+209:                     width: 40,
+210:                     height: 40,
+211:                     decoration: BoxDecoration(
+212:                       color: AppColors.amber50,
+213:                       borderRadius: BorderRadius.circular(12),
+214:                     ),
+215:                     child: Icon(
+216:                       Icons.account_balance_wallet_rounded,
+217:                       size: 22,
+218:                       color: AppColors.amber500,
+219:                     ),
+220:                   ),
+221:                   SizedBox(width: 12),
+222:                   Expanded(
+223:                     child: Column(
+224:                       crossAxisAlignment: CrossAxisAlignment.start,
+225:                       children: [
+226:                         Text(
+227:                           'Thu nhập/Chi tiêu',
+228:                           style: TextStyle(
+229:                             fontSize: 16,
+230:                             fontWeight: FontWeight.w800,
+231:                             color: AppColors.slate800,
+232:                           ),
+233:                         ),
+234:                         SizedBox(height: 2),
+235:                         Text(
+236:                           'Quản lý thu nhập & chi phí',
+237:                           style: TextStyle(
+238:                             fontSize: 12,
+239:                             color: AppColors.slate500,
+240:                           ),
+241:                         ),
+242:                       ],
+243:                     ),
+244:                   ),
+245:                 ],
+246:               ),
+247:             ),
+248: 
+249:           if (!widget.embedded) SizedBox(height: 4),
+250: 
+251:           // ── Content ──
+252:           if (_isLoading)
+253:             Expanded(
+254:               child: Center(
+255:                 child: CircularProgressIndicator(color: AppColors.emerald500),
+256:               ),
+257:             )
+258:           else
+259:             Expanded(
+260:               child: SingleChildScrollView(
+261:                 padding: EdgeInsets.symmetric(
+262:                   horizontal: widget.embedded ? 20 : 16,
+263:                 ),
+264:                 child: ConstrainedBox(
+265:                   constraints: BoxConstraints(
+266:                     maxWidth: widget.embedded ? 600 : 700,
+267:                   ),
+268:                   child: Column(
+269:                     crossAxisAlignment: CrossAxisAlignment.start,
+270:                     children: [
+271:                       SizedBox(height: 4),
+272: 
+273:                       // ── Month Picker ──
+274:                       Center(
+275:                         child: GestureDetector(
+276:                           onTap: () async {
+277:                               int selectedYear = _dateFrom.year;
+278:                               int selectedMonth = _dateFrom.month;
+279:                               
+280:                               final result = await showDialog<DateTime>(
+281:                                 context: context,
+282:                                 builder: (ctx) {
+283:                                   return StatefulBuilder(
+284:                                     builder: (ctx, setDialogState) {
+285:                                       return AlertDialog(
+286:                                         backgroundColor: Colors.white,
+287:                                         surfaceTintColor: Colors.transparent,
+288:                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+289:                                         contentPadding: EdgeInsets.all(20),
+290:                                         content: Column(
+291:                                           mainAxisSize: MainAxisSize.min,
+292:                                           children: [
+293:                                             Row(
+294:                                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+295:                                               children: [
+296:                                                 IconButton(
+297:                                                   icon: Icon(Icons.chevron_left, color: AppColors.slate600),
+298:                                                   onPressed: () => setDialogState(() => selectedYear--),
+299:                                                 ),
+300:                                                 Text(
+301:                                                   selectedYear.toString(),
+302:                                                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.slate800),
+303:                                                 ),
+304:                                                 IconButton(
+305:                                                   icon: Icon(Icons.chevron_right, color: AppColors.slate600),
+306:                                                   onPressed: () => setDialogState(() => selectedYear++),
+307:                                                 ),
+308:                                               ],
+309:                                             ),
+310:                                             SizedBox(height: 16),
+311:                                             Wrap(
+312:                                               spacing: 8,
+313:                                               runSpacing: 8,
+314:                                               children: List.generate(12, (index) {
+315:                                                 final month = index + 1;
+316:                                                 final isSelected = month == selectedMonth;
+317:                                                 return GestureDetector(
+318:                                                   onTap: () {
+319:                                                     setDialogState(() => selectedMonth = month);
+320:                                                     Navigator.pop(ctx, DateTime(selectedYear, selectedMonth, 1));
+321:                                                   },
+322:                                                   child: Container(
+323:                                                     width: 60,
+324:                                                     height: 40,
+325:                                                     alignment: Alignment.center,
+326:                                                     decoration: BoxDecoration(
+327:                                                       color: isSelected ? AppColors.emerald500 : AppColors.slate50,
+328:                                                       borderRadius: BorderRadius.circular(12),
+329:                                                       border: Border.all(
+330:                                                         color: isSelected ? AppColors.emerald500 : AppColors.slate200,
+331:                                                       ),
+332:                                                     ),
+333:                                                     child: Text(
+334:                                                       'Th $month',
+335:                                                       style: TextStyle(
+336:                                                         color: isSelected ? Colors.white : AppColors.slate700,
+337:                                                         fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+338:                                                       ),
+339:                                                     ),
+340:                                                   ),
+341:                                                 );
+342:                                               }),
+343:                                             ),
+344:                                           ],
+345:                                         ),
+346:                                       );
+347:                                     }
+348:                                   );
+349:                                 },
+350:                               );
+351:                               
+352:                               if (result != null) {
+353:                                 setState(() {
+354:                                   _dateFrom = DateTime(result.year, result.month, 1);
+355:                                   _dateTo = DateTime(result.year, result.month + 1, 0); // Last day of month
+356:                                   _selectedDate = null;
+357:                                 });
+358:                                 _fetchData(store, _dateFrom, _dateTo);
+359:                               }
+360:                           },
+361:                           child: Container(
+362:                             margin: EdgeInsets.only(bottom: 24),
+363:                             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+364:                             decoration: BoxDecoration(
+365:                               color: AppColors.slate100,
+366:                               borderRadius: BorderRadius.circular(16),
+367:                             ),
+368:                             child: Row(
+369:                               mainAxisSize: MainAxisSize.min,
+370:                               children: [
+371:                                 Icon(Icons.calendar_month_rounded, size: 20, color: AppColors.slate700),
+372:                                 SizedBox(width: 10),
+373:                                 Text(
+374:                                   'Tháng ${_dateFrom.month}/${_dateFrom.year}',
+375:                                   style: TextStyle(
+376:                                     fontSize: 16,
+377:                                     fontWeight: FontWeight.w800,
+378:                                     color: AppColors.slate800,
+379:                                   ),
+380:                                 ),
+381:                                 SizedBox(width: 6),
+382:                                 Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: AppColors.slate500),
+383:                               ],
+384:                             ),
+385:                           ),
+386:                         ),
+387:                       ),
+388: 
+389:                       // ── Panel 1: Compact Overview Dashboard ──
+390:                       _panel(
+391:                         child: Column(
+392:                           crossAxisAlignment: CrossAxisAlignment.start,
+393:                           children: [
+394:                             Text(
+395:                               'Tổng doanh thu',
+396:                               style: TextStyle(
+397:                                 fontSize: 16,
+398:                                 fontWeight: FontWeight.w800,
+399:                                 color: AppColors.slate800,
+400:                               ),
+401:                             ),
+402:                             SizedBox(height: 12),
+403:                             // Compact UI
+404:                             Row(
+405:                               children: [
+406:                                 Expanded(
+407:                                   child: Container(
+408:                                     padding: EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+409:                                     decoration: BoxDecoration(
+410:                                       color: AppColors.emerald50.withOpacity(0.5),
+411:                                       borderRadius: BorderRadius.circular(14),
+412:                                       border: Border.all(color: AppColors.emerald100),
+413:                                     ),
+414:                                     child: Column(
+415:                                       children: [
+416:                                         Text('Tổng Thu', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.emerald700)),
+417:                                         SizedBox(height: 4),
+418:                                         FittedBox(fit: BoxFit.scaleDown, child: Text(_formatAmount(totalIncome), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.emerald800))),
+419:                                       ],
+420:                                     ),
+421:                                   ),
+422:                                 ),
+423:                                 SizedBox(width: 8),
+424:                                 Expanded(
+425:                                   child: Container(
+426:                                     padding: EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+427:                                     decoration: BoxDecoration(
+428:                                       color: AppColors.red50.withOpacity(0.5),
+429:                                       borderRadius: BorderRadius.circular(14),
+430:                                       border: Border.all(color: AppColors.red100),
+431:                                     ),
+432:                                     child: Column(
+433:                                       children: [
+434:                                         Text('Tổng Chi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.red700)),
+435:                                         SizedBox(height: 4),
+436:                                         FittedBox(fit: BoxFit.scaleDown, child: Text(_formatAmount(totalExpense), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.red800))),
+437:                                       ],
+438:                                     ),
+439:                                   ),
+440:                                 ),
+441:                                 SizedBox(width: 8),
+442:                                 Expanded(
+443:                                   child: Container(
+444:                                     padding: EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+445:                                     decoration: BoxDecoration(
+446:                                       color: balance >= 0 ? AppColors.blue50.withOpacity(0.5) : AppColors.amber50.withOpacity(0.5),
+447:                                       borderRadius: BorderRadius.circular(14),
+448:                                       border: Border.all(color: balance >= 0 ? AppColors.blue100 : AppColors.amber100),
+449:                                     ),
+450:                                     child: Column(
+451:                                       children: [
+452:                                         Text('Số dư', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: balance >= 0 ? AppColors.blue700 : AppColors.amber700)),
+453:                                         SizedBox(height: 4),
+454:                                         FittedBox(fit: BoxFit.scaleDown, child: Text('${balance >= 0 ? '+' : ''}${_formatAmount(balance)}', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: balance >= 0 ? AppColors.blue800 : AppColors.amber800))),
+455:                                       ],
+456:                                     ),
+457:                                   ),
+458:                                 ),
+459:                               ],
+460:                             ),
+461:                           ],
+462:                         ),
+463:                       ),
+464:                       
+465:                       SizedBox(height: 14),
+466:                       _buildCategoryStats(store, allTxns),
+467:                       SizedBox(height: 14),
+468: 
+469:                       // ── Calendar Panel ──
+470:                       _panel(
+471:                         child: _buildCalendar(allTxns),
+472:                       ),
+473: 
+474:                       SizedBox(height: 14),
+475: 
+476:                       // ── Panel 2: Tabs + Transactions ──
+477:                       _panel(
+478:                         child: Column(
+479:                           crossAxisAlignment: CrossAxisAlignment.start,
+480:                           children: [
+481:                             Container(
+482:                               padding: EdgeInsets.all(4),
+483:                               decoration: BoxDecoration(
+484:                                 color: AppColors.slate100,
+485:                                 borderRadius: BorderRadius.circular(12),
+486:                               ),
+487:                               child: Row(
+488:                                 children: [
+489:                                   _buildTab('Tất cả', 0),
+490:                                   _buildTab('Thu', 1),
+491:                                   _buildTab('Chi', 2),
+492:                                 ],
+493:                               ),
+494:                             ),
+495:                             SizedBox(height: 18),
+496: 
+497:                             Row(
+498:                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+499:                               children: [
+500:                                 Text(
+501:                                   '${filteredTxns.length} giao dịch',
+502:                                   style: TextStyle(
+503:                                     fontSize: 15,
+504:                                     fontWeight: FontWeight.w700,
+505:                                     color: AppColors.slate800,
+506:                                   ),
+507:                                 ),
+508:                               ],
+509:                             ),
+510:                             SizedBox(height: 12),
+511: 
+512:                             if (filteredTxns.isEmpty)
+513:                               Padding(
+514:                                 padding: EdgeInsets.all(30),
+515:                                 child: Center(
+516:                                   child: Text(
+517:                                     'Chưa có giao dịch',
+518:                                     style: TextStyle(
+519:                                       color: AppColors.slate400,
+520:                                       fontWeight: FontWeight.w500,
+521:                                     ),
+522:                                   ),
+523:                                 ),
+524:                               )
+525:                             else
+526:                               ...(() {
+527:                                 final List<Widget> txnWidgets = [];
+528:                                 String? lastDateStr;
+529:                                 for (final t in filteredTxns) {
+530:                                   final currentKeyStr = "${t.date.year}-${t.date.month}-${t.date.day}";
+531:                                   Key? itemKey;
+532:                                   if (currentKeyStr != lastDateStr) {
+533:                                     _dateKeys.putIfAbsent(currentKeyStr, () => GlobalKey());
+534:                                     itemKey = _dateKeys[currentKeyStr];
+535:                                     lastDateStr = currentKeyStr;
+536:                                   }
+537: 
+538:                                   final isSelected = _selectedDate != null && 
+539:                                                      _selectedDate!.year == t.date.year && 
+540:                                                      _selectedDate!.month == t.date.month && 
+541:                                                      _selectedDate!.day == t.date.day;
+542: 
+543:                                   txnWidgets.add(Container(
+544:                                      key: itemKey,
+545:                                      decoration: isSelected ? BoxDecoration(
+546:                                         color: AppColors.blue50.withOpacity(0.5),
+547:                                         borderRadius: BorderRadius.circular(12),
+548:                                      ) : null,
+549:                                      child: _buildTransactionItem(t),
+550:                                   ));
+551:                                 }
+552:                                 return txnWidgets;
+553:                               })(),
+554:                           ],
+555:                         ),
+556:                       ),
+557: 
+558:                       SizedBox(height: 24),
+559:                     ],
+560:                   ),
+561:                 ),
+562:               ),
+563:             ),
+564: 
+565:           // ── Bottom buttons ──
+566:           Padding(
+567:             padding: EdgeInsets.fromLTRB(
+568:               widget.embedded ? 20 : 16,
+569:               8,
+570:               widget.embedded ? 20 : 16,
+571:               16,
+572:             ),
+573:             child: ConstrainedBox(
+574:               constraints: BoxConstraints(
+575:                 maxWidth: widget.embedded ? 600 : 700,
+576:               ),
+577:               child: Row(
+578:                 children: [
+579:                   Expanded(
+580:                     child: GestureDetector(
+581:                       onTap: () async {
+582:                         final quota = QuotaHelper(store);
+583:                         if (!quota.canUseTransactions) {
+584:                           await showUpgradePrompt(
+585:                             context,
+586:                             quota.transactionLimitMsg,
+587:                           );
+588:                           return;
+589:                         }
+590:                         if (widget.embedded) {
+591:                           setState(() {
+592:                             _subView = 'thu';
+593:                             _editTxn = null;
+594:                           });
+595:                           widget.onSubViewToggle?.call(true);
+596:                         } else {
+597:                           context.push('/nhap-thu');
+598:                         }
+599:                       },
+600:                       child: Container(
+601:                         height: 52,
+602:                         decoration: BoxDecoration(
+603:                           color: AppColors.emerald500,
+604:                           borderRadius: BorderRadius.circular(14),
+605:                         ),
+606:                         child: Row(
+607:                           mainAxisAlignment: MainAxisAlignment.center,
+608:                           children: [
+609:                             Icon(
+610:                               Icons.trending_up_rounded,
+611:                               size: 20,
+612:                               color: Colors.white,
+613:                             ),
+614:                             SizedBox(width: 8),
+615:                             Text(
+616:                               'Nhập thu',
+617:                               style: TextStyle(
+618:                                 fontSize: 15,
+619:                                 fontWeight: FontWeight.w700,
+620:                                 color: Colors.white,
+621:                               ),
+622:                             ),
+623:                           ],
+624:                         ),
+625:                       ),
+626:                     ),
+627:                   ),
+628:                   SizedBox(width: 12),
+629:                   Expanded(
+630:                     child: GestureDetector(
+631:                       onTap: () async {
+632:                         final quota = QuotaHelper(store);
+633:                         if (!quota.canUseTransactions) {
+634:                           await showUpgradePrompt(
+635:                             context,
+636:                             quota.transactionLimitMsg,
+637:                           );
+638:                           return;
+639:                         }
+640:                         if (widget.embedded) {
+641:                           setState(() {
+642:                             _subView = 'chi';
+643:                             _editTxn = null;
+644:                           });
+645:                           widget.onSubViewToggle?.call(true);
+646:                         } else {
+647:                           context.push('/nhap-chi');
+648:                         }
+649:                       },
+650:                       child: Container(
+651:                         height: 52,
+652:                         decoration: BoxDecoration(
+653:                           color: AppColors.red500,
+654:                           borderRadius: BorderRadius.circular(14),
+655:                         ),
+656:                         child: Row(
+657:                           mainAxisAlignment: MainAxisAlignment.center,
+658:                           children: [
+659:                             Icon(
+660:                               Icons.trending_down_rounded,
+661:                               size: 20,
+662:                               color: Colors.white,
+663:                             ),
+664:                             SizedBox(width: 8),
+665:                             Text(
+666:                               'Nhập chi',
+667:                               style: TextStyle(
+668:                                 fontSize: 15,
+669:                                 fontWeight: FontWeight.w700,
+670:                                 color: Colors.white,
+671:                               ),
+672:                             ),
+673:                           ],
+674:                         ),
+675:                       ),
+676:                     ),
+677:                   ),
+678:                 ],
+679:               ),
+680:             ),
+681:           ),
+682:         ],
+683:       ),
+684:     );
+685:   }
+686: 
+687:   Widget _panel({required Widget child}) {
+688:     return Container(
+689:       width: double.infinity,
+690:       padding: EdgeInsets.all(20),
+691:       decoration: BoxDecoration(
+692:         color: AppColors.cardBg,
+693:         borderRadius: BorderRadius.circular(20),
+694:         border: Border.all(color: AppColors.slate200),
+695:         boxShadow: [
+696:           BoxShadow(
+697:             color: Colors.black.withValues(alpha: 0.03),
+698:             blurRadius: 12,
+699:             offset: Offset(0, 4),
+700:           ),
+701:         ],
+702:       ),
+703:       child: child,
+704:     );
+705:   }
+706: 
+707:   Widget _buildCategoryStats(AppStore store, List<_DisplayTxn> txns) {
+708:     if (txns.isEmpty) return SizedBox.shrink();
+709: 
+710:     // Filter txns based on current active tab: 0=All, 1=Thu, 2=Chi. But actually we want to show stats of whatever is passing.
+711:     // Let's rely on txns, which is `allTxns` passed in. Wait, allTxns includes everything. Let's filter by _tabIndex locally if needed,
+712:     // or just show total Thu, total Chi. Actually, separate lists!
+713:     final List<_DisplayTxn> statTxns;
+714:     if (_tabIndex == 1) {
+715:       statTxns = txns.where((t) => t.isIncome).toList();
+716:     } else if (_tabIndex == 2) {
+717:       statTxns = txns.where((t) => !t.isIncome).toList();
+718:     } else {
+719:       statTxns = txns;
+720:     }
+721: 
+722:     if (statTxns.isEmpty) return SizedBox.shrink();
+723: 
+724:     final customCats = store.currentCustomThuChiCategories;
+725:     final List<TransactionCategory> allKnownCats = [
+726:       TransactionCategory(
+727:         type: 'thu',
+728:         emoji: '🎉',
+729:         label: 'Doanh thu',
+730:         color: AppColors.emerald500,
+731:         isCustom: false,
+732:       ),
+733:       TransactionCategory(
+734:         type: 'thu',
+735:         emoji: '➕',
+736:         label: 'Thêm mới',
+737:         color: AppColors.slate400,
+738:         isCustom: false,
+739:       ),
+740:       TransactionCategory(
+741:         type: 'chi',
+742:         emoji: '➕',
+743:         label: 'Thêm mới',
+744:         color: AppColors.slate400,
+745:         isCustom: false,
+746:       ),
+747:       ...customCats,
+748:     ];
+749: 
+750:     final Map<String, double> categoryTotals = {};
+751:     for (final t in statTxns) {
+752:       final key = t.category;
+753:       if (key.isEmpty) continue;
+754:       categoryTotals[key] = (categoryTotals[key] ?? 0) + t.amount;
+755:     }
+756: 
+757:     if (categoryTotals.isEmpty) return SizedBox.shrink();
+758: 
+759:     final sortedEntries = categoryTotals.entries.toList()
+760:       ..sort((a, b) => b.value.compareTo(a.value));
+761: 
+762:     final maxTotal = sortedEntries.first.value > 0
+763:         ? sortedEntries.first.value
+764:         : 1.0;
+765: 
+766:     return _panel(child: Column(
+767:       crossAxisAlignment: CrossAxisAlignment.start,
+768:       children: [
+769:         Text(
+770:           'Thống kê theo danh mục',
+771:           style: TextStyle(
+772:             fontSize: 14,
+773:             fontWeight: FontWeight.w700,
+774:             color: AppColors.slate800,
+775:           ),
+776:         ),
+777:         SizedBox(height: 16),
+778:         ...sortedEntries.map((e) {
+779:           final catLabel = e.key;
+780:           final total = e.value;
+781:           final fraction = total / maxTotal;
+782: 
+783:           final matchedCat = allKnownCats.firstWhere(
+784:             (c) => c.label == catLabel,
+785:             orElse: () => TransactionCategory(
+786:               type: 'thu',
+787:               emoji: '🏷️',
+788:               label: catLabel,
+789:               color: AppColors.slate400,
+790:             ),
+791:           );
+792: 
+793:           return Padding(
+794:             padding: EdgeInsets.only(bottom: 16),
+795:             child: Row(
+796:               children: [
+797:                 Container(
+798:                   width: 36,
+799:                   height: 36,
+800:                   alignment: Alignment.center,
+801:                   decoration: BoxDecoration(
+802:                     color: matchedCat.color.withValues(alpha: 0.1),
+803:                     borderRadius: BorderRadius.circular(10),
+804:                   ),
+805:                   child: Text(
+806:                     matchedCat.emoji,
+807:                     style: TextStyle(fontSize: 18),
+808:                   ),
+809:                 ),
+810:                 SizedBox(width: 12),
+811:                 Expanded(
+812:                   child: Column(
+813:                     crossAxisAlignment: CrossAxisAlignment.start,
+814:                     children: [
+815:                       Row(
+816:                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+817:                         children: [
+818:                           Expanded(
+819:                             child: Text(
+820:                               catLabel,
+821:                               style: TextStyle(
+822:                                 fontSize: 13,
+823:                                 fontWeight: FontWeight.w600,
+824:                                 color: AppColors.slate800,
+825:                               ),
+826:                               maxLines: 1,
+827:                               overflow: TextOverflow.ellipsis,
+828:                             ),
+829:                           ),
+830:                           Text(
+831:                             _formatAmount(total),
+832:                             style: TextStyle(
+833:                               fontSize: 13,
+834:                               fontWeight: FontWeight.w700,
+835:                               color: AppColors.slate800,
+836:                             ),
+837:                           ),
+838:                         ],
+839:                       ),
+840:                       SizedBox(height: 6),
+841:                       Stack(
+842:                         children: [
+843:                           Container(
+844:                             height: 6,
+845:                             width: double.infinity,
+846:                             decoration: BoxDecoration(
+847:                               color: AppColors.slate100,
+848:                               borderRadius: BorderRadius.circular(3),
+849:                             ),
+850:                           ),
+851:                           FractionallySizedBox(
+852:                             widthFactor: fraction.clamp(0.0, 1.0),
+853:                             child: Container(
+854:                               height: 6,
+855:                               decoration: BoxDecoration(
+856:                                 color: matchedCat.color,
+857:                                 borderRadius: BorderRadius.circular(3),
+858:                               ),
+859:                             ),
+860:                           ),
+861:                         ],
+862:                       ),
+863:                     ],
+864:                   ),
+865:                 ),
+866:               ],
+867:             ),
+868:           );
+869:         }),
+870:       ],
+871:     ));
+872:   }
+873: 
+874:   Widget _buildTab(String label, int index) {
+875:     final isActive = _tabIndex == index;
+876:     return Expanded(
+877:       child: GestureDetector(
+878:         onTap: () => setState(() => _tabIndex = index),
+879:         child: AnimatedContainer(
+880:           duration: Duration(milliseconds: 200),
+881:           padding: EdgeInsets.symmetric(vertical: 10),
+882:           decoration: BoxDecoration(
+883:             color: isActive ? AppColors.cardBg : Colors.transparent,
+884:             borderRadius: BorderRadius.circular(10),
+885:             boxShadow: isActive
+886:                 ? [
+887:                     BoxShadow(
+888:                       color: Colors.black.withValues(alpha: 0.05),
+889:                       blurRadius: 6,
+890:                       offset: Offset(0, 2),
+891:                     ),
+892:                   ]
+893:                 : null,
+894:           ),
+895:           alignment: Alignment.center,
+896:           child: Text(
+897:             label,
+898:             style: TextStyle(
+899:               fontSize: 13,
+900:               fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+901:               color: isActive ? AppColors.slate800 : AppColors.slate500,
+902:             ),
+903:           ),
+904:         ),
+905:       ),
+906:     );
+907:   }
+908: 
+909:   Widget _buildTransactionItem(_DisplayTxn t) {
+910:     final dateStr =
+911:         '${t.date.day.toString().padLeft(2, '0')}/${t.date.month.toString().padLeft(2, '0')}/${t.date.year}  •  ${t.date.hour.toString().padLeft(2, '0')}:${t.date.minute.toString().padLeft(2, '0')}';
+912:     final sourceLabel = t.source == 'order'
+913:         ? 'Doanh thu'
+914:         : t.source == 'manual_thu'
+915:         ? 'Nhập thu'
+916:         : 'Nhập chi';
+917:     final isMatchingDate = _selectedDate != null && 
+918:                            _selectedDate!.year == t.date.year && 
+919:                            _selectedDate!.month == t.date.month && 
+920:                            _selectedDate!.day == t.date.day;
+921: 
+922:     final card = AnimatedContainer(
+923:       duration: Duration(milliseconds: 300),
+924:       padding: EdgeInsets.all(14),
+925:       decoration: BoxDecoration(
+926:         color: isMatchingDate ? AppColors.blue50 : AppColors.slate50,
+927:         borderRadius: BorderRadius.circular(14),
+928:         border: Border.all(color: isMatchingDate ? AppColors.blue400 : AppColors.slate100, width: isMatchingDate ? 1.5 : 1.0),
+929:         boxShadow: isMatchingDate ? [
+930:           BoxShadow(
+931:             color: AppColors.blue200.withOpacity(0.5),
+932:             blurRadius: 8,
+933:             offset: Offset(0, 2),
+934:           )
+935:         ] : null,
+936:       ),
+937:       child: Row(
+938:         children: [
+939:           Container(
+940:             width: 40,
+941:             height: 40,
+942:             decoration: BoxDecoration(
+943:               color: t.isIncome ? AppColors.emerald50 : AppColors.red50,
+944:               borderRadius: BorderRadius.circular(12),
+945:             ),
+946:             child: Icon(
+947:               t.icon,
+948:               size: 20,
+949:               color: t.isIncome ? AppColors.emerald500 : AppColors.red500,
+950:             ),
+951:           ),
+952:           SizedBox(width: 12),
+953:           Expanded(
+954:             child: Column(
+955:               crossAxisAlignment: CrossAxisAlignment.start,
+956:               children: [
+957:                 Text(
+958:                   t.title,
+959:                   style: TextStyle(
+960:                     fontSize: 14,
+961:                     fontWeight: FontWeight.w600,
+962:                     color: AppColors.slate800,
+963:                   ),
+964:                   maxLines: 1,
+965:                   overflow: TextOverflow.ellipsis,
+966:                 ),
+967:                 if (t.subtitle != null && t.subtitle!.isNotEmpty) ...[
+968:                   SizedBox(height: 2),
+969:                   Text(
+970:                     t.subtitle!,
+971:                     style: TextStyle(
+972:                       fontSize: 12,
+973:                       color: AppColors.slate500,
+974:                     ),
+975:                   ),
+976:                 ],
+977:                 SizedBox(height: 3),
+978:                 Row(
+979:                   children: [
+980:                     Text(
+981:                       dateStr,
+982:                       style: TextStyle(
+983:                         fontSize: 11,
+984:                         color: AppColors.slate400,
+985:                       ),
+986:                     ),
+987:                     SizedBox(width: 8),
+988:                     Container(
+989:                       padding: EdgeInsets.symmetric(
+990:                         horizontal: 6,
+991:                         vertical: 2,
+992:                       ),
+993:                       decoration: BoxDecoration(
+994:                         color: t.source == 'order'
+995:                             ? AppColors.blue50
+996:                             : t.isIncome
+997:                             ? AppColors.emerald50
+998:                             : AppColors.red50,
+999:                         borderRadius: BorderRadius.circular(6),
+1000:                       ),
+1001:                       child: Text(
+1002:                         sourceLabel,
+1003:                         style: TextStyle(
+1004:                           fontSize: 9,
+1005:                           fontWeight: FontWeight.w600,
+1006:                           color: t.source == 'order'
+1007:                               ? AppColors.blue600
+1008:                               : t.isIncome
+1009:                               ? AppColors.emerald600
+1010:                               : AppColors.red500,
+1011:                         ),
+1012:                       ),
+1013:                     ),
+1014:                   ],
+1015:                 ),
+1016:               ],
+1017:             ),
+1018:           ),
+1019:           SizedBox(width: 10),
+1020:           Text(
+1021:             '${t.isIncome ? '+' : '-'}${_formatAmount(t.amount)}',
+1022:             style: TextStyle(
+1023:               fontSize: 14,
+1024:               fontWeight: FontWeight.w700,
+1025:               color: t.isIncome ? AppColors.emerald600 : AppColors.red500,
+1026:             ),
+1027:           ),
+1028:         ],
+1029:       ),
+1030:     );
+1031: 
+1032:     if (t.source == 'order' || t.originalTxn == null) {
+1033:       return Padding(padding: EdgeInsets.only(bottom: 10), child: card);
+1034:     }
+1035: 
+1036:     return Padding(
+1037:       padding: EdgeInsets.only(bottom: 10),
+1038:       child: Slidable(
+1039:         key: ValueKey(t.id ?? UniqueKey().toString()),
+1040:         endActionPane: ActionPane(
+1041:           motion: DrawerMotion(),
+1042:           extentRatio: 0.45,
+1043:           children: [
+1044:             SlidableAction(
+1045:               onPressed: (context) => _handleEdit(t),
+1046:               backgroundColor: AppColors.blue500,
+1047:               foregroundColor: Colors.white,
+1048:               icon: Icons.edit_rounded,
+1049:               label: 'Sửa',
+1050:             ),
+1051:             SlidableAction(
+1052:               onPressed: (context) => _handleDelete(t),
+1053:               backgroundColor: AppColors.red500,
+1054:               foregroundColor: Colors.white,
+1055:               icon: Icons.delete_outline_rounded,
+1056:               label: 'Xóa',
+1057:               borderRadius: BorderRadius.horizontal(
+1058:                 right: Radius.circular(14),
+1059:               ),
+1060:             ),
+1061:           ],
+1062:         ),
+1063:         child: card,
+1064:       ),
+1065:     );
+1066:   }
+1067: 
+1068:   void _handleEdit(_DisplayTxn t) {
+1069:     if (t.originalTxn == null) return;
+1070:     if (widget.embedded) {
+1071:       setState(() {
+1072:         _subView = t.isIncome ? 'thu' : 'chi';
+1073:         _editTxn = t.originalTxn;
+1074:       });
+1075:       widget.onSubViewToggle?.call(true);
+1076:     } else {
+1077:       if (t.isIncome) {
+1078:         Navigator.push(
+1079:           context,
+1080:           MaterialPageRoute(
+1081:             builder: (_) => IncomePage(initialTransaction: t.originalTxn),
+1082:           ),
+1083:         );
+1084:       } else {
+1085:         Navigator.push(
+1086:           context,
+1087:           MaterialPageRoute(
+1088:             builder: (_) => ExpensePage(initialTransaction: t.originalTxn),
+1089:           ),
+1090:         );
+1091:       }
+1092:     }
+1093:   }
+1094: 
+1095:   void _handleDelete(_DisplayTxn t) {
+1096:     final store = context.read<AppStore>();
+1097:     store.showConfirm(
+1098:       'Bạn có chắc chắn muốn xóa giao dịch này? Số dư sẽ được cập nhật lại.',
+1099:       () {
+1100:         if (t.id != null) {
+1101:           store.deleteTransaction(t.id!);
+1102:           store.showToast('Đã xóa giao dịch');
+1103:         }
+1104:       },
+1105:       title: 'Xóa giao dịch',
+1106:       confirmLabel: 'Xóa',
+1107:     );
+1108:   }
+1109: 
+1110:   String _formatAmount(double amount) {
+1111:     final abs = amount.abs();
+1112:     return abs
+1113:         .toStringAsFixed(0)
+1114:         .replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+1115:   }
+1116: }
+1117: 
+1118:   Widget _buildCalendarAmountBadge({required String label, required double amount, required bool isIncome}) {
+1119:     final background = isIncome ? AppColors.emerald50 : AppColors.red50;
+1120:     final border = isIncome ? AppColors.emerald100 : AppColors.red100;
+1121:     final accent = isIncome ? AppColors.emerald600 : AppColors.red600;
+1122: 
+1123:     String _formatCompactAmount(double val) {
+1124:       if (val >= 1000000000) return '${(val / 1000000000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')}B';
+1125:       if (val >= 1000000) return '${(val / 1000000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')}M';
+1126:       if (val >= 1000) return '${(val / 1000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')}K';
+1127:       return val.toStringAsFixed(0);
+1128:     }
+1129:     
+1130:     return Container(
+1131:       constraints: const BoxConstraints(maxWidth: 36),
+1132:       padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+1133:       decoration: BoxDecoration(
+1134:         color: background,
+1135:         borderRadius: BorderRadius.circular(4),
+1136:         border: Border.all(color: border),
+1137:       ),
+1138:       child: Row(
+1139:         mainAxisSize: MainAxisSize.min,
+1140:         children: [
+1141:           Flexible(
+1142:             child: FittedBox(
+1143:               fit: BoxFit.scaleDown,
+1144:               alignment: Alignment.centerLeft,
+1145:               child: Text(
+1146:                 _formatCompactAmount(amount),
+1147:                 style: TextStyle(
+1148:                   fontSize: 10,
+1149:                   fontWeight: FontWeight.w800,
+1150:                   color: accent,
+1151:                 ),
+1152:               ),
+1153:             ),
+1154:           ),
+1155:         ],
+1156:       ),
+1157:     );
+1158:   }
+1159: 
+1160:   void _showTransactionDialog(DateTime date) {
+1161:     if (widget.embedded) {
+1162:        setState(() {
+1163:          _subView = 'thu';
+1164:          _editTxn = null; // Ideally prepopulate with the date, but not supported out of box yet
+1165:        });
+1166:        widget.onSubViewToggle?.call(true);
+1167:     } else {
+1168:        context.push('/nhap-thu');
+1169:     }
+1170:   }
+1171: 
+1172:   Widget _buildCalendar(List<_DisplayTxn> txns) {
+1173:     if (_customOrders == null && _customTxns == null && _isLoading) {
+1174:       return Center(child: CircularProgressIndicator(color: AppColors.emerald500));
+1175:     }
+1176:     
+1177:     final year = _dateFrom.year;
+1178:     final month = _dateFrom.month;
+1179:     final daysInMonth = DateTime(year, month + 1, 0).day;
+1180:     final firstDayOfMonth = DateTime(year, month, 1);
+1181:     final firstWeekday = firstDayOfMonth.weekday; // 1 = Monday
+1182:     
+1183:     Map<int, double> incomeByDay = {};
+1184:     Map<int, double> expenseByDay = {};
+1185:     for (var t in txns) {
+1186:         if (t.date.year == year && t.date.month == month) {
+1187:             if (t.isIncome) {
+1188:                 incomeByDay[t.date.day] = (incomeByDay[t.date.day] ?? 0) + t.amount;
+1189:             } else {
+1190:                 expenseByDay[t.date.day] = (expenseByDay[t.date.day] ?? 0) + t.amount;
+1191:             }
+1192:         }
+1193:     }
+1194:     
+1195:     final List<Widget> cells = [];
+1196:     for (int i = 0; i < firstWeekday - 1; i++) {
+1197:         cells.add(Container(color: Colors.transparent));
+1198:     }
+1199:     
+1200:     for (int day = 1; day <= daysInMonth; day++) {
+1201:         final inc = incomeByDay[day] ?? 0.0;
+1202:         final exp = expenseByDay[day] ?? 0.0;
+1203:         final hasSummary = inc > 0 || exp > 0;
+1204:         final isSelected = _selectedDate != null && 
+1205:                            _selectedDate!.year == year && 
+1206:                            _selectedDate!.month == month && 
+1207:                            _selectedDate!.day == day;
+1208:         
+1209:         cells.add(GestureDetector(
+1210:             onTap: () {
+1211:                setState(() {
+1212:                  if (isSelected) {
+1213:                    _selectedDate = null;
+1214:                  } else {
+1215:                    _selectedDate = DateTime(year, month, day);
+1216:                  }
+1217:                });
+1218:                if (!isSelected) {
+1219:                   Future.delayed(const Duration(milliseconds: 100), () {
+1220:                     final keyStr = "$year-$month-$day";
+1221:                     final key = _dateKeys[keyStr];
+1222:                     if (key != null && key.currentContext != null) {
+1223:                         Scrollable.ensureVisible(
+1224:                             key.currentContext!, 
+1225:                             duration: Duration(milliseconds: 300), 
+1226:                             curve: Curves.easeInOut,
+1227:                             alignment: 0.1,
+1228:                         );
+1229:                     }
+1230:                   });
+1231:                }
+1232:             },
+1233:             onDoubleTap: () => _showTransactionDialog(DateTime(year, month, day)),
+1234:             child: Container(
+1235:             clipBehavior: Clip.antiAlias,
+1236:             decoration: BoxDecoration(
+1237:                 color: isSelected ? AppColors.blue50 : AppColors.slate50,
+1238:                 borderRadius: BorderRadius.circular(8),
+1239:                 border: Border.all(color: isSelected ? AppColors.blue400 : AppColors.slate200, width: isSelected ? 1.5 : 1.0),
+1240:             ),
+1241:             padding: const EdgeInsets.fromLTRB(4, 4, 1, 1),
+1242:             child: Stack(
+1243:                 children: [
+1244:                     Positioned(
+1245:                         top: 0,
+1246:                         left: 2,
+1247:                         child: Text(
+1248:                             '${day}',
+1249:                             style: TextStyle(
+1250:                               fontSize: 13, 
+1251:                               fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700, 
+1252:                               color: isSelected ? AppColors.blue600 : AppColors.slate800
+1253:                             ),
+1254:                         ),
+1255:                     ),
+1256:                     if (hasSummary)
+1257:                       Positioned(
+1258:                         right: 0,
+1259:                         bottom: 0,
+1260:                         child: Column(
+1261:                           mainAxisSize: MainAxisSize.min,
+1262:                           crossAxisAlignment: CrossAxisAlignment.end,
+1263:                           children: [
+1264:                             if (inc > 0)
+1265:                               _buildCalendarAmountBadge(
+1266:                                 label: 'Thu',
+1267:                                 amount: inc,
+1268:                                 isIncome: true,
+1269:                               ),
+1270:                             if (inc > 0 && exp > 0) const SizedBox(height: 1),
+1271:                             if (exp > 0)
+1272:                               _buildCalendarAmountBadge(
+1273:                                 label: 'Chi',
+1274:                                 amount: exp,
+1275:                                 isIncome: false,
+1276:                               ),
+1277:                           ],
+1278:                         ),
+1279:                       ),
+1280:                 ],
+1281:             )
+1282:         )));
+1283:     }
+1284:     
+1285:     return Column(
+1286:       crossAxisAlignment: CrossAxisAlignment.start,
+1287:       children: [
+1288:         // removed header Row per user request
+1289:         SizedBox(height: 16),
+1290:         Row(
+1291:           mainAxisAlignment: MainAxisAlignment.spaceAround,
+1292:           children: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((e) => 
+1293:             Expanded(child: Center(child: Text(e, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.slate500))))
+1294:           ).toList(),
+1295:         ),
+1296:         SizedBox(height: 8),
+1297:         GridView.builder(
+1298:           shrinkWrap: true,
+1299:           physics: NeverScrollableScrollPhysics(),
+1300:           itemCount: cells.length,
+1301:           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+1302:             crossAxisCount: 7,
+1303:             mainAxisSpacing: 6,
+1304:             crossAxisSpacing: 6,
+1305:             childAspectRatio: 1.0,
+1306:           ),
+1307:           itemBuilder: (context, index) => cells[index],
+1308:         ),
+1309:       ],
+1310:     );
+1311:   }
+1312: 
+1313: class _DisplayTxn {
+1314:   final String? id;
+1315:   final String title;
+1316:   final String? subtitle;
+1317:   final String category;
+1318:   final DateTime date;
+1319:   final double amount;
+1320:   final bool isIncome;
+1321:   final IconData icon;
+1322:   final String source;
+1323:   final Transaction? originalTxn;
+1324: 
+1325:   _DisplayTxn({
+1326:     this.id,
+1327:     required this.title,
+1328:     this.subtitle,
+1329:     this.category = '',
+1330:     required this.date,
+1331:     required this.amount,
+1332:     required this.isIncome,
+1333:     required this.icon,
+1334:     required this.source,
+1335:     this.originalTxn,
+1336:   });
+1337: 
+1338:   void _showTransactionDialog(DateTime selectedDate) {
+1339:     FocusScope.of(context).unfocus();
+1340:     final thuKey = GlobalKey<IncomePageState>();
+1341:     final chiKey = GlobalKey<ExpensePageState>();
+1342: 
+1343:     showAnimatedDialog(
+1344:       context: context,
+1345:       builder: (ctx) => Center(
+1346:         child: Material(
+1347:           color: Colors.transparent,
+1348:           child: Container(
+1349:             width: 420,
+1350:             height: 500,
+1351:             margin: EdgeInsets.all(20),
+1352:             decoration: BoxDecoration(
+1353:               color: AppColors.cardBg,
+1354:               borderRadius: BorderRadius.circular(20),
+1355:             ),
+1356:             child: DefaultTabController(
+1357:               length: 2,
+1358:               child: Column(
+1359:                 children: [
+1360:                   Container(
+1361:                     margin: EdgeInsets.fromLTRB(16, 16, 16, 0),
+1362:                     decoration: BoxDecoration(
+1363:                       color: AppColors.slate100,
+1364:                       borderRadius: BorderRadius.circular(12),
+1365:                     ),
+1366:                     child: TabBar(
+1367:                       indicatorSize: TabBarIndicatorSize.tab,
+1368:                       indicator: BoxDecoration(
+1369:                         color: Colors.white,
+1370:                         borderRadius: BorderRadius.circular(10),
+1371:                         boxShadow: [
+1372:                           BoxShadow(color: Colors.black12, blurRadius: 4),
+1373:                         ],
+1374:                       ),
+1375:                       labelColor: AppColors.slate800,
+1376:                       unselectedLabelColor: AppColors.slate500,
+1377:                       labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+1378:                       tabs: [
+1379:                         Tab(text: 'Thu nhập'),
+1380:                         Tab(text: 'Chi tiêu'),
+1381:                       ],
+1382:                     ),
+1383:                   ),
+1384:                   SizedBox(height: 16),
+1385:                   Expanded(
+1386:                     child: TabBarView(
+1387:                       children: [
+1388:                         IncomePage(
+1389:                           key: thuKey,
+1390:                           asDialog: true,
+1391:                           initialDate: selectedDate,
+1392:                           onSaved: () {
+1393:                             Navigator.pop(ctx);
+1394:                             _fetchData(context.read<AppStore>(), _dateFrom, _dateTo);
+1395:                           },
+1396:                         ),
+1397:                         ExpensePage(
+1398:                           key: chiKey,
+1399:                           asDialog: true,
+1400:                           initialDate: selectedDate,
+1401:                           onSaved: () {
+1402:                             Navigator.pop(ctx);
+1403:                             _fetchData(context.read<AppStore>(), _dateFrom, _dateTo);
+1404:                           },
+1405:                         ),
+1406:                       ],
+1407:                     ),
+1408:                   ),
+1409:                   Builder(
+1410:                     builder: (innerCtx) => Container(
+1411:                       padding: EdgeInsets.fromLTRB(16, 12, 16, 16),
+1412:                       decoration: BoxDecoration(
+1413:                         border: Border(top: BorderSide(color: AppColors.slate200)),
+1414:                       ),
+1415:                       child: Row(
+1416:                         mainAxisAlignment: MainAxisAlignment.end,
+1417:                         children: [
+1418:                           TextButton(
+1419:                             onPressed: () => Navigator.pop(ctx),
+1420:                             style: TextButton.styleFrom(
+1421:                               foregroundColor: AppColors.slate600,
+1422:                               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+1423:                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+1424:                             ),
+1425:                             child: Text('Hủy bỏ', style: TextStyle(fontWeight: FontWeight.bold)),
+1426:                           ),
+1427:                           SizedBox(width: 12),
+1428:                           ElevatedButton(
+1429:                             onPressed: () {
+1430:                               final currentIdx = DefaultTabController.of(innerCtx).index;
+1431:                               if (currentIdx == 0) {
+1432:                                 thuKey.currentState?.submit();
+1433:                               } else {
+1434:                                 chiKey.currentState?.submit();
+1435:                               }
+1436:                             },
+1437:                             style: ElevatedButton.styleFrom(
+1438:                               backgroundColor: AppColors.emerald500,
+1439:                               foregroundColor: Colors.white,
+1440:                               padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+1441:                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+1442:                               elevation: 0,
+1443:                             ),
+1444:                             child: Text('Lưu', style: TextStyle(fontWeight: FontWeight.bold)),
+1445:                           ),
+1446:                         ],
+1447:                       ),
+1448:                     ),
+1449:                   ),
+1450:                 ],
+1451:               ),
+1452:             ),
+1453:           ),
+1454:         ),
+1455:       ),
+1456:     );
+1457:   }
+1458: 
+1459:   Widget _buildCalendar(List<_DisplayTxn> txns) {
+1460:     if (_customOrders == null && _customTxns == null && _isLoading) {
+1461:       return Center(child: CircularProgressIndicator(color: AppColors.emerald500));
+1462:     }
+1463:     
+1464:     final year = _dateFrom.year;
+1465:     final month = _dateFrom.month;
+1466:     final firstDayOfMonth = DateTime(year, month, 1);
+1467:     final daysInMonth = DateTime(year, month + 1, 0).day;
+1468:     final firstWeekday = firstDayOfMonth.weekday; // 1 (Mon) - 7 (Sun)
+1469:     
+1470:     final Map<int, double> incomeByDay = {};
+1471:     final Map<int, double> expenseByDay = {};
+1472:     
+1473:     for (final t in txns) {
+1474:       if (t.date.year == year && t.date.month == month) {
+1475:         final d = t.date.day;
+1476:         if (t.isIncome) {
+1477:           incomeByDay[d] = (incomeByDay[d] ?? 0) + t.amount;
+1478:         } else {
+1479:           expenseByDay[d] = (expenseByDay[d] ?? 0) + t.amount;
+1480:         }
+1481:       }
+1482:     }
+1483: 
+1484:     final List<Widget> cells = [];
+1485:     for (int i = 0; i < firstWeekday - 1; i++) {
+1486:         cells.add(Container(color: Colors.transparent));
+1487:     }
+1488:     
+1489:     for (int day = 1; day <= daysInMonth; day++) {
+1490:         final inc = incomeByDay[day] ?? 0;
+1491:         final exp = expenseByDay[day] ?? 0;
+1492:         
+1493:         cells.add(GestureDetector(
+1494:             onDoubleTap: () => _showTransactionDialog(DateTime(year, month, day)),
+1495:             child: Container(
+1496:                 decoration: BoxDecoration(
+1497:                     color: AppColors.slate50,
+1498:                     borderRadius: BorderRadius.circular(8),
+1499:                     border: Border.all(color: AppColors.slate200),
+1500:                 ),
+1501:                 padding: EdgeInsets.all(4),
+1502:                 child: Stack(
+1503:                     children: [
+1504:                         Positioned(
+1505:                             top: 0,
+1506:                             left: 0,
+1507:                             child: Text(
+1508:                                 '$day',
+1509:                                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.slate800),
+1510:                             ),
+1511:                         ),
+1512:                         Positioned(
+1513:                             bottom: 0,
+1514:                             right: 0,
+1515:                             child: Column(
+1516:                                 crossAxisAlignment: CrossAxisAlignment.end,
+1517:                                 mainAxisSize: MainAxisSize.min,
+1518:                                 children: [
+1519:                                     if (inc > 0)
+1520:                                         Text(
+1521:                                             _formatAmount(inc),
+1522:                                             style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: AppColors.emerald600),
+1523:                                         ),
+1524:                                     if (exp > 0)
+1525:                                         Text(
+1526:                                             _formatAmount(exp),
+1527:                                             style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: AppColors.red500),
+1528:                                         ),
+1529:                                 ],
+1530:                             )
+1531:                         )
+1532:                     ]
+1533:                 )
+1534:             )
+1535:         ));
+1536:     }
+1537:     
+1538:     return Column(
+1539:       crossAxisAlignment: CrossAxisAlignment.start,
+1540:       children: [
+1541:         Text('Lịch thu chi', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.slate800)),
+1542:         SizedBox(height: 12),
+1543:         Row(
+1544:           mainAxisAlignment: MainAxisAlignment.spaceAround,
+1545:           children: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((e) => 
+1546:             Expanded(child: Center(child: Text(e, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.slate500))))
+1547:           ).toList(),
+1548:         ),
+1549:         SizedBox(height: 8),
+1550:         GridView.builder(
+1551:           shrinkWrap: true,
+1552:           physics: NeverScrollableScrollPhysics(),
+1553:           itemCount: cells.length,
+1554:           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+1555:             crossAxisCount: 7,
+1556:             mainAxisSpacing: 6,
+1557:             crossAxisSpacing: 6,
+1558:             childAspectRatio: 0.8,
+1559:           ),
+1560:           itemBuilder: (context, index) => cells[index],
+1561:         ),
+1562:       ],
+1563:     );
+1564:   }
+1565: 
+1566: }
