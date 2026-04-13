@@ -1295,14 +1295,14 @@ class _OrderCardState extends State<_OrderCard> {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: item.isDone ? AppColors.emerald50 : AppColors.orange50,
+                                          color: item.isDone ? AppColors.emerald50 : AppColors.red50,
                                           borderRadius: BorderRadius.circular(4),
-                                          border: Border.all(color: item.isDone ? AppColors.emerald200 : AppColors.orange200),
+                                          border: Border.all(color: item.isDone ? AppColors.emerald200 : Colors.transparent),
                                         ),
                                         child: Text(
                                           item.isDone ? 'Đã xong' : 'Chưa xong',
                                           style: TextStyle(
-                                            color: item.isDone ? AppColors.emerald600 : AppColors.orange600,
+                                            color: item.isDone ? AppColors.emerald600 : AppColors.red500,
                                             fontSize: 9,
                                             fontWeight: FontWeight.w700,
                                           ),

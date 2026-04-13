@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
-import 'package:moimoi_pos/core/state/ui_store.dart';
-import 'package:moimoi_pos/core/state/audio_store_standalone.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:moimoi_pos/core/state/app_store.dart';
+import 'package:moimoi_pos/core/state/audio_store_standalone.dart' as standalone_audio;
 import 'package:moimoi_pos/core/utils/constants.dart';
 
 class NotificationsSection extends StatefulWidget {
@@ -16,6 +18,11 @@ class _NotificationsSectionState extends State<NotificationsSection> {
   int _selectedTab = 0; // 0 for New Order, 1 for Payment
   String? _selectedNotificationSound;
   String? _selectedPaymentSound;
+
+  // Custom device sounds picked by the user
+  String? _customNotifName;
+  String? _customPaymentName;
+
   final List<Map<String, String>> _sounds = [
     {'name': 'Chuông bàn lễ tân', 'path': 'sounds/bell.wav'},
     {'name': 'Tiếng Ding', 'path': 'sounds/ding-sound-effect_2.mp3'},
@@ -44,9 +51,73 @@ class _NotificationsSectionState extends State<NotificationsSection> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // Load existing custom sound names from audio store
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCustomSoundNames();
+    });
+  }
+
+  void _loadCustomSoundNames() {
+    final audioStore = context.read<standalone_audio.AudioStore>();
+    final notifSound = audioStore.notificationSound;
+    final paySound = audioStore.paymentSound;
+
+    if (notifSound.startsWith('device:')) {
+      setState(() {
+        _customNotifName = _extractFileName(notifSound.substring(7));
+      });
+    }
+    if (paySound.startsWith('device:')) {
+      setState(() {
+        _customPaymentName = _extractFileName(paySound.substring(7));
+      });
+    }
+  }
+
+  String _extractFileName(String path) {
+    final parts = path.split(RegExp(r'[/\\]'));
+    return parts.isNotEmpty ? parts.last : path;
+  }
+
+  Future<void> _pickCustomSound() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac'],
+        dialogTitle: 'Chọn file âm thanh',
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final filePath = result.files.single.path!;
+        final fileName = result.files.single.name;
+        final devicePath = 'device:$filePath';
+
+        setState(() {
+          if (_selectedTab == 0) {
+            _selectedNotificationSound = devicePath;
+            _customNotifName = fileName;
+          } else {
+            _selectedPaymentSound = devicePath;
+            _customPaymentName = fileName;
+          }
+        });
+
+        // Preview the picked sound
+        final audioStore = context.read<standalone_audio.AudioStore>();
+        audioStore.previewNotificationSound(devicePath);
+      }
+    } catch (e) {
+      debugPrint('[NotificationsSection] pickCustomSound error: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final audioStore = context.watch<AudioStore>();
-    final uiStore = context.read<UIStore>();
+    final store = context.watch<AppStore>();
+    final audioStore = context.watch<standalone_audio.AudioStore>();
+
     final currentNotifSound =
         _selectedNotificationSound ?? audioStore.notificationSound;
     final currentPaySound = _selectedPaymentSound ?? audioStore.paymentSound;
@@ -59,6 +130,10 @@ class _NotificationsSectionState extends State<NotificationsSection> {
             _selectedNotificationSound != audioStore.notificationSound) ||
         (_selectedPaymentSound != null &&
             _selectedPaymentSound != audioStore.paymentSound);
+
+    // Check if current sound is a custom device file (not in asset list)
+    final isCustomDeviceSound = currentSound.startsWith('device:');
+    final customName = _selectedTab == 0 ? _customNotifName : _customPaymentName;
 
     return Column(
       children: [
@@ -123,18 +198,34 @@ class _NotificationsSectionState extends State<NotificationsSection> {
                         Text(
                           _selectedTab == 0
                               ? 'Hệ thống sẽ phát âm báo này ngay khi nhận được đơn đặt món mới.'
-                              : 'Hệ thống sẽ phát âm áo này khi khách hàng thanh toán thành công.',
+                              : 'Hệ thống sẽ phát âm báo này khi khách hàng thanh toán thành công.',
                           style: TextStyle(
                             fontSize: 13,
                             color: AppColors.slate500,
                           ),
                         ),
                         SizedBox(height: 16),
+
+                        // === Custom device sound (show at top if selected) ===
+                        if (isCustomDeviceSound && customName != null) ...[
+                          _buildCustomSoundItem(
+                            name: customName,
+                            isSelected: true,
+                            onTap: () {
+                              audioStore.previewNotificationSound(currentSound);
+                            },
+                          ),
+                          SizedBox(height: 12),
+                          Divider(color: AppColors.slate200, height: 1),
+                          SizedBox(height: 12),
+                        ],
+
+                        // === Preset sound list ===
                         ListView.separated(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: _sounds.length,
-                          separatorBuilder: (_, _) => SizedBox(height: 8),
+                          separatorBuilder: (context, index) => SizedBox(height: 8),
                           itemBuilder: (context, index) {
                             final s = _sounds[index];
                             final isSelected = currentSound == s['path'];
@@ -143,13 +234,19 @@ class _NotificationsSectionState extends State<NotificationsSection> {
                                 setState(() {
                                   if (_selectedTab == 0) {
                                     _selectedNotificationSound = s['path']!;
+                                    // Clear custom name when switching to preset
+                                    if (!s['path']!.startsWith('device:')) {
+                                      _customNotifName = null;
+                                    }
                                   } else {
                                     _selectedPaymentSound = s['path']!;
+                                    if (!s['path']!.startsWith('device:')) {
+                                      _customPaymentName = null;
+                                    }
                                   }
                                 });
                                 audioStore.previewNotificationSound(s['path']!);
                               },
-                              // ... existing child
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
                                 padding: EdgeInsets.symmetric(
@@ -208,6 +305,64 @@ class _NotificationsSectionState extends State<NotificationsSection> {
                             );
                           },
                         ),
+
+                        // === Pick from device button ===
+                        if (!kIsWeb) ...[
+                          SizedBox(height: 12),
+                          GestureDetector(
+                            onTap: _pickCustomSound,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.slate50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppColors.slate200,
+                                  style: BorderStyle.solid,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.amber100,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      Icons.folder_open_rounded,
+                                      size: 18,
+                                      color: AppColors.amber600,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Text(
+                                    'Chọn từ thiết bị',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.slate700,
+                                    ),
+                                  ),
+                                  Spacer(),
+                                  Text(
+                                    '.mp3 .wav .ogg .m4a',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.slate400,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -217,12 +372,89 @@ class _NotificationsSectionState extends State<NotificationsSection> {
             ),
           ),
         ),
-        if (widget.onCancel != null) _buildBottomActions(audioStore, uiStore, hasChanges),
+        if (widget.onCancel != null) _buildBottomActions(store, audioStore, hasChanges),
       ],
     );
   }
 
-  Widget _buildBottomActions(AudioStore audioStore, UIStore store, bool hasChanges) {
+  Widget _buildCustomSoundItem({
+    required String name,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.amber50 : AppColors.slate50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppColors.amber200 : Colors.transparent,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.amber100
+                    : AppColors.slate200,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Icon(
+                Icons.audio_file_rounded,
+                size: 16,
+                color: isSelected
+                    ? AppColors.amber600
+                    : AppColors.slate400,
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected
+                          ? AppColors.amber600
+                          : AppColors.slate700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Âm thanh từ thiết bị',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.slate400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle_rounded,
+                size: 20,
+                color: AppColors.amber500,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomActions(AppStore store, standalone_audio.AudioStore audioStore, bool hasChanges) {
     return Padding(
       padding: EdgeInsets.fromLTRB(9, 8, 9, 16),
       child: ConstrainedBox(

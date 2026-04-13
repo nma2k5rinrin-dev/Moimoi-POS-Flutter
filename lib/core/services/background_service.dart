@@ -11,6 +11,12 @@ import 'package:moimoi_pos/core/utils/env_config.dart';
 import 'package:moimoi_pos/features/pos_order/models/order_model.dart';
 import 'dart:ui';
 
+/// Persistent foreground notification ID (pinned like Messenger)
+const int _kForegroundNotificationId = 888;
+
+/// Notification channel for persistent foreground service (low priority, silent)
+const String _kForegroundChannelId = 'pos_foreground_service';
+
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,6 +64,14 @@ void onStart(ServiceInstance service) async {
   if (storeId == null || storeId.isEmpty) {
     service.stopSelf();
     return;
+  }
+
+  // Show persistent pinned notification immediately
+  if (service is AndroidServiceInstance) {
+    service.setForegroundNotificationInfo(
+      title: "MoiMoi POS đang hoạt động",
+      content: "Đang lắng nghe đơn hàng mới...",
+    );
   }
 
   // ── Helper: fetch đơn gộp và bắn notification ──
@@ -126,9 +140,11 @@ void onStart(ServiceInstance service) async {
     // Cập nhật thông báo foreground service (chống Android sleep)
     if (service is AndroidServiceInstance) {
       if (await service.isForegroundService()) {
+        final now = DateTime.now();
+        final timeStr = '${now.hour}:${now.minute.toString().padLeft(2, '0')}';
         service.setForegroundNotificationInfo(
-          title: "MoiMoi POS",
-          content: "Đang quản lý đơn hàng ngầm (${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')})",
+          title: "MoiMoi POS đang hoạt động",
+          content: "Đang lắng nghe đơn hàng mới • Cập nhật lúc $timeStr",
         );
       }
     }
@@ -144,12 +160,13 @@ class BackgroundServiceHelper {
     
     final service = FlutterBackgroundService();
 
-    // Tạo kênh thông báo cho Foreground Service chống crash
+    // Tạo kênh thông báo cho Foreground Service — ongoing, pinned (like Messenger)
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'pos_foreground_service', 
+      _kForegroundChannelId, 
       'Dịch vụ nhận đơn ngầm', 
-      description: 'Giữ kết nối và nhận đơn trực tiếp',
-      importance: Importance.low, 
+      description: 'Hiện thông báo ghim khi đang lắng nghe đơn hàng mới',
+      importance: Importance.low, // Low = silent but visible, no sound/vibration
+      showBadge: false,
     );
 
     final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -163,10 +180,10 @@ class BackgroundServiceHelper {
         autoStart: false,
         autoStartOnBoot: false,
         isForegroundMode: true,
-        notificationChannelId: 'pos_foreground_service',
-        initialNotificationTitle: 'MoiMoi POS',
-        initialNotificationContent: 'Đang chờ nhận đơn...',
-        foregroundServiceNotificationId: 888,
+        notificationChannelId: _kForegroundChannelId,
+        initialNotificationTitle: 'MoiMoi POS đang hoạt động',
+        initialNotificationContent: 'Đang lắng nghe đơn hàng mới...',
+        foregroundServiceNotificationId: _kForegroundNotificationId,
       ),
       iosConfiguration: IosConfiguration(
         autoStart: false,
@@ -175,15 +192,26 @@ class BackgroundServiceHelper {
     );
   }
 
+  /// Start the background foreground service (call after login if enabled)
   static Future<void> startService(String storeId) async {
     if (kIsWeb) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('moimoi_background_store_id', storeId);
     
     final service = FlutterBackgroundService();
+    
+    // Check if already running to avoid duplicate starts
+    final isRunning = await service.isRunning();
+    if (isRunning) {
+      debugPrint('[BackgroundService] Already running, skipping start');
+      return;
+    }
+    
     service.startService();
+    debugPrint('[BackgroundService] Started for store: $storeId');
   }
 
+  /// Stop the service (call on logout or when user disables)
   static Future<void> stopService() async {
     if (kIsWeb) return;
     final prefs = await SharedPreferences.getInstance();
@@ -191,5 +219,13 @@ class BackgroundServiceHelper {
 
     final service = FlutterBackgroundService();
     service.invoke('stopService');
+    debugPrint('[BackgroundService] Stopped');
+  }
+  
+  /// Check if background service is currently running
+  static Future<bool> isRunning() async {
+    if (kIsWeb) return false;
+    final service = FlutterBackgroundService();
+    return await service.isRunning();
   }
 }

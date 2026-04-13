@@ -39,10 +39,15 @@ class OrderStore extends ChangeNotifier with BaseMixin {
   // ── State ─────────────────────────────────────────────────
   List<OrderModel> orders = [];
 
+  /// Track order IDs that already got merge notifications to prevent duplicates
+  /// (INSERT and UPDATE events can both fire for the same merge)
+  final Set<String> _mergeNotifiedOrderIds = {};
+
   UserModel? get currentUser => getCurrentUser();
 
   void clearOrderState() {
     orders = [];
+    _mergeNotifiedOrderIds.clear();
   }
 
   // ── Drift Helpers ─────────────────────────────────────────
@@ -231,9 +236,13 @@ class OrderStore extends ChangeNotifier with BaseMixin {
                       orders.insert(0, mergedOrder);
                     }
                     
-                    showToast('${mergedOrder.table} vừa thêm sản phẩm vào đơn', 'warning');
-                    playNewOrderSound();
-                    NotificationHelper.showNewOrderNotification(mergedOrder, isUpdate: true);
+                    if (!_mergeNotifiedOrderIds.contains(mergedOrder.id)) {
+                      _mergeNotifiedOrderIds.add(mergedOrder.id);
+                      Future.delayed(const Duration(seconds: 10), () => _mergeNotifiedOrderIds.remove(mergedOrder.id));
+                      showToast('${mergedOrder.table} vừa thêm sản phẩm vào đơn', 'warning');
+                      playNewOrderSound();
+                      NotificationHelper.showNewOrderNotification(mergedOrder, isUpdate: true);
+                    }
                     
                     if (db != null) await updateOrderInDrift(mergedOrder.id);
                     notifyListeners();
@@ -285,9 +294,13 @@ class OrderStore extends ChangeNotifier with BaseMixin {
                       orders.insert(0, mergedOrder);
                     }
                     
-                    showToast('${mergedOrder.table} vừa thêm sản phẩm vào đơn', 'warning');
-                    playNewOrderSound();
-                    NotificationHelper.showNewOrderNotification(mergedOrder, isUpdate: true);
+                    if (!_mergeNotifiedOrderIds.contains(mergedOrder.id)) {
+                      _mergeNotifiedOrderIds.add(mergedOrder.id);
+                      Future.delayed(const Duration(seconds: 10), () => _mergeNotifiedOrderIds.remove(mergedOrder.id));
+                      showToast('${mergedOrder.table} vừa thêm sản phẩm vào đơn', 'warning');
+                      playNewOrderSound();
+                      NotificationHelper.showNewOrderNotification(mergedOrder, isUpdate: true);
+                    }
                     
                     if (db != null) await updateOrderInDrift(mergedOrder.id);
                     notifyListeners();
@@ -409,6 +422,20 @@ class OrderStore extends ChangeNotifier with BaseMixin {
                   items: updatedItems,
                 );
                 if (db != null) await updateOrderInDrift(id);
+
+                // ── Thông báo khi phát hiện item mới được thêm (QR merge) ──
+                final hasNewItems = updatedItems.any((item) => item.isNewlyAdded);
+                final hadNewItemsBefore = existing.items.any((item) => item.isNewlyAdded);
+                if (hasNewItems && !hadNewItemsBefore && !_mergeNotifiedOrderIds.contains(id)) {
+                  _mergeNotifiedOrderIds.add(id);
+                  Future.delayed(const Duration(seconds: 10), () => _mergeNotifiedOrderIds.remove(id));
+                  final updatedOrder = orders[idx];
+                  final tableName = updatedOrder.table.isNotEmpty ? updatedOrder.table : 'Mang về';
+                  showToast('$tableName vừa thêm sản phẩm vào đơn', 'warning');
+                  playNewOrderSound();
+                  NotificationHelper.showNewOrderNotification(updatedOrder, isUpdate: true);
+                }
+
                 notifyListeners();
               } else {
                 try {

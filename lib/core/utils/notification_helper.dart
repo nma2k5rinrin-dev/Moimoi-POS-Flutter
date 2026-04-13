@@ -72,7 +72,7 @@ class NotificationHelper {
 
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-          'new_order_channel',
+          'new_order_channel_v2',
           'Đơn Hàng Mới',
           channelDescription: 'Thông báo khi có đơn hàng mới từ QR code',
           importance: Importance.max,
@@ -80,7 +80,8 @@ class NotificationHelper {
           showWhen: true,
           enableVibration: true,
           playSound: true,
-          icon: '@mipmap/launcher_icon', // Chỉ định cứng icon để tránh lỗi
+          audioAttributesUsage: AudioAttributesUsage.notificationEvent,
+          icon: '@mipmap/launcher_icon',
         );
 
     const DarwinNotificationDetails iOSPlatformChannelSpecifics =

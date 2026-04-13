@@ -17,19 +17,20 @@ class AudioStore extends ChangeNotifier {
   void initAudio() {
     if (!kIsWeb) {
       try {
-        _orderSoundPlayer.setAudioContext(
-          AudioContext(
-            android: AudioContextAndroid(
-              usageType: AndroidUsageType.notification,
-              contentType: AndroidContentType.sonification,
-              audioFocus: AndroidAudioFocus.gainTransientMayDuck,
-            ),
-            iOS: AudioContextIOS(
-              category: AVAudioSessionCategory.ambient,
-              options: {AVAudioSessionOptions.mixWithOthers},
-            ),
+        final notificationContext = AudioContext(
+          android: AudioContextAndroid(
+            usageType: AndroidUsageType.notification,
+            contentType: AndroidContentType.sonification,
+            audioFocus: AndroidAudioFocus.gainTransientMayDuck,
+          ),
+          iOS: AudioContextIOS(
+            category: AVAudioSessionCategory.ambient,
+            options: {AVAudioSessionOptions.mixWithOthers},
           ),
         );
+        // Both players use notification stream (not media stream)
+        _orderSoundPlayer.setAudioContext(notificationContext);
+        _paymentSoundPlayer.setAudioContext(notificationContext);
       } catch (e) {
         debugPrint('[AudioStore] initAudio error: $e');
       }
@@ -69,13 +70,22 @@ class AudioStore extends ChangeNotifier {
     }
   }
 
+  /// Resolves the correct Source for a sound path.
+  /// Paths starting with 'device:' are device files, otherwise assets.
+  Source _resolveSource(String soundPath) {
+    if (soundPath.startsWith('device:')) {
+      return DeviceFileSource(soundPath.substring(7)); // strip 'device:' prefix
+    }
+    return AssetSource(soundPath);
+  }
+
   void previewNotificationSound(String soundPath) async {
     try {
       if (_orderSoundPlayer.state == PlayerState.playing) {
         await _orderSoundPlayer.stop();
       }
       if (soundPath == 'mute') return;
-      await _orderSoundPlayer.play(AssetSource(soundPath));
+      await _orderSoundPlayer.play(_resolveSource(soundPath));
     } catch (e) {
       debugPrint('[AudioStore] previewNotificationSound error: $e');
     }
@@ -87,7 +97,7 @@ class AudioStore extends ChangeNotifier {
         await _orderSoundPlayer.stop();
       }
       if (_notificationSound == 'mute') return;
-      await _orderSoundPlayer.play(AssetSource(_notificationSound));
+      await _orderSoundPlayer.play(_resolveSource(_notificationSound));
     } catch (e) {
       debugPrint('[AudioStore] playNewOrderSound error: $e');
     }
@@ -99,7 +109,7 @@ class AudioStore extends ChangeNotifier {
         await _paymentSoundPlayer.stop();
       }
       if (_paymentSound == 'mute') return;
-      await _paymentSoundPlayer.play(AssetSource(_paymentSound));
+      await _paymentSoundPlayer.play(_resolveSource(_paymentSound));
     } catch (e) {
       debugPrint('[AudioStore] playPaymentSound error: $e');
     }
