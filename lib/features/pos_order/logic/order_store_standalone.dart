@@ -59,9 +59,8 @@ class OrderStore extends ChangeNotifier with BaseMixin {
           .select('id, store_id, table_name, items, status, payment_status, total_amount, time, created_by, payment_method, deleted_at')
           .eq('store_id', storeId)
           .isFilter('deleted_at', null)
-          .gte('time', todayStart.toIso8601String())
           .order('time', ascending: false)
-          .limit(20);
+          .limit(100);
 
       final fetchedOrders = rows.map((e) => OrderModel.fromMap(e)).toList();
 
@@ -141,11 +140,32 @@ class OrderStore extends ChangeNotifier with BaseMixin {
         orders = fetchedOrders;
       }
     } catch (e) {
-      debugPrint('[initOrderStore] $e');
+      debugPrint('[initOrderStore] Error: $e');
     }
+    notifyListeners();
 
     // Dọn dẹp đơn "ma" (xóa mềm nhưng chưa hủy) — chạy ngầm, không chặn UI
     _cleanupGhostOrders(storeId);
+  }
+
+  Future<void> reloadOrdersFromDrift() async {
+    if (db == null) return;
+    final storeId = quotaProvider.getStoreId();
+    final localOrders = await db!.getOrdersByStore(storeId);
+    orders = localOrders.map((lo) => OrderModel.fromMap({
+      'id': lo.id,
+      'store_id': lo.storeId,
+      'table_name': lo.orderTable,
+      'items': jsonDecode(lo.itemsJson),
+      'status': lo.status,
+      'payment_status': lo.paymentStatus,
+      'total_amount': lo.totalAmount,
+      'created_by': lo.createdBy,
+      'time': lo.time,
+      'payment_method': lo.paymentMethod,
+    })).toList();
+    orders.sort((a, b) => b.time.compareTo(a.time));
+    notifyListeners();
   }
 
   /// Tự động dọn dẹp đơn bị xóa mềm nhưng status vẫn là pending/processing.

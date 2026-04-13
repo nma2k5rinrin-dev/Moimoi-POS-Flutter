@@ -8,11 +8,15 @@ import 'package:image_picker/image_picker.dart';
 import 'package:moimoi_pos/services/api/cloudflare_service.dart';
 import 'package:moimoi_pos/core/widgets/crop/circle_crop_dialog.dart';
 
-/// Max file size: 100KB (optimized for base64 DB storage)
-const int maxImageFileBytes = 100 * 1024;
+/// Max file size: 500KB (optimized for R2 cloud storage)
+const int maxImageFileBytes = 500 * 1024;
 
-/// Max dimension: 200×200 (images display at ≤200px in UI)
-const int maxImageDimension = 200;
+/// Max dimension: 1024x1024 (images upload to R2)
+const int maxImageDimension = 1024;
+
+/// Max dimension for cropping input to preserve detail for zooming.
+const int maxCropDimension = 2048;
+const int maxCropFileBytes = 2 * 1024 * 1024; // 2MB
 
 /// Validates image file size and dimensions.
 /// Returns error message or null if valid.
@@ -49,6 +53,51 @@ Future<String?> validateProductImage(Uint8List bytes) async {
 /// Now runs in a background isolate to avoid UI freeze.
 Future<Uint8List> prepareImageBytes(Uint8List rawBytes) async {
   return compute(_prepareImageBytesIsolate, rawBytes);
+}
+
+/// Auto-resize and compress image bytes specifically for the Crop Dialog.
+/// Allows up to 1024x1024 and 1MB size so the user can zoom without losing quality.
+/// Now runs in a background isolate to avoid UI freeze.
+Future<Uint8List> prepareImageForCrop(Uint8List rawBytes) async {
+  return compute(_prepareImageForCropIsolate, rawBytes);
+}
+
+/// Top-level function for compute() isolate for crop prep
+Uint8List _prepareImageForCropIsolate(Uint8List rawBytes) {
+  final decoded = img.decodeImage(rawBytes);
+  if (decoded == null) return rawBytes;
+
+  img.Image processed = decoded;
+
+  // Resize if any dimension exceeds max
+  if (decoded.width > maxCropDimension || decoded.height > maxCropDimension) {
+    if (decoded.width >= decoded.height) {
+      processed = img.copyResize(
+        decoded,
+        width: maxCropDimension,
+        interpolation: img.Interpolation.linear,
+      );
+    } else {
+      processed = img.copyResize(
+        decoded,
+        height: maxCropDimension,
+        interpolation: img.Interpolation.linear,
+      );
+    }
+  }
+
+  // Encode as JPEG, try quality 85 first
+  var compressed = Uint8List.fromList(img.encodeJpg(processed, quality: 85));
+
+  // If still over 1MB, reduce quality progressively
+  if (compressed.length > maxCropFileBytes) {
+    for (int q = 75; q >= 30; q -= 15) {
+      compressed = Uint8List.fromList(img.encodeJpg(processed, quality: q));
+      if (compressed.length <= maxCropFileBytes) break;
+    }
+  }
+
+  return compressed;
 }
 
 /// Top-level function for compute() isolate
@@ -188,7 +237,7 @@ Future<String?> pickAndCropAvatar(BuildContext context) async {
   }
 
   // Auto-resize & compress if needed (max 1024px, under 1MB)
-  final prepared = await prepareImageBytes(bytes);
+  final prepared = await prepareImageForCrop(bytes);
 
   if (!context.mounted) return null;
 
@@ -240,7 +289,7 @@ Future<String?> pickCropAndUploadAvatar(BuildContext context) async {
     return null;
   }
 
-  final prepared = await prepareImageBytes(bytes);
+  final prepared = await prepareImageForCrop(bytes);
   if (!context.mounted) return null;
 
   final base64Result = await showCircleCropDialog(

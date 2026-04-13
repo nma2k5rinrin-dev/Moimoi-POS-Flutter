@@ -104,7 +104,7 @@ class _CashflowPageState extends State<CashflowPage> {
       }
     }
     setState(() {
-      _processDataAnalytics({'totalIncome': _totalIncome, 'totalExpense': _totalExpense}, _customOrders ?? [], _customTxns!);
+      _processDataAnalytics(_customOrders ?? [], _customTxns!);
     });
     // Finally trigger a silent fetch to ensure correctness with backend
     _fetchData(store, _dateFrom, _dateTo, silent: true);
@@ -122,18 +122,17 @@ class _CashflowPageState extends State<CashflowPage> {
     try {
       final endOfDay = end.add(Duration(hours: 23, minutes: 59, seconds: 59));
       
-      // We fetch the RPC Summary for true totals, AND limited histories for timeline to save Egress
+      // Dùng fetchCashflowOrdersByDateRange để lấy toàn bộ đơn hàng (minimal fields)
+      // Không dùng RPC và Limit nữa để đảm bảo Calendar hiển thị đủ ngày và tổng chuẩn xác
       final results = await Future.wait([
-        store.fetchCashflowSummary(start, endOfDay),
-        context.read<OrderFilterStore>().fetchOrdersByDateRange(start, endOfDay, limit: 30),
+        context.read<OrderFilterStore>().fetchCashflowOrdersByDateRange(start, endOfDay),
         store.fetchTransactionsByDateRange(start, endOfDay),
       ]);
       
-      final summary = results[0] as Map<String, double>;
-      final orders = results[1] as List<OrderModel>;
-      final txns = results[2] as List<Transaction>;
+      final orders = results[0] as List<OrderModel>;
+      final txns = results[1] as List<Transaction>;
 
-      _processDataAnalytics(summary, orders, txns);
+      _processDataAnalytics(orders, txns);
 
       if (mounted) {
         setState(() {
@@ -151,11 +150,12 @@ class _CashflowPageState extends State<CashflowPage> {
   }
 
   void _processDataAnalytics(
-    Map<String, double> summary,
     List<OrderModel> sourceOrders,
     List<Transaction> sourceTxns,
   ) {
     final List<_DisplayTxn> newTxns = [];
+    double calcTotalIncome = 0.0;
+    double calcTotalExpense = 0.0;
 
     final paidOrders = sourceOrders
         .where((o) => o.paymentStatus == 'paid' && o.status != 'cancelled')
@@ -183,6 +183,7 @@ class _CashflowPageState extends State<CashflowPage> {
           source: 'order',
         ),
       );
+      calcTotalIncome += order.totalAmount;
     }
 
     for (final txn in sourceTxns) {
@@ -208,14 +209,19 @@ class _CashflowPageState extends State<CashflowPage> {
           originalTxn: txn,
         ),
       );
+      if (txn.type == 'thu') {
+        calcTotalIncome += txn.amount;
+      } else {
+        calcTotalExpense += txn.amount;
+      }
     }
 
     newTxns.sort((a, b) => b.date.compareTo(a.date));
 
     _allTxns = newTxns;
-    // USE TRUE AGGREGATED METRICS FROM RPC INSTEAD OF FOREACH SUM:
-    _totalIncome = summary['totalIncome'] ?? 0.0;
-    _totalExpense = summary['totalExpense'] ?? 0.0;
+    // Đồng bộ chuẩn giá trị trực tiếp từ danh sách full, vì RPC đếm sai transactions
+    _totalIncome = calcTotalIncome;
+    _totalExpense = calcTotalExpense;
   }
 
   @override
@@ -1696,7 +1702,7 @@ class _CashflowPageState extends State<CashflowPage> {
             setState(() {
               if (_customTxns != null) {
                 _customTxns!.removeWhere((x) => x.id == t.id);
-                _processDataAnalytics({'totalIncome': _totalIncome, 'totalExpense': _totalExpense}, _customOrders ?? [], _customTxns!);
+                _processDataAnalytics(_customOrders ?? [], _customTxns!);
               }
             });
             _fetchData(store, _dateFrom, _dateTo, silent: true);

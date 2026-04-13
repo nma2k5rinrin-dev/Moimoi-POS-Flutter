@@ -128,16 +128,11 @@ class _DashboardPageState extends State<DashboardPage> {
 
         final mainContent = Container(
           color: AppColors.scaffoldBg,
-          child: SingleChildScrollView(
-            controller: _scrollController,
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 24),
-            child: LayoutBuilder(
-              builder: (context, outerConstraints) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Header ────────────────────────
-                    Row(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 9, right: 9, top: 24, bottom: 20),
+                child: Row(
                       children: [
                         Container(
                           width: 48,
@@ -178,10 +173,17 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                       ],
                     ),
-
-                    SizedBox(height: 20),
-
-                    _buildDatePicker(),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.fromLTRB(9, 0, 9, 24),
+                      child: LayoutBuilder(
+                        builder: (context, outerConstraints) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildDatePicker(),
 
                     SizedBox(height: 20),
 
@@ -421,11 +423,14 @@ class _DashboardPageState extends State<DashboardPage> {
                         );
                       },
                     ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ),
                   ],
-                );
-              },
-            ),
-          ),
+                ),
         );
 
         return Skeletonizer(enabled: isLoading, child: mainContent);

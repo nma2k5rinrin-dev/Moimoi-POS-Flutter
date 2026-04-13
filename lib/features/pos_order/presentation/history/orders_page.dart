@@ -763,95 +763,95 @@ class _OrderCardState extends State<_OrderCard> {
 
     final isStaff = auth.currentUser?.role != 'sadmin' && auth.currentUser?.role != 'admin';
 
-    return Dismissible(
-      key: Key('order_${order.id}'),
-      direction: isStaff ? DismissDirection.none : DismissDirection.endToStart,
-      confirmDismiss: (_) async {
-        final completer = Completer<bool>();
-        ui.showConfirm(
-          'Bạn có chắc chắn muốn xóa đơn hàng này không? Hành động này không thể hoàn tác.',
-          () {
-            completer.complete(true);
-          },
-          onCancel: () {
-            if (!completer.isCompleted) completer.complete(false);
-          },
-          title: 'Xóa đơn hàng?',
-          confirmLabel: 'Xóa',
-          icon: Icons.delete_rounded,
-        );
-        return await completer.future;
-      },
-      onDismissed: (_) {
-        orderStore.deleteOrder(order.id);
-        widget.onDelete?.call();
-        ui.showToast('Đã xóa đơn hàng');
-      },
-      background: Container(
-        margin: EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: AppColors.red500,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        alignment: Alignment.centerRight,
-        padding: EdgeInsets.only(right: 24),
-        child: Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 32),
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: statusColor, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: statusColor.withValues(alpha: 0.12),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: GestureDetector(
-        onLongPress: () {
-          if (isStaff) {
-            ui.showToast('Chỉ admin mới được xóa đơn hàng', 'error');
-            return;
-          }
-          ui.showConfirm(
-            'Bạn có chắc chắn muốn xóa đơn hàng này không? Hành động này không thể hoàn tác.',
-            () {
+      child: Column(
+        children: [
+          // ── Header (tap to expand/collapse, swipe/long_press to delete) ──
+          Dismissible(
+            key: Key('order_header_${order.id}'),
+            direction: isStaff ? DismissDirection.none : DismissDirection.endToStart,
+            confirmDismiss: (_) async {
+              final completer = Completer<bool>();
+              ui.showConfirm(
+                'Bạn có chắc chắn muốn xóa đơn hàng này không? Hành động này không thể hoàn tác.',
+                () {
+                  completer.complete(true);
+                },
+                onCancel: () {
+                  if (!completer.isCompleted) completer.complete(false);
+                },
+                title: 'Xóa đơn hàng?',
+                confirmLabel: 'Xóa',
+                icon: Icons.delete_rounded,
+              );
+              return await completer.future;
+            },
+            onDismissed: (_) {
               orderStore.deleteOrder(order.id);
               widget.onDelete?.call();
               ui.showToast('Đã xóa đơn hàng');
             },
-            title: 'Xóa đơn hàng?',
-            confirmLabel: 'Xóa',
-            icon: Icons.delete_rounded,
-          );
-        },
-        child: Container(
-          margin: EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: statusColor, width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: statusColor.withValues(alpha: 0.12),
-                blurRadius: 20,
-                offset: const Offset(0, 6),
+            background: Container(
+              decoration: BoxDecoration(
+                color: AppColors.red500,
+                borderRadius: _isExpanded
+                    ? BorderRadius.vertical(top: Radius.circular(20))
+                    : BorderRadius.circular(20),
               ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // ── Header (tap to expand/collapse) ──
-              GestureDetector(
-                onTap: () => widget.onToggleExpand?.call(),
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: order.status == 'pending'
-                        ? AppColors.red50
-                        : order.status == 'processing'
-                        ? AppColors.orange50
-                        : order.status == 'cancelled'
-                        ? AppColors.slate50
-                        : AppColors.emerald50,
-                    borderRadius: _isExpanded
-                        ? BorderRadius.vertical(top: Radius.circular(20))
-                        : BorderRadius.circular(20),
+              alignment: Alignment.centerRight,
+              padding: EdgeInsets.only(right: 24),
+              child: Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 32),
+            ),
+            child: GestureDetector(
+              onLongPress: () {
+                if (isStaff) {
+                  ui.showToast('Chỉ admin mới được xóa đơn hàng', 'error');
+                  return;
+                }
+                ui.showConfirm(
+                  'Bạn có chắc chắn muốn xóa đơn hàng này không? Hành động này không thể hoàn tác.',
+                  () {
+                    orderStore.deleteOrder(order.id);
+                    widget.onDelete?.call();
+                    ui.showToast('Đã xóa đơn hàng');
+                  },
+                  title: 'Xóa đơn hàng?',
+                  confirmLabel: 'Xóa',
+                  icon: Icons.delete_rounded,
+                );
+              },
+              onTap: () => widget.onToggleExpand?.call(),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: order.status == 'pending'
+                      ? AppColors.red50
+                      : order.status == 'processing'
+                      ? AppColors.orange50
+                      : order.status == 'cancelled'
+                      ? AppColors.slate50
+                      : AppColors.emerald50,
+                  borderRadius: _isExpanded
+                      ? BorderRadius.vertical(top: Radius.circular(20))
+                      : BorderRadius.circular(20),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -1087,6 +1087,7 @@ class _OrderCardState extends State<_OrderCard> {
                   ),
                 ),
               ),
+          ),
 
               // ── Expandable body ──
               AnimatedCrossFade(
@@ -1100,8 +1101,6 @@ class _OrderCardState extends State<_OrderCard> {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 

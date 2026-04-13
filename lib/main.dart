@@ -174,7 +174,26 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> with WidgetsBindingObserver {
       order: _orderStore,
     );
     
-    // Wait! I actually WANT to delete them. There's no replacement code needed except empty.
+    // Inject Offline-First dependencies (Drift + SyncEngine) into all stores
+    _authStore.db = appDb;
+    _authStore.syncEngine = syncEngine;
+    _invStore.db = appDb;
+    _invStore.syncEngine = syncEngine;
+    _orderStore.db = appDb;
+    _orderStore.syncEngine = syncEngine;
+    _mgmtStore.db = appDb;
+    _mgmtStore.syncEngine = syncEngine;
+    _cashflowStore.db = appDb;
+    _cashflowStore.syncEngine = syncEngine;
+    _premiumStore.db = appDb;
+    _premiumStore.syncEngine = syncEngine;
+
+    if (syncEngine != null) {
+      syncEngine!.onNewServerOrders = (count) {
+        debugPrint('[SyncEngine] $count new orders pulled from server');
+        _orderStore.reloadOrdersFromDrift();
+      };
+    }
 
     // Apply preloaded theme immediately (no async delay)
     _uiStore.isDarkMode = widget.initialDarkMode;
@@ -233,7 +252,13 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> with WidgetsBindingObserver {
         _mgmtStore.initManagementStore(sid, user),
         _invStore.initInventoryStore(sid),
         _orderStore.initOrderStore(sid, todayStart),
+        _cashflowStore.initCashflowStore(sid, todayStart),
       ]);
+
+      // Bật lại các luồng Realtime sau khi init (Refactor Standalone bỏ sót)
+      _authStore.setupLoginAttemptRealtime();
+      _orderStore.setupOrdersRealtime(sid, user.role);
+      _mgmtStore.setupNotificationsRealtime(user.username);
     } catch (e) {
       debugPrint('Error loading initial data: $e');
     }

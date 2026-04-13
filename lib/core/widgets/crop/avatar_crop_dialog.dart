@@ -130,8 +130,8 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
 
       final srcRect = Rect.fromLTRB(srcLeft, srcTop, srcRight, srcBottom);
 
-      // Draw to a 512×512 canvas with circle clip
-      const outSize = 512;
+      // Draw to a 1024×1024 canvas with circle clip
+      const outSize = 1024;
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
 
