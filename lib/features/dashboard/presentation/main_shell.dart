@@ -249,7 +249,10 @@ class _MainShellState extends State<MainShell> {
                         ),
                       ),
                     ),
-                    SliverFillRemaining(child: widget.child),
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: widget.child,
+                    ),
                   ],
                 ),
               ),
