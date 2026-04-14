@@ -1143,7 +1143,7 @@ class _OrderCardState extends State<_OrderCard> {
                       ),
                       if (order.status == 'pending' || order.status == 'processing') ...[
                         SlidableAction(
-                          onPressed: (context) {
+                          onPressed: (_) {
                             _showEditItemQuantityDialog(context, order, item);
                           },
                           backgroundColor: AppColors.orange500,
@@ -1152,10 +1152,13 @@ class _OrderCardState extends State<_OrderCard> {
                           label: 'Sửa',
                         ),
                         SlidableAction(
-                          onPressed: (context) {
-                            context.read<UIStore>().showConfirm(
+                          onPressed: (_) {
+                            final uiStore = context.read<UIStore>();
+                            final orderStore = context.read<OrderStore>();
+                            
+                            uiStore.showConfirm(
                               'Bạn có chắc chắn muốn xóa "${item.name}" khỏi đơn hàng không?',
-                              () => context.read<OrderStore>().removeOrderItem(order.id, item.id),
+                              () => orderStore.removeOrderItem(order.id, item.id),
                               title: 'Xóa sản phẩm',
                               confirmLabel: 'Xóa',
                               icon: Icons.remove_shopping_cart_rounded,

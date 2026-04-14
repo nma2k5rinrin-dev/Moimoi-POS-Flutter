@@ -69,6 +69,9 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
     final picker = ImagePicker();
     final XFile? pickedFile = await picker.pickImage(
       source: ImageSource.gallery,
+      imageQuality: 70,
+      maxWidth: 800,
+      maxHeight: 800,
     );
     if (pickedFile == null) return;
 
@@ -83,18 +86,20 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
       borderRadius: 24,
     );
     if (base64Result != null) {
-      String imageData = base64Result;
+      store.showToast('Đang tải ảnh lên...');
       try {
-        imageData = await CloudflareService.uploadBase64(
+        final imageData = await CloudflareService.uploadBase64(
           base64Data: base64Result,
           folder: 'logos',
         );
+        final info = store.currentStoreInfo.copyWith(logoUrl: imageData);
+        store.updateStoreInfo(info);
+        setState(() {});
+        store.showToast('Tải logo thành công!');
       } catch (e) {
         debugPrint('[StoreInfoSection] Logo upload failed: $e');
+        store.showToast('Lỗi tải ảnh logo. Vui lòng thử lại.');
       }
-      final info = store.currentStoreInfo.copyWith(logoUrl: imageData);
-      store.updateStoreInfo(info);
-      setState(() {});
     }
   }
 
@@ -102,6 +107,9 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
     final picker = ImagePicker();
     final XFile? pickedFile = await picker.pickImage(
       source: ImageSource.gallery,
+      imageQuality: 70,
+      maxWidth: 800,
+      maxHeight: 800,
     );
     if (pickedFile == null) return;
 
@@ -117,17 +125,18 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
       title: 'Điều chỉnh ảnh QR',
     );
     if (base64Result != null && mounted) {
-      String imageData = base64Result;
+      store.showToast('Đang tải ảnh lên...');
       try {
-        imageData = await CloudflareService.uploadBase64(
+        final imageData = await CloudflareService.uploadBase64(
           base64Data: base64Result,
           folder: 'qr',
         );
+        setState(() => _qrImageUrl = imageData);
+        store.showToast('Đã tải ảnh QR. Ấn Lưu để áp dụng.');
       } catch (e) {
         debugPrint('[StoreInfoSection] QR upload failed: $e');
+        store.showToast('Lỗi tải ảnh QR. Vui lòng thử lại.');
       }
-      setState(() => _qrImageUrl = imageData);
-      store.showToast('Đã chọn ảnh QR. Ấn Lưu để áp dụng.');
     }
   }
 

@@ -230,31 +230,17 @@ class _MainShellState extends State<MainShell> {
             backgroundColor: AppColors.scaffoldBg,
             body: SafeArea(
               bottom: false,
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  if (context.watch<AuthStore>().currentUser != null) {
-                    // await loadInitialData
-                  }
-                },
-                color: AppColors.emerald500,
-                child: CustomScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _StickyHeaderDelegate(
-                        child: _MobileHeader(
-                          store: store,
-                          storeInfo: storeInfo,
-                        ),
-                      ),
+              child: Column(
+                children: [
+                  if (MediaQuery.of(context).size.width < 600)
+                    _MobileHeader(
+                      store: store,
+                      storeInfo: storeInfo,
                     ),
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: widget.child,
-                    ),
-                  ],
-                ),
+                  Expanded(
+                    child: widget.child,
+                  ),
+                ],
               ),
             ),
 

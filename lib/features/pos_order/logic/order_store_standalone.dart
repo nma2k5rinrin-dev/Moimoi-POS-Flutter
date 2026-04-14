@@ -227,13 +227,18 @@ class OrderStore extends ChangeNotifier with BaseMixin {
                 )
               : null,
           callback: (payload) async {
+            debugPrint('[Realtime] ══════ EVENT: ${payload.eventType} ══════');
+            debugPrint('[Realtime] Record: id=${payload.newRecord['id']}, status=${payload.newRecord['status']}, table=${payload.newRecord['table_name']}, deleted_at=${payload.newRecord['deleted_at']}');
+            
             if (payload.eventType == PostgresChangeEvent.insert) {
               final newOrder = OrderModel.fromMap(payload.newRecord);
+              debugPrint('[Realtime] INSERT: id=${newOrder.id}, status=${newOrder.status}, table=${newOrder.table}, deletedAt=${newOrder.deletedAt}, items=${newOrder.items.length}');
               
               // Nếu INSERT event đến với deleted_at đã set (Realtime gửi trạng thái cuối)
               // hoặc status đã bị cancelled -> đây là tín hiệu merge từ DB trigger!
               // Phải query lại đơn cũ ngay lập tức để cập nhật UI.
               if (newOrder.deletedAt != null || newOrder.status == 'cancelled') {
+                debugPrint('[Realtime] INSERT -> Merge detected (deleted/cancelled). Querying existing order...');
                 try {
                   final existingData = await supabaseClient
                       .from('orders')
@@ -249,10 +254,13 @@ class OrderStore extends ChangeNotifier with BaseMixin {
 
                   if (existingData != null) {
                     final mergedOrder = OrderModel.fromMap(existingData);
+                    debugPrint('[Realtime] INSERT->Merge: Found existing order id=${mergedOrder.id}, status=${mergedOrder.status}, items=${mergedOrder.items.length}');
                     final mergeIdx = orders.indexWhere((o) => o.id == mergedOrder.id);
                     if (mergeIdx != -1) {
+                      debugPrint('[Realtime] INSERT->Merge: Updating existing order at idx=$mergeIdx');
                       orders[mergeIdx] = mergedOrder;
                     } else {
+                      debugPrint('[Realtime] INSERT->Merge: Order not in list, inserting at top');
                       orders.insert(0, mergedOrder);
                     }
                     
@@ -266,6 +274,8 @@ class OrderStore extends ChangeNotifier with BaseMixin {
                     
                     if (db != null) await updateOrderInDrift(mergedOrder.id);
                     notifyListeners();
+                  } else {
+                    debugPrint('[Realtime] INSERT->Merge: No existing order found for table=${newOrder.table}');
                   }
                 } catch (e) {
                   debugPrint('[Realtime] Lỗi query đơn gộp từ INSERT: $e');
@@ -273,11 +283,16 @@ class OrderStore extends ChangeNotifier with BaseMixin {
                 return;
               }
               
-              if (orders.any((o) => o.id == newOrder.id)) return;
+              if (orders.any((o) => o.id == newOrder.id)) {
+                debugPrint('[Realtime] INSERT: Order ${newOrder.id} already in list, skipping.');
+                return;
+              }
 
               // Đợi để DB trigger kịp xử lý merge (nếu có)
               // rồi kiểm tra lại xem đơn có bị cancelled chưa
+              debugPrint('[Realtime] INSERT: Waiting 800ms for trigger to merge...');
               await Future.delayed(const Duration(milliseconds: 800));
+              debugPrint('[Realtime] INSERT: 800ms elapsed. Querying fresh state of ${newOrder.id}...');
 
               try {
                 final freshData = await supabaseClient
@@ -286,12 +301,15 @@ class OrderStore extends ChangeNotifier with BaseMixin {
                     .eq('id', newOrder.id)
                     .maybeSingle();
                 
+                debugPrint('[Realtime] INSERT: freshData null=${freshData == null}, deleted_at=${freshData?['deleted_at']}, status=${freshData?['status']}');
+                
                 // Nếu đơn đã bị trigger cancelled/xóa -> đây là merge!
                 // Query lại đơn cũ đã được gộp để cập nhật UI
                 if (freshData == null || 
                     freshData['deleted_at'] != null || 
                     freshData['status'] == 'cancelled') {
                   
+                  debugPrint('[Realtime] INSERT: Merge detected! Searching for existing order on table=${newOrder.table}...');
                   // Tìm đơn cũ đang active của cùng bàn đó
                   final existingData = await supabaseClient
                       .from('orders')
@@ -305,9 +323,12 @@ class OrderStore extends ChangeNotifier with BaseMixin {
                       .limit(1)
                       .maybeSingle();
 
+                  debugPrint('[Realtime] INSERT: Existing order found=${existingData != null}, id=${existingData?['id']}, items=${existingData != null ? (existingData['items'] as List?)?.length : 'N/A'}');
+
                   if (existingData != null) {
                     final mergedOrder = OrderModel.fromMap(existingData);
                     final mergeIdx = orders.indexWhere((o) => o.id == mergedOrder.id);
+                    debugPrint('[Realtime] INSERT->Merge: mergeIdx=$mergeIdx, mergedOrder.items=${mergedOrder.items.length}');
                     if (mergeIdx != -1) {
                       orders[mergeIdx] = mergedOrder;
                     } else {
@@ -324,10 +345,100 @@ class OrderStore extends ChangeNotifier with BaseMixin {
                     
                     if (db != null) await updateOrderInDrift(mergedOrder.id);
                     notifyListeners();
+                  } else {
+                    debugPrint('[Realtime] INSERT->Merge: No existing order found for table=${newOrder.table}');
                   }
                   return;
                 }
                 
+                // Đơn không bị cancelled -> kiểm tra xem có đơn cũ cùng bàn không
+                // Nếu có → trigger không gộp được, app tự gộp!
+                debugPrint('[Realtime] INSERT: Order still active. Checking if existing order on same table...');
+                final existingForTable = await supabaseClient
+                    .from('orders')
+                    .select('id, store_id, table_name, items, status, payment_status, total_amount, time, created_by, payment_method, deleted_at')
+                    .eq('store_id', newOrder.storeId)
+                    .isFilter('deleted_at', null)
+                    .inFilter('status', ['pending', 'processing'])
+                    .eq('payment_status', 'unpaid')
+                    .neq('id', newOrder.id)
+                    .order('time', ascending: false);
+
+                // Tìm đơn cùng bàn bằng cách so sánh tên bàn đã normalize
+                final normalizedNewTable = newOrder.table.toLowerCase().replaceAll('bàn', '').replaceAll('bán', '').trim();
+                Map<String, dynamic>? matchingExisting;
+                for (final row in existingForTable) {
+                  final existingTable = (row['table_name'] ?? '').toString().toLowerCase().replaceAll('bàn', '').replaceAll('bán', '').trim();
+                  if (existingTable == normalizedNewTable) {
+                    matchingExisting = row;
+                    break;
+                  }
+                }
+
+                if (matchingExisting != null) {
+                  debugPrint('[Realtime] INSERT: Found existing order ${matchingExisting['id']} on same table! Trigger did NOT merge. App will merge manually.');
+                  
+                  // App-level merge: gộp items từ đơn mới vào đơn cũ
+                  final existingOrder = OrderModel.fromMap(matchingExisting);
+                  final newItems = OrderModel.fromMap(freshData).items;
+                  
+                  // Merge items: thêm items mới vào cuối, đánh dấu isNewlyAdded
+                  final mergedItems = [...existingOrder.items];
+                  for (final newItem in newItems) {
+                    final existIdx = mergedItems.indexWhere((i) => 
+                      i.name.trim().toLowerCase() == newItem.name.trim().toLowerCase() &&
+                      i.note.trim().toLowerCase() == newItem.note.trim().toLowerCase());
+                    if (existIdx != -1) {
+                      mergedItems[existIdx] = mergedItems[existIdx].copyWith(
+                        quantity: mergedItems[existIdx].quantity + newItem.quantity,
+                        isNewlyAdded: true,
+                      );
+                    } else {
+                      mergedItems.add(newItem.copyWith(isNewlyAdded: true));
+                    }
+                  }
+                  
+                  final newTotal = existingOrder.totalAmount + OrderModel.fromMap(freshData).totalAmount;
+                  
+                  // Update đơn cũ trên Supabase
+                  await supabaseClient.from('orders').update({
+                    'items': mergedItems.map((i) => i.toMap()).toList(),
+                    'total_amount': newTotal,
+                  }).eq('id', existingOrder.id);
+                  
+                  // Soft-delete đơn mới
+                  await supabaseClient.from('orders').update({
+                    'deleted_at': DateTime.now().toUtc().toIso8601String(),
+                    'status': 'cancelled',
+                  }).eq('id', newOrder.id);
+                  
+                  // Update UI
+                  final mergedOrderModel = existingOrder.copyWith(
+                    items: mergedItems,
+                    totalAmount: newTotal,
+                  );
+                  final mergeIdx = orders.indexWhere((o) => o.id == existingOrder.id);
+                  if (mergeIdx != -1) {
+                    orders[mergeIdx] = mergedOrderModel;
+                  } else {
+                    orders.insert(0, mergedOrderModel);
+                  }
+                  
+                  if (!_mergeNotifiedOrderIds.contains(existingOrder.id)) {
+                    _mergeNotifiedOrderIds.add(existingOrder.id);
+                    Future.delayed(const Duration(seconds: 10), () => _mergeNotifiedOrderIds.remove(existingOrder.id));
+                    showToast('${existingOrder.table} vừa thêm sản phẩm vào đơn', 'warning');
+                    playNewOrderSound();
+                    NotificationHelper.showNewOrderNotification(mergedOrderModel, isUpdate: true);
+                  }
+                  
+                  if (db != null) await updateOrderInDrift(existingOrder.id);
+                  notifyListeners();
+                  debugPrint('[Realtime] INSERT: App-level merge completed! ${mergedItems.length} items total.');
+                  return;
+                }
+                
+                debugPrint('[Realtime] INSERT: No existing order on same table. Treating as genuine new order.');
                 // Đơn không bị cancelled -> đây là đơn mới thật sự
                 if (orders.any((o) => o.id == newOrder.id)) return;
                 
@@ -364,7 +475,9 @@ class OrderStore extends ChangeNotifier with BaseMixin {
               }
             } else if (payload.eventType == PostgresChangeEvent.update) {
               final rec = payload.newRecord;
+              debugPrint('[Realtime] UPDATE: id=${rec['id']}, status=${rec['status']}, items_null=${rec['items'] == null}, deleted_at=${rec['deleted_at']}');
               if (rec['deleted_at'] != null) {
+                debugPrint('[Realtime] UPDATE: Order ${rec['id']} soft-deleted, removing from list');
                 orders.removeWhere((o) => o.id == rec['id']?.toString());
                 if (db != null)
                   db!.deleteOrderLocally(rec['id']?.toString() ?? '');
@@ -385,11 +498,14 @@ class OrderStore extends ChangeNotifier with BaseMixin {
 
               final idx = orders.indexWhere((o) => o.id == id);
 
+              debugPrint('[Realtime] UPDATE: Order idx in local list = $idx (total orders: ${orders.length})');
               if (idx != -1) {
                 final existing = orders[idx];
+                debugPrint('[Realtime] UPDATE: Found existing order status=${existing.status}, items=${existing.items.length}');
                 List<OrderItemModel> updatedItems = existing.items;
 
                 if (rec['items'] != null) {
+                  debugPrint('[Realtime] UPDATE: Incoming items count=${(rec['items'] as List).length}');
                   final incomingItems = (rec['items'] as List<dynamic>)
                       .map((e) => OrderItemModel.fromMap(e as Map<String, dynamic>))
                       .toList();
@@ -443,10 +559,11 @@ class OrderStore extends ChangeNotifier with BaseMixin {
                 );
                 if (db != null) await updateOrderInDrift(id);
 
-                // ── Thông báo khi phát hiện item mới được thêm (QR merge) ──
-                final hasNewItems = updatedItems.any((item) => item.isNewlyAdded);
-                final hadNewItemsBefore = existing.items.any((item) => item.isNewlyAdded);
-                if (hasNewItems && !hadNewItemsBefore && !_mergeNotifiedOrderIds.contains(id)) {
+                // ── Thông báo khi phát hiện item mới được thêm (QR merge hay thiết bị khác) ──
+                final oldTotalQty = existing.items.fold<int>(0, (s, i) => s + i.quantity);
+                final newTotalQty = updatedItems.fold<int>(0, (s, i) => s + i.quantity);
+                
+                if (newTotalQty > oldTotalQty && !_mergeNotifiedOrderIds.contains(id)) {
                   _mergeNotifiedOrderIds.add(id);
                   Future.delayed(const Duration(seconds: 10), () => _mergeNotifiedOrderIds.remove(id));
                   final updatedOrder = orders[idx];
