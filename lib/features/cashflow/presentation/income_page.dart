@@ -112,7 +112,7 @@ class IncomePageState extends State<IncomePage> {
                     if (!widget.asDialog) ...[
                       GestureDetector(
                         onTap: () {
-                                HapticFeedback.lightImpact();
+                          HapticFeedback.lightImpact();
                           if (widget.onSaved != null) {
                             widget.onSaved!();
                           } else if (widget.embedded && widget.onBack != null) {
@@ -184,7 +184,9 @@ class IncomePageState extends State<IncomePage> {
             // ── Content ─────────────────────────
             Expanded(
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: widget.asDialog ? 0 : 20),
+                padding: EdgeInsets.symmetric(
+                  horizontal: widget.asDialog ? 0 : 20,
+                ),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: 600),
                   child: Column(
@@ -195,134 +197,206 @@ class IncomePageState extends State<IncomePage> {
                       // ── Amount, Note & Date ──────────────
                       Container(
                         width: double.infinity,
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [AppColors.emerald50, AppColors.emerald100],
-                          ),
-                          borderRadius: BorderRadius.circular(16),
+                          color: Theme.of(context).cardColor,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.emerald500.withOpacity(0.08),
+                              blurRadius: 24,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
                           border: Border.all(
-                            color: AppColors.cardBg != Colors.white
-                                ? AppColors.emerald100
-                                : AppColors.emerald200,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? AppColors.emerald400.withOpacity(0.3)
+                                : AppColors.emerald200.withOpacity(0.5),
                           ),
                         ),
-                        child: IntrinsicHeight(
-                          child: Row(
-                            children: [
-                              // Left: Amount + Note
-                              Expanded(
-                                flex: 3,
-                                child: Padding(
-                                  padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      // Removed 'Số tiền thu' text here
-                                      TextField(
-                                        controller: _amountCtrl,
-                                        keyboardType: TextInputType.number,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.w800,
-                                          color:
-                                              Theme.of(context).brightness ==
-                                                  Brightness.dark
-                                              ? AppColors.emerald400
-                                              : AppColors.emerald700,
-                                        ),
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter
-                                              .digitsOnly,
-                                          _ThousandSeparatorFormatter(),
-                                        ],
-                                        decoration: InputDecoration(
-                                          border: InputBorder.none,
-                                          hintText: '0',
-                                          hintStyle: TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.w800,
-                                            color: AppColors.emerald400,
-                                          ),
-                                        ),
-                                      ),
-                                      TextField(
-                                        controller: _noteCtrl,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontStyle: FontStyle.italic,
-                                          color:
-                                              Theme.of(context).brightness ==
-                                                  Brightness.dark
-                                              ? AppColors.emerald400
-                                              : AppColors.emerald800,
-                                        ),
-                                        decoration: InputDecoration(
-                                          hintText: 'Thêm ghi chú (tùy chọn)',
-                                          hintStyle: TextStyle(
-                                            fontSize: 13,
-                                            fontStyle: FontStyle.italic,
-                                            color: AppColors.emerald500,
-                                          ),
-                                          border: InputBorder.none,
-                                          isDense: true,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                        child: Column(
+                          children: [
+                            // --- Amount Area ---
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: 24,
+                                bottom: 16,
+                                left: 16,
+                                right: 16,
                               ),
-                              // Vertical Divider
-                              Container(width: 1, color: AppColors.emerald200),
-                              // Right: Date Picker
-                              Expanded(
-                                flex: 2,
-                                child: GestureDetector(
-                                  onTap: () async {
-                                    final picked = await showCompactDatePicker(
-                                      context: context,
-                                      initialDate: _selectedDate,
-                                      firstDate: DateTime(2020),
-                                      lastDate: DateTime.now(),
-                                    );
-                                    if (picked != null) {
-                                      setState(() => _selectedDate = picked);
-                                    }
-                                  },
-                                  behavior: HitTestBehavior.opaque,
-                                  child: Padding(
-                                    padding: EdgeInsets.fromLTRB(12, 8, 12, 8),
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.calendar_today_rounded,
-                                          color: AppColors.emerald600,
-                                          size: 24,
-                                        ),
-                                        SizedBox(height: 8),
-                                        Text(
-                                          '${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}',
+                              child: Column(
+                                children: [
+                                  Text(
+                                    'SỐ TIỀN THU',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 1.2,
+                                      color: AppColors.emerald700.withOpacity(
+                                        0.8,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: _amountCtrl,
+                                          keyboardType: TextInputType.number,
+                                          textAlign: TextAlign.center,
                                           style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w700,
+                                            fontSize: 42,
+                                            height: 1.1,
+                                            fontWeight: FontWeight.w800,
                                             color:
                                                 Theme.of(context).brightness ==
                                                     Brightness.dark
                                                 ? AppColors.emerald400
-                                                : AppColors.emerald800,
+                                                : AppColors.emerald700,
+                                            letterSpacing: -1,
                                           ),
-                                          textAlign: TextAlign.center,
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter
+                                                .digitsOnly,
+                                            _ThousandSeparatorFormatter(),
+                                          ],
+                                          decoration: InputDecoration(
+                                            border: InputBorder.none,
+                                            hintText: '0',
+                                            hintStyle: TextStyle(
+                                              fontSize: 42,
+                                              height: 1.1,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppColors.emerald400
+                                                  .withOpacity(0.5),
+                                            ),
+                                            isDense: true,
+                                          ),
                                         ),
-                                      ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            Divider(
+                              height: 1,
+                              thickness: 1,
+                              color: AppColors.slate200.withOpacity(0.4),
+                            ),
+
+                            // --- Metadata Area ---
+                            IntrinsicHeight(
+                              child: Row(
+                                children: [
+                                  // Note
+                                  Expanded(
+                                    flex: 1,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 4,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.edit_note_rounded,
+                                            size: 20,
+                                            color: AppColors.slate400,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: TextField(
+                                              controller: _noteCtrl,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                                color:
+                                                    Theme.of(
+                                                          context,
+                                                        ).brightness ==
+                                                        Brightness.dark
+                                                    ? Colors.white
+                                                    : AppColors.slate700,
+                                              ),
+                                              decoration: InputDecoration(
+                                                hintText: 'Thêm ghi chú...',
+                                                hintStyle: TextStyle(
+                                                  fontSize: 14,
+                                                  fontStyle: FontStyle.italic,
+                                                  fontWeight: FontWeight.w400,
+                                                  color: AppColors.slate400,
+                                                ),
+                                                border: InputBorder.none,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
+
+                                  VerticalDivider(
+                                    width: 1,
+                                    thickness: 1,
+                                    color: AppColors.slate200.withOpacity(0.4),
+                                  ),
+
+                                  // Date
+                                  GestureDetector(
+                                    onTap: () async {
+                                      final picked =
+                                          await showCompactDatePicker(
+                                            context: context,
+                                            initialDate: _selectedDate,
+                                            firstDate: DateTime(2020),
+                                            lastDate: DateTime.now(),
+                                          );
+                                      if (picked != null) {
+                                        setState(() => _selectedDate = picked);
+                                      }
+                                    },
+                                    behavior: HitTestBehavior.opaque,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 16,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.calendar_month_rounded,
+                                            size: 18,
+                                            color: AppColors.emerald700,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            '${_selectedDate.day.toString().padLeft(2, "0")}/${_selectedDate.month.toString().padLeft(2, "0")}',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.emerald700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
 
@@ -369,11 +443,17 @@ class IncomePageState extends State<IncomePage> {
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 if (!_isEditMode) ...[
-                                                  Icon(Icons.tune_rounded, size: 14, color: AppColors.slate500),
+                                                  Icon(
+                                                    Icons.tune_rounded,
+                                                    size: 14,
+                                                    color: AppColors.slate500,
+                                                  ),
                                                   SizedBox(width: 4),
                                                 ],
                                                 Text(
-                                                  _isEditMode ? 'Xong' : 'Chỉnh sửa',
+                                                  _isEditMode
+                                                      ? 'Xong'
+                                                      : 'Chỉnh sửa',
                                                   style: TextStyle(
                                                     fontSize: 12,
                                                     fontWeight: FontWeight.w600,
@@ -403,7 +483,7 @@ class IncomePageState extends State<IncomePage> {
                                     Expanded(
                                       child: GestureDetector(
                                         onTap: () {
-                                HapticFeedback.lightImpact();
+                                          HapticFeedback.lightImpact();
                                           if (widget.onSaved != null) {
                                             widget.onSaved!();
                                           } else if (widget.embedded &&
@@ -534,7 +614,7 @@ class IncomePageState extends State<IncomePage> {
     return GestureDetector(
       key: ValueKey(cat.id ?? 'item_$index'),
       onTap: () {
-                                HapticFeedback.lightImpact();
+        HapticFeedback.lightImpact();
         if (_isEditMode) return;
         if (isAdd) {
           _showAddCategoryDialog();
@@ -744,7 +824,7 @@ class IncomePageState extends State<IncomePage> {
                       Expanded(
                         child: InkWell(
                           onTap: () {
-                                HapticFeedback.lightImpact();
+                            HapticFeedback.lightImpact();
                             Navigator.pop(ctx);
                             final store = context.read<CashflowStore>();
                             store.deleteTransactionCategory(cat.id!);
@@ -786,7 +866,7 @@ class IncomePageState extends State<IncomePage> {
                       Expanded(
                         child: InkWell(
                           onTap: () {
-                                HapticFeedback.lightImpact();
+                            HapticFeedback.lightImpact();
                             Navigator.pop(ctx);
                             showAddCategoryDialog(
                               context: context,
@@ -1158,7 +1238,7 @@ class _AddCategoryDialogContentState extends State<_AddCategoryDialogContent> {
               height: 44,
               child: ElevatedButton.icon(
                 onPressed: () {
-                                HapticFeedback.lightImpact();
+                  HapticFeedback.lightImpact();
                   final name = _nameCtrl.text.trim();
                   if (name.isEmpty) return;
                   widget.onSave(

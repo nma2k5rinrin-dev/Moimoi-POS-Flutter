@@ -154,142 +154,90 @@ class _ProductGridState extends State<_ProductGrid> {
           color: AppColors.scaffoldBg,
           child: Column(
             children: [
-              // Search bar
-              Padding(
-                padding: EdgeInsets.fromLTRB(9, 16, 9, 0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBg,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.slate200),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (v) => ui.setSearchQuery(v),
-                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'Tìm kiếm sản phẩm...',
-                      hintStyle: TextStyle(
-                        color: AppColors.slate400.withValues(alpha: 0.8),
-                        fontWeight: FontWeight.w400,
-                      ),
-                      prefixIcon: Padding(
-                        padding: EdgeInsets.only(left: 14, right: 10),
-                        child: Icon(
-                          Icons.search_rounded,
-                          color: AppColors.slate400,
-                          size: 22,
+              // Body: Categories (Left) + Product Grid (Right)
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Category Sidebar (Left)
+                    Container(
+                      width: 76,
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBg,
+                        border: Border(
+                          right: BorderSide(
+                            color: AppColors.slate200,
+                            width: 1,
+                          ),
                         ),
                       ),
-                      prefixIconConstraints: const BoxConstraints(minWidth: 0),
-                      suffixIcon: searchQuery.isNotEmpty
-                          ? GestureDetector(
-                              onTap: () {
-                                _searchController.clear();
-                                ui.setSearchQuery('');
-                              },
-                              child: Padding(
-                                padding: EdgeInsets.only(right: 10),
-                                child: Icon(
-                                  Icons.close_rounded,
-                                  color: AppColors.slate400,
-                                  size: 20,
-                                ),
-                              ),
-                            )
-                          : null,
-                      suffixIconConstraints: const BoxConstraints(minWidth: 0),
-                      filled: true,
-                      fillColor: Colors.transparent,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
+                      child: ListView(
+                        padding: EdgeInsets.only(bottom: 100),
+                        children: [
+                          _CategoryChip(
+                            label: 'Tất cả',
+                            isActive: selectedCategory == 'all',
+                            count: allProducts.length,
+                            onTap: () => ui.setCategory('all'),
+                          ),
+                          ...allCategories.map((cat) {
+                            final count = allProducts
+                                .where((p) => p.category == cat.id)
+                                .length;
+                            return _CategoryChip(
+                              label: cat.name,
+                              isActive: selectedCategory == cat.id,
+                              count: count,
+                              onTap: () => ui.setCategory(cat.id),
+                            );
+                          }),
+                        ],
                       ),
-                      border: InputBorder.none,
                     ),
-                  ),
+
+                    // Product Grid
+                    Expanded(
+                      child: filteredProducts.isEmpty
+                          ? _buildEmptyState()
+                          : LayoutBuilder(
+                              builder: (context, constraints) {
+                                final width = constraints.maxWidth;
+                                int crossAxisCount;
+                                double childAspectRatio;
+                                if (width >= 1024) {
+                                  crossAxisCount = 5;
+                                  childAspectRatio = 0.7;
+                                } else if (width >= 600) {
+                                  crossAxisCount = 3;
+                                  childAspectRatio = 0.7;
+                                } else {
+                                  crossAxisCount = 2;
+                                  childAspectRatio = 0.7;
+                                }
+                                return GridView.builder(
+                                  controller: _scrollController,
+                                  padding: EdgeInsets.fromLTRB(16, 16, 16, 100),
+                                  gridDelegate:
+                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: crossAxisCount,
+                                        childAspectRatio: childAspectRatio,
+                                        mainAxisSpacing: 12,
+                                        crossAxisSpacing: 12,
+                                      ),
+                                  itemCount: filteredProducts.length,
+                                  itemBuilder: (ctx, i) {
+                                    return RepaintBoundary(
+                                      child: _ProductCard(
+                                        product: filteredProducts[i],
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
                 ),
-              ),
-
-              // Category Chips
-              Padding(
-                padding: EdgeInsets.only(top: 6),
-                child: SizedBox(
-                  height: 48,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                    children: [
-                      _CategoryChip(
-                        label: 'Tất cả',
-                        isActive: selectedCategory == 'all',
-                        count: allProducts.length,
-                        onTap: () => ui.setCategory('all'),
-                      ),
-                      ...allCategories.map((cat) {
-                        final count = allProducts
-                            .where((p) => p.category == cat.id)
-                            .length;
-                        return _CategoryChip(
-                          label: cat.name,
-                          isActive: selectedCategory == cat.id,
-                          count: count,
-                          onTap: () => ui.setCategory(cat.id),
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Product Grid
-              Expanded(
-                child: filteredProducts.isEmpty
-                    ? _buildEmptyState()
-                    : LayoutBuilder(
-                        builder: (context, constraints) {
-                          final width = constraints.maxWidth;
-                          int crossAxisCount;
-                          double childAspectRatio;
-                          if (width >= 1024) {
-                            crossAxisCount = 5;
-                            childAspectRatio = 0.7;
-                          } else if (width >= 600) {
-                            crossAxisCount = 3;
-                            childAspectRatio = 0.7;
-                          } else {
-                            crossAxisCount = 2;
-                            childAspectRatio = 0.7;
-                          }
-                          return GridView.builder(
-                            controller: _scrollController,
-                            padding: EdgeInsets.fromLTRB(9, 14, 9, 16),
-
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: crossAxisCount,
-                                  childAspectRatio: childAspectRatio,
-                                  mainAxisSpacing: 12,
-                                  crossAxisSpacing: 12,
-                                ),
-                            itemCount: filteredProducts.length,
-                            itemBuilder: (ctx, i) {
-                              return RepaintBoundary(
-                                child: _ProductCard(
-                                  product: filteredProducts[i],
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
               ),
             ],
           ),
@@ -329,6 +277,7 @@ class _ProductGridState extends State<_ProductGrid> {
           Text(
             'Thêm sản phẩm trong Quản lý kho → Quản lý danh mục / sản phẩm',
             style: TextStyle(color: AppColors.slate400, fontSize: 13),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -351,67 +300,35 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(right: 10),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: BoxDecoration(
-              color: isActive ? AppColors.emerald500 : AppColors.cardBg,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: isActive ? AppColors.emerald500 : AppColors.slate200,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: EdgeInsets.symmetric(horizontal: 4, vertical: 20),
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.emerald50 : Colors.transparent,
+            border: Border(
+              left: BorderSide(
+                color: isActive ? AppColors.emerald500 : Colors.transparent,
+                width: 4,
               ),
-              boxShadow: isActive
-                  ? [
-                      BoxShadow(
-                        color: AppColors.emerald500.withValues(alpha: 0.25),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ]
-                  : null,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isActive ? Colors.white : AppColors.slate800,
-                  ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+                  color: isActive ? AppColors.emerald700 : AppColors.slate600,
                 ),
-                if (count > 0) ...[
-                  SizedBox(width: 8),
-                  Container(
-                    width: 24,
-                    height: 24,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: isActive ? Colors.white : AppColors.slate200,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '$count',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: isActive
-                            ? const Color(0xFF2EC4B6)
-                            : AppColors.slate500,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

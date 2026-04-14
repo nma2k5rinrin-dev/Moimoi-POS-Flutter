@@ -449,7 +449,8 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
       default:
         avatarBg = AppColors.blue50;
         avatarFg = const Color(0xFF2563EB);
-        roleLabel = 'Nhân viên';
+        final roleIndex = store.appRoles.indexWhere((r) => r.id == user.role);
+        roleLabel = roleIndex != -1 ? store.appRoles[roleIndex].roleName : 'Nhân viên';
         roleBg = AppColors.blue50;
         roleFg = const Color(0xFF2563EB);
         break;
@@ -877,12 +878,16 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
       roles.add(MapEntry('admin', 'Admin'));
     }
 
-    // Chỉ có 1 vai trò hợp lệ duy nhất cho nhân viên
-    roles.add(MapEntry('staff', 'Nhân viên (Chung)'));
+    if (store.appRoles.isNotEmpty) {
+      for (final role in store.appRoles) {
+        roles.add(MapEntry(role.id, role.roleName));
+      }
+    } else {
+      roles.add(MapEntry('staff', 'Nhân viên (Chung)'));
+    }
 
-    // Bỏ qua các role lỗi thời, tự động gán là staff
     if (!roles.any((e) => e.key == _selectedRole)) {
-      _selectedRole = 'staff';
+      _selectedRole = roles.first.key;
     }
 
     return Column(

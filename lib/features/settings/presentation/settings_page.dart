@@ -20,7 +20,6 @@ import 'package:moimoi_pos/features/settings/presentation/sections/account_secti
 import 'package:moimoi_pos/features/settings/presentation/sections/store_info_section.dart';
 import 'package:moimoi_pos/features/settings/presentation/sections/tables_section.dart';
 import 'package:moimoi_pos/features/settings/presentation/sections/users_section.dart';
-import 'package:moimoi_pos/features/settings/presentation/sections/backup_section.dart';
 import 'package:moimoi_pos/features/settings/presentation/sections/notifications_section.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -134,13 +133,6 @@ class _SettingsPageState extends State<SettingsPage> {
       desc: 'Tùy chỉnh âm thanh đơn hàng mới',
       icon: Icons.notifications_active_outlined,
       requiresStore: true,
-      group: '⚙️ HỆ THỐNG CÀI ĐẶT',
-    ),
-    _SettingMenu(
-      id: 'backup',
-      name: 'Lưu Trữ & Phục Hồi',
-      desc: 'Sao lưu dữ liệu đám mây',
-      icon: Icons.cloud_outlined,
       group: '⚙️ HỆ THỐNG CÀI ĐẶT',
     ),
   ];
@@ -389,8 +381,6 @@ class _SettingsPageState extends State<SettingsPage> {
         return const PrinterSection();
       case 'notifications':
         return NotificationsSection(onCancel: onCancel);
-      case 'backup':
-        return const BackupSection();
       case 'cashflow':
         return CashflowPage(
           embedded: true,

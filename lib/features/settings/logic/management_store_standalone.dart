@@ -350,8 +350,16 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
           currentUser = users.firstWhere((u) => u.username == username);
         }
       },
-      remote: () =>
-          supabaseClient.from('users').update(dbData).eq('username', username),
+      remote: () async {
+        final res = await supabaseClient
+            .from('users')
+            .update(dbData)
+            .eq('username', username)
+            .select();
+        if (res.isEmpty) {
+          throw Exception('RLS block: Không có quyền cập nhật người dùng này.');
+        }
+      },
       rollback: () {
         users = oldUsers;
         currentUser = oldCurrentUser;
