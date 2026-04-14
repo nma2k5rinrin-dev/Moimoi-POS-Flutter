@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 // Supabase Edge Function: payment-webhook
 // Deploy: supabase functions deploy payment-webhook
 // URL: https://<project-ref>.supabase.co/functions/v1/payment-webhook
@@ -12,6 +13,7 @@
 // 3. Deploy: supabase functions deploy payment-webhook --no-verify-jwt
 // 4. Add the function URL to SePay/Casso webhook settings
 
+// deno-lint-ignore-file
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -168,10 +170,10 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
-  } catch (err) {
+  } catch (err: any) {
     console.error('Webhook error:', err)
     return new Response(
-      JSON.stringify({ success: false, error: err.message }),
+      JSON.stringify({ success: false, error: err?.message ?? 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
