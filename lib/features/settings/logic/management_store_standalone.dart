@@ -393,7 +393,6 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
   // ── Add Staff ───────────────────────────────────────────
   Future<void> addStaff({
     required String fullname,
-    required String email,
     required String phone,
     required String username,
     required String password,
@@ -423,7 +422,6 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
           'p_fullname': fullname,
           'p_phone': phone,
           'p_created_by': createdBy ?? currentUser?.username,
-          'p_email': email.trim().toLowerCase(),
         },
       );
 

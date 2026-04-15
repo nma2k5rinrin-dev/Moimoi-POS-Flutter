@@ -1,9 +1,18 @@
--- File: e:\Moimoi-POS-Flutter\supabase\migrations\20260415000002_add_email_to_admin_create_user.sql
+-- File: e:\Moimoi-POS-Flutter\supabase\migrations\20260415000003_add_email_to_public_users.sql
 
--- Drop the old definition (since parameter list changed)
+-- 1. Add email column to public.users if it doesn't exist
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS email text;
+
+-- 2. Backfill existing emails from auth.users (for admins who signed up via usual flow)
+UPDATE public.users pu
+SET email = au.email
+FROM auth.users au
+WHERE pu.id = au.id AND pu.email IS NULL;
+
+-- 3. Update the RPC again to insert email into public.users
 DROP FUNCTION IF EXISTS public.admin_create_user(text, text, text, text, text, text);
+DROP FUNCTION IF EXISTS public.admin_create_user(text, text, text, text, text, text, text);
 
--- Create new definition with p_email
 CREATE OR REPLACE FUNCTION public.admin_create_user(
     p_username text,
     p_password text,
@@ -25,7 +34,7 @@ BEGIN
         RAISE EXCEPTION 'Tên đăng nhập đã tồn tại';
     END IF;
     
-    -- Option: check if email is already taken by auth.users
+    -- Check if email is already taken by auth.users
     IF EXISTS (SELECT 1 FROM auth.users WHERE email = p_email) THEN
         RAISE EXCEPTION 'Email này đã tồn tại';
     END IF;
@@ -42,11 +51,12 @@ BEGIN
         now(), now(), '', '', '', ''
     );
 
+    -- Insert into public.users with the email included!
     INSERT INTO public.users (
-        id, username, pass, role, fullname, phone, created_by, is_premium, 
+        id, username, pass, role, fullname, phone, email, created_by, is_premium, 
         show_vip_expired, show_vip_congrat, created_at
     ) VALUES (
-        new_user_id, p_username, p_password, p_role, p_fullname, p_phone, p_created_by, false, 
+        new_user_id, p_username, p_password, p_role, p_fullname, p_phone, p_email, p_created_by, false, 
         false, false, now()
     );
 

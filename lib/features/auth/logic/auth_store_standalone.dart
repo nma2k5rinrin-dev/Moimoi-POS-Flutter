@@ -192,15 +192,6 @@ class AuthStore extends ChangeNotifier with BaseMixin {
 
   Future<String> forgotPassword(String email) async {
     try {
-      final isDeleted = await _supabase.rpc(
-        'check_deleted_email',
-        params: {'p_email': email.trim().toLowerCase()},
-      ) as bool?;
-
-      if (isDeleted == true) {
-        return 'Không thể lấy lại mật khẩu cho tài khoản đã xóa.';
-      }
-
       await _supabase.auth.resetPasswordForEmail(email.trim());
       return 'success';
     } on AuthException catch (e) {
@@ -271,6 +262,7 @@ class AuthStore extends ChangeNotifier with BaseMixin {
           'role': 'admin',
           'fullname': meta['fullname'] ?? '',
           'phone': meta['phone'] ?? '',
+          'email': authResponse.user!.email,
           'is_premium': false,
         };
         await _supabase.from('users').insert(newUser);
@@ -291,12 +283,6 @@ class AuthStore extends ChangeNotifier with BaseMixin {
 
       if (userResponse['deleted_at'] != null) {
         await _supabase.auth.signOut();
-        
-        final deletedAt = DateTime.parse(userResponse['deleted_at']);
-        if (DateTime.now().difference(deletedAt).inDays >= 3) {
-          return 'Tài khoản không tồn tại';
-        }
-        
         if (userResponse['role'] == 'admin') {
           return 'Tài khoản sẽ hoàn tất xóa dữ liệu vĩnh viễn trong 3 ngày. Vui lòng liên hệ Admin ứng dụng để khôi phục.';
         }
@@ -408,20 +394,6 @@ class AuthStore extends ChangeNotifier with BaseMixin {
     final cleanUsername = username.toLowerCase().replaceAll(RegExp(r'\s'), '');
 
     try {
-      final isOverlap = await _supabase.rpc(
-        'check_registration_overlap',
-        params: {
-          'p_username': cleanUsername,
-          'p_phone': phone,
-          'p_email': email.trim().toLowerCase(),
-        },
-      ) as bool?;
-
-      if (isOverlap == true) {
-        showToast('Tài khoản này đã tồn tại', 'error');
-        return 'exists';
-      }
-
       final authResponse = await _supabase.auth.signUp(
         email: email,
         password: password,
