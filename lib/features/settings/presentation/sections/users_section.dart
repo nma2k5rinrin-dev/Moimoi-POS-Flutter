@@ -29,6 +29,7 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
   // Add/Edit panel state
   UserModel? _editingUser;
   final _fullnameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _usernameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
@@ -48,6 +49,7 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
   @override
   void dispose() {
     _fullnameCtrl.dispose();
+    _emailCtrl.dispose();
     _usernameCtrl.dispose();
     _phoneCtrl.dispose();
     _passwordCtrl.dispose();
@@ -688,6 +690,7 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
   void _openAddPanel(ManagementStore store) {
     _editingUser = null;
     _fullnameCtrl.clear();
+    _emailCtrl.clear();
     _usernameCtrl.clear();
     _phoneCtrl.clear();
     _passwordCtrl.clear();
@@ -814,6 +817,14 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
                           label: 'Họ và tên',
                         ),
                         SizedBox(height: 14),
+                        if (!isEditing) ...[
+                          SettingsDialogField(
+                            controller: _emailCtrl,
+                            label: 'Email (Dùng để lấy lại mật khẩu)',
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          SizedBox(height: 14),
+                        ],
                         SettingsDialogField(
                           controller: _usernameCtrl,
                           label: 'Tên đăng nhập',
@@ -981,6 +992,10 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
       context.read<UIStore>().showToast('Vui lòng nhập tên đăng nhập', 'error');
       return;
     }
+    if (_editingUser == null && _emailCtrl.text.trim().isEmpty) {
+      context.read<UIStore>().showToast('Vui lòng nhập email', 'error');
+      return;
+    }
     if (_editingUser == null && _passwordCtrl.text.isEmpty) {
       context.read<UIStore>().showToast('Vui lòng nhập mật khẩu', 'error');
       return;
@@ -1010,6 +1025,7 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
       store.updateUser(_editingUser!.username, updatedData);
     } else {
       await store.addStaff(
+        email: _emailCtrl.text.trim(),
         username: _usernameCtrl.text.trim().toLowerCase().replaceAll(' ', ''),
         password: _passwordCtrl.text,
         fullname: _fullnameCtrl.text.trim(),
