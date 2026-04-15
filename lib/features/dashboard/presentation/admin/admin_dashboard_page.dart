@@ -1467,59 +1467,58 @@ class _StoreCard extends StatelessWidget {
             SizedBox(height: 12),
 
             // ── Footer: Last online & Action Buttons ──
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  info.lastLoginAt != null ? 'Đăng nhập: ${_formatDate(info.lastLoginAt!)}' : 'Chưa đăng nhập',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.slate400),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Expanded(
+                  child: Text(
+                    info.lastLoginAt != null ? 'Đăng nhập: \n${_formatDate(info.lastLoginAt!)}' : 'Chưa đăng nhập',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.slate400, height: 1.3),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                SizedBox(height: 12),
+                SizedBox(width: 8),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Gia hạn button
-                    Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          // TODO: Gia hạn logic
-                        },
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(color: AppColors.emerald500),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text('Gia hạn', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.emerald600)),
+                    InkWell(
+                      onTap: () {
+                        // TODO: Gia hạn logic
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: AppColors.emerald500),
+                          borderRadius: BorderRadius.circular(20),
                         ),
+                        alignment: Alignment.center,
+                        child: Text('Gia hạn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.emerald600)),
                       ),
                     ),
-                    SizedBox(width: 12),
+                    SizedBox(width: 8),
                     // Chi tiết button
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => _StoreDetailPage(
-                              storeId: storeId, info: info, store: store, colorIndex: colorIndex,
-                            ),
+                    InkWell(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => _StoreDetailPage(
+                            storeId: storeId, info: info, store: store, colorIndex: colorIndex,
                           ),
                         ),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: AppColors.emerald500,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [BoxShadow(color: AppColors.emerald500.withValues(alpha: 0.3), blurRadius: 4, offset: Offset(0, 2))],
-                          ),
-                          alignment: Alignment.center,
-                          child: Text('Chi tiết', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.emerald500,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [BoxShadow(color: AppColors.emerald500.withValues(alpha: 0.3), blurRadius: 4, offset: Offset(0, 2))],
                         ),
+                        alignment: Alignment.center,
+                        child: Text('Chi tiết', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
                       ),
                     ),
                   ],
