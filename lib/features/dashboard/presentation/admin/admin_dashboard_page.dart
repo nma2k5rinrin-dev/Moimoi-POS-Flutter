@@ -713,8 +713,8 @@ class _PortraitLayout extends StatelessWidget {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final width = constraints.maxWidth;
-                final colCount = width > 600 ? 3 : (width > 340 ? 2 : 1);
-                final useCompactCard = width < 500;
+                final colCount = 1;
+                final useCompactCard = false;
                 final bool showAddCard = filter == 'all';
                 final totalItems = storeEntries.length + (showAddCard ? 1 : 0);
                 final rowCount = (totalItems / colCount).ceil();
