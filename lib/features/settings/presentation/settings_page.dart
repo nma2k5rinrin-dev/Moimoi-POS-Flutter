@@ -143,15 +143,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _SettingMenu(
       id: 'account',
       name: 'Thông Tin Cá Nhân',
-      desc: 'Tên, email, avatar, đổi mật khẩu',
+      desc: 'Widget, thanh toán, xóa tài khoản',
       icon: Icons.person_outline,
-      group: '👤  TÀI KHOẢN CỦA TÔI',
-    ),
-    _SettingMenu(
-      id: 'sa-security',
-      name: 'Bảo Mật & Xác Thực 2 Lớp',
-      desc: 'Mật khẩu, 2FA, phiên đăng nhập',
-      icon: Icons.shield_outlined,
       group: '👤  TÀI KHOẢN CỦA TÔI',
     ),
     // 🏢 QUẢN TRỊ NỀN TẢNG

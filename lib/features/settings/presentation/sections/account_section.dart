@@ -148,6 +148,11 @@ class _AccountSectionState extends State<AccountSection> {
   Widget build(BuildContext context) {
     final store = context.watch<AuthStore>();
     final user = store.currentUser;
+    final isSadmin = user?.role == 'sadmin';
+
+    if (isSadmin) {
+      return _buildSadminView(store, user);
+    }
 
     return Column(
       children: [
@@ -172,10 +177,95 @@ class _AccountSectionState extends State<AccountSection> {
                       ],
                     ),
                   ),
-                  if (user?.role == 'sadmin') ...[
-                    SizedBox(height: 24),
-                    _buildBankSection(store),
-                  ],
+                  SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
+        ),
+        _buildBottomActions(store, user),
+      ],
+    );
+  }
+
+  /// Sadmin-only simplified view
+  Widget _buildSadminView(AuthStore store, UserModel? user) {
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: 9),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: Column(
+                children: [
+                  SizedBox(height: 12),
+                  // Widget sync
+                  _SectionCard(
+                    child: Column(
+                      children: [
+                        _SecurityRow(
+                          icon: Icons.widgets_rounded,
+                          label: 'Hiện số liệu lên Widget',
+                          trailing: Switch(
+                            value: _widgetSyncEnabled,
+                            activeTrackColor: AppColors.emerald500,
+                            onChanged: _toggleWidgetSync,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  // Bank info
+                  _buildBankSection(store),
+                  SizedBox(height: 16),
+                  // Danger zone
+                  _SectionCard(
+                    child: Column(
+                      children: [
+                        _SecurityRow(
+                          icon: Icons.no_accounts_rounded,
+                          label: 'Xóa tài khoản',
+                          labelColor: AppColors.red500,
+                          trailing: Icon(
+                            Icons.chevron_right_rounded,
+                            size: 20,
+                            color: AppColors.red400,
+                          ),
+                          onTap: () => _showDeleteAccountDialog(context, store),
+                        ),
+                        SizedBox(height: 10),
+                        _SecurityRow(
+                          icon: Icons.privacy_tip_outlined,
+                          label: 'Chính sách bảo mật & Điều khoản sử dụng',
+                          trailing: Icon(
+                            Icons.open_in_new_rounded,
+                            size: 20,
+                            color: AppColors.slate400,
+                          ),
+                          onTap: () => launchUrl(
+                            Uri.parse(
+                              'https://docs.google.com/document/d/1A0i6Gq__4pY6Z8FqweItaelxnvEYGeQNRgQIabx9kks/edit?usp=sharing',
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 10),
+                        _SecurityRow(
+                          icon: Icons.logout_rounded,
+                          label: 'Đăng xuất',
+                          trailing: Icon(
+                            Icons.chevron_right_rounded,
+                            size: 20,
+                            color: AppColors.slate400,
+                          ),
+                          onTap: () {
+                            store.logout();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                   SizedBox(height: 32),
                 ],
               ),

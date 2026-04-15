@@ -577,7 +577,14 @@ class AuthStore extends ChangeNotifier with BaseMixin {
           );
         }
         if (dbData.isNotEmpty) {
-          await _supabase.from('users').update(dbData).eq('username', username);
+          final res = await _supabase
+              .from('users')
+              .update(dbData)
+              .eq('username', username)
+              .select();
+          if (res.isEmpty) {
+            throw Exception('RLS block: Không có quyền cập nhật người dùng này.');
+          }
         }
         showToast('Cập nhật thông tin thành công');
       },
