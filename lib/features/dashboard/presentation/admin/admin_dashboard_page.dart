@@ -80,10 +80,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
         final totalStores = storeEntries.length;
         final totalStaff = context.watch<ManagementStore>().users.where((u) => u.role != 'sadmin' && u.role != 'admin').length;
-        final totalProducts = context.watch<InventoryStore>().products.values.fold<int>(
-          0,
-          (sum, list) => sum + list.length,
-        );
+        final totalProducts = 0; // Product count not loaded in sadmin view
         final pendingVipCount = 0;
 
         // ── Date-filtered payment metrics ──
@@ -2322,7 +2319,7 @@ class _StoreDetailPage extends StatelessWidget {
     final staffCount = context.watch<ManagementStore>().users
         .where((u) => u.createdBy == storeId && u.role != 'admin')
         .length;
-    final productCount = context.watch<InventoryStore>().products[storeId]?.length ?? 0;
+    final productCount = 0; // Product count not loaded in sadmin view
     final orderCount = [].where((o) => o.storeId == storeId).length;
     final totalRevenue = []
         .where((o) => o.storeId == storeId && o.paymentStatus == 'paid')
