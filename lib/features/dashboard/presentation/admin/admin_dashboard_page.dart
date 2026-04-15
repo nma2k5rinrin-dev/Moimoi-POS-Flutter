@@ -1467,40 +1467,60 @@ class _StoreCard extends StatelessWidget {
             SizedBox(height: 12),
 
             // ── Footer: Last online & Action Buttons ──
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    info.lastLoginAt != null ? _formatDate(info.lastLoginAt!) : 'Chưa đăng nhập',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.slate400),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                Text(
+                  info.lastLoginAt != null ? 'Đăng nhập: ${_formatDate(info.lastLoginAt!)}' : 'Chưa đăng nhập',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.slate400),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(width: 8),
+                SizedBox(height: 12),
                 Row(
                   children: [
                     // Gia hạn button
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: AppColors.emerald500),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          // TODO: Gia hạn logic
+                        },
                         borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(color: AppColors.emerald500),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text('Gia hạn', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.emerald600)),
+                        ),
                       ),
-                      child: Text('Gia hạn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.emerald600)),
                     ),
-                    SizedBox(width: 8),
+                    SizedBox(width: 12),
                     // Chi tiết button
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.emerald500,
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => _StoreDetailPage(
+                              storeId: storeId, info: info, store: store, colorIndex: colorIndex,
+                            ),
+                          ),
+                        ),
                         borderRadius: BorderRadius.circular(20),
-                        boxShadow: [BoxShadow(color: AppColors.emerald500.withValues(alpha: 0.3), blurRadius: 4, offset: Offset(0, 2))],
+                        child: Container(
+                          padding: EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: AppColors.emerald500,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [BoxShadow(color: AppColors.emerald500.withValues(alpha: 0.3), blurRadius: 4, offset: Offset(0, 2))],
+                          ),
+                          alignment: Alignment.center,
+                          child: Text('Chi tiết', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
+                        ),
                       ),
-                      child: Text('Chi tiết', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
                     ),
                   ],
                 ),
