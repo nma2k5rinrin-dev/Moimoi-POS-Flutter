@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:moimoi_pos/features/inventory/logic/inventory_store_standalone.dart';
 import 'package:moimoi_pos/features/settings/logic/management_store_standalone.dart';
 import 'package:moimoi_pos/core/state/ui_store.dart';
 import 'package:moimoi_pos/features/settings/models/store_info_model.dart';
@@ -1258,7 +1257,6 @@ class _StoreCard extends StatelessWidget {
     final staffCount = context.watch<ManagementStore>().users
         .where((u) => u.createdBy == storeId && u.role != 'admin')
         .length;
-    final productCount = context.watch<InventoryStore>().products[storeId]?.length ?? 0;
     final storeName = info.name.isNotEmpty ? info.name : storeId;
     final isPremium = info.isPremium;
 
@@ -1267,28 +1265,17 @@ class _StoreCard extends StatelessWidget {
         .firstOrNull;
     final isOnline = adminUser?.isOnline ?? false;
 
-    int offlineDays = 0;
-    if (!isOnline) {
-      final refDate = adminUser?.loginAttemptAt ?? info.createdAt;
-      if (refDate != null) {
-        final utcNow = DateTime.now().toUtc();
-        final utcRef = refDate.toUtc();
-        final ref = DateTime.utc(utcRef.year, utcRef.month, utcRef.day);
-        final today = DateTime.utc(utcNow.year, utcNow.month, utcNow.day);
-        final diff = today.difference(ref).inDays;
-        offlineDays = diff > 0 ? diff : 0;
-      }
-    }
+    // Use the model's correct getter for offline days
+    final offlineDays = isOnline ? 0 : info.consecutiveOfflineDays;
 
     final hasPendingUpgrade = false;
 
     final cardRadius = compact ? 16.0 : 20.0;
     final cardPad = compact ? 12.0 : 16.0;
-    final iconSize = compact ? 40.0 : 52.0;
-    final iconInnerSize = compact ? 20.0 : 26.0;
-    final iconRadius = compact ? 12.0 : 16.0;
-    final nameSize = compact ? 12.0 : 15.0;
-    final metricFontSize = compact ? 8.0 : 10.0;
+    final iconSize = compact ? 36.0 : 48.0;
+    final iconInnerSize = compact ? 18.0 : 24.0;
+    final iconRadius = compact ? 10.0 : 14.0;
+    final nameSize = compact ? 13.0 : 15.0;
 
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
@@ -1308,11 +1295,15 @@ class _StoreCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.cardBg,
           borderRadius: BorderRadius.circular(cardRadius),
+          border: Border.all(
+            color: isOnline ? AppColors.emerald100 : AppColors.slate200,
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: compact ? 8 : 12,
-              offset: Offset(0, compact ? 1 : 2),
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: Offset(0, 2),
             ),
           ],
         ),
@@ -1320,9 +1311,8 @@ class _StoreCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ── Header: Icon + Badges ──
+            // ── Header: Icon + Name + Status ──
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Store Logo/Icon
                 Builder(
@@ -1349,8 +1339,8 @@ class _StoreCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: colors,
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(iconRadius),
                       ),
@@ -1363,119 +1353,128 @@ class _StoreCard extends StatelessWidget {
                     );
                   },
                 ),
-                SizedBox(width: 4),
-                // Stacked badges
+                SizedBox(width: 10),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Tier badge
-                      if (hasPendingUpgrade)
-                        _badge(
-                          '⏳',
-                          'Chờ duyệt',
-                          Color(0xFFD97706),
-                          AppColors.orange50,
-                        )
-                      else if (isPremium)
-                        _badge(
-                          '👑',
-                          'Premium',
-                          AppColors.emerald500,
-                          AppColors.emerald50,
-                        )
-                      else
-                        _badge(
-                          '',
-                          'Cơ bản',
-                          Color(0xFF9CA3AF),
-                          Color(0xFFF6F7F8),
+                      Text(
+                        storeName,
+                        style: TextStyle(
+                          fontSize: nameSize,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.slate800,
+                          height: 1.2,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       SizedBox(height: 4),
-                      // Status badge
-                      _badge(
-                        isOnline ? '●' : '●',
-                        isOnline ? 'Hoạt động' : 'Ngoại tuyến',
-                        isOnline ? AppColors.emerald500 : Color(0xFFEF4444),
-                        isOnline ? AppColors.emerald50 : AppColors.red50,
+                      // Status + Tier in one row
+                      Row(
+                        children: [
+                          // Online/Offline dot
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: isOnline ? AppColors.emerald500 : Color(0xFFEF4444),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            isOnline ? 'Hoạt động' : 'Ngoại tuyến',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                              color: isOnline ? AppColors.emerald600 : Color(0xFFEF4444),
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          // Tier badge
+                          if (hasPendingUpgrade)
+                            _badge('⏳', 'Chờ duyệt', Color(0xFFD97706), AppColors.orange50)
+                          else if (isPremium)
+                            _badge('👑', 'Premium', AppColors.emerald500, AppColors.emerald50)
+                          else
+                            _badge('', 'Cơ bản', Color(0xFF9CA3AF), Color(0xFFF3F4F6)),
+                        ],
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-            SizedBox(height: compact ? 2 : 8),
+            SizedBox(height: compact ? 10 : 14),
 
-            // ── Store Name ──
-            Text(
-              storeName,
-              style: TextStyle(
-                fontSize: nameSize,
-                fontWeight: FontWeight.w700,
-                color: AppColors.slate800,
+            // ── Stats Row ──
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.slate50,
+                borderRadius: BorderRadius.circular(10),
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              child: Row(
+                children: [
+                  // Created date
+                  Expanded(
+                    child: _statChip(
+                      Icons.calendar_today,
+                      _formatDate(info.createdAt ?? DateTime.now()),
+                      AppColors.slate500,
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 16,
+                    color: AppColors.slate200,
+                  ),
+                  // Staff count
+                  Expanded(
+                    child: _statChip(
+                      Icons.people_outline,
+                      '$staffCount NV',
+                      AppColors.slate500,
+                    ),
+                  ),
+                  if (offlineDays > 0) ...[
+                    Container(
+                      width: 1,
+                      height: 16,
+                      color: AppColors.slate200,
+                    ),
+                    // Offline days
+                    Expanded(
+                      child: _statChip(
+                        Icons.wifi_off,
+                        '$offlineDays ngày',
+                        Color(0xFFEF4444),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
 
-            // ── Premium Status Badge ──
+            // ── Premium expiry ──
             if (isPremium) ...[
-              SizedBox(height: compact ? 2 : 4),
-              _expiryBadge(
-                '⏳ Còn ${info.daysUntilExpiry ?? 0} ngày',
-                AppColors.emerald500,
-                AppColors.emerald50,
+              SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(Icons.workspace_premium, size: 12, color: AppColors.emerald500),
+                  SizedBox(width: 4),
+                  Text(
+                    'Còn ${info.daysUntilExpiry ?? 0} ngày',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.emerald600,
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(height: compact ? 4 : 10),
-            ] else ...[
-              SizedBox(height: compact ? 8 : 16),
             ],
-
-            // ── Separator ──
-            Container(height: 1, color: AppColors.inputBg),
-            SizedBox(height: compact ? 4 : 8),
-
-            // ── Activity Stats Grid ──
-            _metricRow(
-              Icons.calendar_today,
-              'Ngày kích hoạt:',
-              _formatDate(info.createdAt ?? DateTime.now()),
-              metricFontSize,
-            ),
-            SizedBox(height: compact ? 2 : 4),
-            _metricRow(
-              Icons.schedule,
-              'Hoạt động:',
-              '${info.activeDays} ngày',
-              metricFontSize,
-              color: Color(0xFF6366F1),
-            ),
-            SizedBox(height: compact ? 2 : 4),
-            if (offlineDays > 0) ...[
-              _metricRow(
-                Icons.wifi_off,
-                'Offline:',
-                '$offlineDays ngày',
-                metricFontSize,
-                color: Color(0xFFEF4444),
-              ),
-              SizedBox(height: compact ? 2 : 4),
-            ],
-            _metricRow(
-              Icons.people_outline,
-              'Nhân viên:',
-              '$staffCount nhân viên',
-              metricFontSize,
-              color: AppColors.slate500,
-            ),
-            SizedBox(height: compact ? 2 : 4),
-            _metricRow(
-              Icons.inventory_2_outlined,
-              'Sản phẩm:',
-              '$productCount sản phẩm',
-              metricFontSize,
-              color: Color(0xFFF59E0B),
-            ),
           ],
         ),
       ),
@@ -1508,6 +1507,29 @@ class _StoreCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _statChip(IconData icon, String label, Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 10, color: color),
+        SizedBox(width: 3),
+        Flexible(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 
