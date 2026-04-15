@@ -235,7 +235,8 @@ class _AccountDialogContent extends StatelessWidget {
                           Switch(
                             value: context.watch<UIStore>().isBackgroundServiceEnabled,
                             onChanged: (val) {
-                              context.read<UIStore>().toggleBackgroundService(val);
+                              final currentStoreId = context.read<AuthStore>().getStoreId();
+                              context.read<UIStore>().toggleBackgroundService(val, storeId: currentStoreId);
                             },
                             activeColor: AppColors.emerald500,
                           ),

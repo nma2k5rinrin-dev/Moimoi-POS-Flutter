@@ -259,6 +259,14 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> with WidgetsBindingObserver {
       _authStore.setupLoginAttemptRealtime();
       _orderStore.setupOrdersRealtime(sid, user.role);
       _mgmtStore.setupNotificationsRealtime(user.username);
+
+      // Tự động bật lại Background Service cho phiên duy trì
+      SharedPreferences.getInstance().then((prefs) {
+        final bgEnabled = prefs.getBool('isBackgroundEnabled') ?? true;
+        if (bgEnabled && user.role != 'sadmin' && sid.isNotEmpty && sid != 'sadmin') {
+          BackgroundServiceHelper.startService(sid);
+        }
+      });
     } catch (e) {
       debugPrint('Error loading initial data: $e');
     }

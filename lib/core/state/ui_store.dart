@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:moimoi_pos/core/models/confirm_dialog_data.dart';
 import 'package:moimoi_pos/core/utils/constants.dart';
+import 'package:moimoi_pos/core/services/background_service.dart';
 
 /// Standalone UIStore — manages theme, toast, confirm dialog, search/category
 /// selection, and sadmin view. Replaces the old UIStore mixin.
@@ -71,10 +72,16 @@ class UIStore extends ChangeNotifier {
     }
   }
 
-  Future<void> toggleBackgroundService(bool val) async {
+  Future<void> toggleBackgroundService(bool val, {String? storeId}) async {
     isBackgroundServiceEnabled = val;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isBackgroundEnabled', val);
+    
+    if (val) {
+      BackgroundServiceHelper.startService(storeId);
+    } else {
+      BackgroundServiceHelper.stopService();
+    }
     notifyListeners();
   }
 

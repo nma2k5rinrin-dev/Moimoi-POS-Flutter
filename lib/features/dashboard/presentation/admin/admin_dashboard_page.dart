@@ -2398,17 +2398,13 @@ class _StoreDetailPage extends StatelessWidget {
     required this.colorIndex,
   });
 
-  String _fmtDate(DateTime? dt) {
-    if (dt == null) return '—';
-    final d = dt.toUtc();
-    return '${d.day.toString().padLeft(2, '0')} Tháng ${d.month.toString().padLeft(2, '0')}, ${d.year}';
-  }
-
   String _fmtCurrency(double amount) {
-    if (amount >= 1e9) return '${(amount / 1e9).toStringAsFixed(1)}B';
-    if (amount >= 1e6) return '${(amount / 1e6).toStringAsFixed(1)}M';
-    if (amount >= 1e3) return '${(amount / 1e3).toStringAsFixed(0)}K';
-    return amount.toStringAsFixed(0);
+    if (amount == 0) return '0đ';
+    final formatted = amount.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]},',
+    );
+    return '$formattedđ';
   }
 
   @override
@@ -2419,7 +2415,7 @@ class _StoreDetailPage extends StatelessWidget {
     final staffCount = context.watch<ManagementStore>().users
         .where((u) => u.createdBy == storeId && u.role != 'admin')
         .length;
-    final productCount = 0; // Product count not loaded in sadmin view
+    final productCount = 0; // Not loaded in sadmin view
     final orderCount = [].where((o) => o.storeId == storeId).length;
     final totalRevenue = []
         .where((o) => o.storeId == storeId && o.paymentStatus == 'paid')
@@ -2433,13 +2429,12 @@ class _StoreDetailPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Color(0xFFF9FAFB),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Header ──
-              Row(
+        child: Column(
+          children: [
+            // ── Header ──
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Row(
                 children: [
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
@@ -2447,20 +2442,13 @@ class _StoreDetailPage extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.cardBg,
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 8,
-                          ),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: Offset(0, 2)),
                         ],
                       ),
-                      child: Icon(
-                        Icons.arrow_back_ios_new,
-                        size: 18,
-                        color: AppColors.slate800,
-                      ),
+                      child: Icon(Icons.arrow_back_ios_new, size: 18, color: AppColors.slate800),
                     ),
                   ),
                   SizedBox(width: 14),
@@ -2469,479 +2457,308 @@ class _StoreDetailPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          storeName,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.slate800,
-                          ),
+                          'MoiMoi POS',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.slate800),
                         ),
                         Text(
                           'Chi tiết cửa hàng',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.slate400,
-                          ),
+                          style: TextStyle(fontSize: 13, color: AppColors.slate400),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: 24),
+            ),
 
-              // ── Store Identity Card ──
-              Container(
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppColors.cardBg,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 12,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
+            // ── Main Content ──
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Column(
                   children: [
-                    // Avatar
-                    Builder(
-                      builder: (_) {
-                        final hasLogo = info.logoUrl.isNotEmpty;
-                        if (hasLogo) {
-                          if (CloudflareService.isUrl(info.logoUrl)) {
-                            return ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: CachedNetworkImage(
-                                imageUrl: info.logoUrl,
-                                width: 56,
-                                height: 56,
-                                fit: BoxFit.cover,
-                                placeholder: (_, _) =>
-                                    CircularProgressIndicator(strokeWidth: 2),
-                                errorWidget: (_, _, _) => Icon(Icons.error),
-                              ),
-                            );
-                          }
-                          try {
-                            final base64Part = info.logoUrl.split(',').last;
-                            final bytes = base64Decode(base64Part);
-                            return ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: Image.memory(
-                                bytes,
-                                width: 56,
-                                height: 56,
-                                fit: BoxFit.cover,
-                              ),
-                            );
-                          } catch (_) {}
-                        }
-                        return Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: colors,
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Icon(
-                            Icons.storefront,
-                            size: 28,
-                            color: Colors.white,
-                          ),
-                        );
-                      },
-                    ),
-                    SizedBox(width: 16),
-                    Expanded(
+                    // ── Card 1: Store Identity ──
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: Offset(0, 2))],
+                      ),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            storeName,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.slate800,
+                          Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Avatar
+                                Builder(
+                                  builder: (_) {
+                                    final hasLogo = info.logoUrl.isNotEmpty;
+                                    if (hasLogo) {
+                                      if (CloudflareService.isUrl(info.logoUrl)) {
+                                        return ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: CachedNetworkImage(
+                                            imageUrl: info.logoUrl,
+                                            width: 48,
+                                            height: 48,
+                                            fit: BoxFit.cover,
+                                            placeholder: (_, _) => CircularProgressIndicator(strokeWidth: 2),
+                                            errorWidget: (_, _, _) => Icon(Icons.storefront),
+                                          ),
+                                        );
+                                      }
+                                      try {
+                                        final base64Part = info.logoUrl.split(',').last;
+                                        final bytes = base64Decode(base64Part);
+                                        return ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Image.memory(bytes, width: 48, height: 48, fit: BoxFit.cover),
+                                        );
+                                      } catch (_) {}
+                                    }
+                                    return Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Icon(Icons.storefront, size: 24, color: Colors.white),
+                                    );
+                                  },
+                                ),
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              storeName,
+                                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.slate900),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          SizedBox(width: 8),
+                                          Container(
+                                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: isActive ? AppColors.emerald50 : Color(0xFFF3F4F6),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              isActive ? 'Online' : 'Offline',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: isActive ? AppColors.emerald600 : Color(0xFF6B7280),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        'ID: MM-${storeId.hashCode.abs().toString().padLeft(8, '0')}',
+                                        style: TextStyle(fontSize: 13, color: AppColors.slate500),
+                                      ),
+                                      Text(
+                                        'Created: ${info.createdAt != null ? _formatDate(info.createdAt!) : 'N/A'}',
+                                        style: TextStyle(fontSize: 13, color: AppColors.slate400),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          SizedBox(height: 4),
-                          Text(
-                            'ID: MM-${storeId.hashCode.abs().toString().padLeft(8, '0')}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.slate400,
+                          Divider(height: 1, color: AppColors.slate100, thickness: 1),
+                          Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(child: _miniMetric('Doanh thu:', _fmtCurrency(totalRevenue), totalRevenue > 0)),
+                                    Expanded(child: _miniMetric('Nhân viên:', '$staffCount', staffCount > 0)),
+                                  ],
+                                ),
+                                SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(child: _miniMetric('Sản phẩm:', '$productCount', productCount > 0)),
+                                    Expanded(child: _miniMetric('Đơn hàng:', '$orderCount', orderCount > 0)),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 16),
+                    SizedBox(height: 16),
 
-              // ── Date & Premium Badge Row ──
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                decoration: BoxDecoration(
-                  color: AppColors.cardBg,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _fmtDate(info.createdAt),
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.slate500,
-                      ),
-                    ),
+                    // ── Card 2: Subscription ──
                     Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 5,
-                      ),
+                      padding: EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: isPremium
-                            ? AppColors.emerald50
-                            : Color(0xFFF6F7F8),
-                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: Offset(0, 2))],
                       ),
-                      child: Text(
-                        isPremium ? '👑 Premium' : 'Cơ bản',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isPremium
-                              ? AppColors.emerald500
-                              : Color(0xFF9CA3AF),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 16),
-
-              // ── Metrics Grid 2x2 ──
-              Row(
-                children: [
-                  Expanded(
-                    child: _metricCard(
-                      Icons.attach_money,
-                      'Doanh thu',
-                      '${_fmtCurrency(totalRevenue)}đ',
-                      Color(0xFF10B981),
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: _metricCard(
-                      Icons.people_outline,
-                      'Nhân viên',
-                      '$staffCount',
-                      Color(0xFF6366F1),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _metricCard(
-                      Icons.inventory_2_outlined,
-                      'Sản phẩm',
-                      '$productCount',
-                      Color(0xFFF59E0B),
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: _metricCard(
-                      Icons.receipt_long_outlined,
-                      'Đơn hàng',
-                      '$orderCount',
-                      Color(0xFF3B82F6),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 24),
-
-              // ── Premium Management Section ──
-              Container(
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppColors.cardBg,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 12,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Gói Premium',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.slate800,
-                          ),
-                        ),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? AppColors.emerald50
-                                : AppColors.red50,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text('Gói dịch vụ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.slate900)),
+                          SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Icon(
-                                Icons.circle,
-                                size: 8,
-                                color: isActive
-                                    ? AppColors.emerald500
-                                    : Color(0xFFEF4444),
-                              ),
-                              SizedBox(width: 4),
+                              Text('Gói hiện tại:', style: TextStyle(fontSize: 14, color: AppColors.slate500)),
                               Text(
-                                isActive ? 'Active' : 'Offline',
+                                isPremium ? 'Premium' : 'Cơ bản',
                                 style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: isActive
-                                      ? AppColors.emerald500
-                                      : Color(0xFFEF4444),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: isPremium ? AppColors.emerald600 : AppColors.slate800,
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 12),
-                    if (isPremium && info.premiumExpiresAt != null) ...[
-                      Row(
-                        children: [
-                          Text(
-                            'Hết hạn vào',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.slate400,
+                          SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Hết hạn:', style: TextStyle(fontSize: 14, color: AppColors.slate500)),
+                              if (isPremium && info.premiumExpiresAt != null)
+                                Row(
+                                  children: [
+                                    Text(
+                                      _formatDate(info.premiumExpiresAt!),
+                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate800),
+                                    ),
+                                    if ((info.daysUntilExpiry ?? 0) > 0) ...[
+                                      SizedBox(width: 8),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(color: Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(6)),
+                                        child: Text(
+                                          'Còn ${info.daysUntilExpiry} ngày',
+                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFD97706)),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                )
+                              else
+                                Text('Không thời hạn', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate800)),
+                            ],
+                          ),
+                          SizedBox(height: 20),
+                          ElevatedButton(
+                            onPressed: () {
+                              context.read<UIStore>().showToast('Tính năng nâng cấp đang phát triển', 'info');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(0xFF00C897),
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              isPremium ? 'Gia hạn Premium' : 'Nâng cấp lên Premium',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                             ),
                           ),
                         ],
                       ),
-                      SizedBox(height: 4),
-                      Text(
-                        '${_fmtDate(info.premiumExpiresAt)} (Còn ${info.daysUntilExpiry ?? 0} ngày)',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.slate800,
-                        ),
-                      ),
-                    ] else ...[
-                      Text(
-                        'Cửa hàng đang dùng gói Cơ bản',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.slate400,
-                        ),
-                      ),
-                    ],
+                    ),
                     SizedBox(height: 16),
-                    // Gia hạn Premium button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // TODO: Open premium extension flow
-                          context.read<UIStore>().showToast(
-                            'Tính năng gia hạn đang phát triển',
-                            'info',
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.emerald500,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          'Gia hạn Premium',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+
+                    // ── Card 3: Admin Actions ──
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: Offset(0, 2))],
+                      ),
+                      child: Column(
+                        children: [
+                          _adminActionItem(Icons.edit_outlined, 'Chỉnh sửa thông tin cửa hàng', AppColors.slate800, () => _showEditStoreDialog(context)),
+                          Divider(height: 1, color: AppColors.slate100, indent: 48),
+                          _adminActionItem(Icons.history_outlined, 'Xem nhật ký hoạt động', AppColors.slate800, () {
+                            context.read<UIStore>().showToast('Nhật ký hoạt động đang phát triển', 'info');
+                          }),
+                          Divider(height: 1, color: AppColors.slate100, indent: 48),
+                          _adminActionItem(Icons.notifications_outlined, 'Gửi thông báo cho chủ shop', AppColors.slate800, () {
+                            context.read<UIStore>().showToast('Tính năng gửi thông báo đang phát triển', 'info');
+                          }),
+                          Divider(height: 1, color: AppColors.slate100, indent: 48),
+                          _adminActionItem(Icons.lock_outline, 'Khóa tài khoản', Color(0xFFEF4444), () => _showDeleteConfirm(context)),
+                        ],
                       ),
                     ),
+                    SizedBox(height: 32),
                   ],
                 ),
               ),
-              SizedBox(height: 24),
-
-              // ── Action Buttons ──
-              _actionButton(
-                icon: Icons.edit_outlined,
-                label: 'Chỉnh sửa thông tin',
-                color: AppColors.slate800,
-                bgColor: AppColors.cardBg,
-                onTap: () => _showEditStoreDialog(context),
-              ),
-              SizedBox(height: 10),
-              _actionButton(
-                icon: Icons.lock_outline,
-                label: 'Tạm khoá cửa hàng',
-                color: Color(0xFFD97706),
-                bgColor: AppColors.orange50,
-                onTap: () {
-                  context.read<UIStore>().showToast('Tính năng tạm khoá đang phát triển', 'info');
-                },
-              ),
-              SizedBox(height: 10),
-              _actionButton(
-                icon: Icons.delete_outline,
-                label: 'Xoá cửa hàng',
-                color: Color(0xFFEF4444),
-                bgColor: AppColors.red50,
-                onTap: () => _showDeleteConfirm(context),
-              ),
-              SizedBox(height: 32),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _metricCard(IconData icon, String label, String value, Color color) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 20, color: color),
-          ),
-          SizedBox(height: 12),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AppColors.slate800,
-            ),
-          ),
-          SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(fontSize: 12, color: AppColors.slate400),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _actionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required Color bgColor,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 8,
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _miniMetric(String label, String value, bool isPositive) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 13, color: AppColors.slate500),
+        ),
+        SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: isPositive ? AppColors.slate900 : AppColors.slate400,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _adminActionItem(IconData icon, String label, Color color, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, size: 20, color: color),
-            ),
-            SizedBox(width: 14),
+            Icon(icon, size: 20, color: color),
+            SizedBox(width: 12),
             Expanded(
               child: Text(
                 label,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: color),
               ),
             ),
-            Icon(
-              Icons.chevron_right,
-              size: 20,
-              color: color.withValues(alpha: 0.5),
-            ),
+            Icon(Icons.chevron_right, size: 20, color: AppColors.slate300),
           ],
         ),
       ),
@@ -2954,10 +2771,7 @@ class _StoreDetailPage extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Sửa cửa hàng',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
-        ),
+        title: Text('Sửa cửa hàng', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
         content: TextField(
           controller: nameCtrl,
           decoration: InputDecoration(
@@ -2967,26 +2781,18 @@ class _StoreDetailPage extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Hủy', style: TextStyle(color: AppColors.slate400)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Hủy', style: TextStyle(color: AppColors.slate400))),
           ElevatedButton(
             onPressed: () {
               if (nameCtrl.text.trim().isEmpty) return;
-              store.updateStoreInfoById(
-                storeId,
-                info.copyWith(name: nameCtrl.text.trim()),
-              );
+              store.updateStoreInfoById(storeId, info.copyWith(name: nameCtrl.text.trim()));
               context.read<UIStore>().showToast('Đã cập nhật cửa hàng!');
               Navigator.pop(ctx);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.emerald500,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: Text('Lưu', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
@@ -3001,34 +2807,26 @@ class _StoreDetailPage extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Xoá cửa hàng?',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
-        ),
+        title: Text('Khóa tài khoản?', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: Color(0xFFEF4444))),
         content: Text(
-          'Bạn có chắc muốn xoá "$storeName"?\n\nThao tác này sẽ xoá vĩnh viễn cửa hàng, tài khoản admin và tất cả nhân viên liên quan.',
+          'Bạn có chắc muốn khóa "$storeName"?\n\nThao tác này chưa được hỗ trợ hoàn toàn, tạm thời sẽ thay thế bằng thao tác Xoá tài khoản (cấm truy cập vĩnh viễn).',
           style: TextStyle(fontSize: 14, color: AppColors.slate500),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Hủy', style: TextStyle(color: AppColors.slate400)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Hủy', style: TextStyle(color: AppColors.slate400))),
           ElevatedButton(
             onPressed: () {
               store.deleteStore(storeId);
               context.read<UIStore>().showToast('Đã xoá cửa hàng "$storeName"');
               Navigator.pop(ctx);
-              Navigator.of(context).pop(); // Back to dashboard
+              Navigator.of(context).pop();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.red500,
+              backgroundColor: Color(0xFFEF4444),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text('Xoá', style: TextStyle(fontWeight: FontWeight.w700)),
+            child: Text('Khóa (Xóa)', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
       ),

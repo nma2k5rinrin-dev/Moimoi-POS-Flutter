@@ -58,8 +58,14 @@ void onStart(ServiceInstance service) async {
 
   // Supabase v2 tự động khôi phục session nội bộ khi initialize() nên không cần recoverSession thủ công.
   
-  // Đọc StoreID được lưu
+  // Đọc StoreID và BG Flag được lưu
   final prefs = await SharedPreferences.getInstance();
+  final bgEnabled = prefs.getBool('isBackgroundEnabled') ?? true;
+  if (!bgEnabled) {
+    service.stopSelf();
+    return;
+  }
+
   final storeId = prefs.getString('moimoi_background_store_id');
   if (storeId == null || storeId.isEmpty) {
     service.stopSelf();
@@ -177,8 +183,8 @@ class BackgroundServiceHelper {
     await service.configure(
       androidConfiguration: AndroidConfiguration(
         onStart: onStart,
-        autoStart: false,
-        autoStartOnBoot: false,
+        autoStart: true,
+        autoStartOnBoot: true,
         isForegroundMode: true,
         notificationChannelId: _kForegroundChannelId,
         initialNotificationTitle: 'MoiMoi POS đang hoạt động',
@@ -186,18 +192,27 @@ class BackgroundServiceHelper {
         foregroundServiceNotificationId: _kForegroundNotificationId,
       ),
       iosConfiguration: IosConfiguration(
-        autoStart: false,
+        autoStart: true,
         onForeground: onStart,
       ),
     );
   }
 
   /// Start the background foreground service (call after login if enabled)
-  static Future<void> startService(String storeId) async {
+  static Future<void> startService([String? storeId]) async {
     if (kIsWeb) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('moimoi_background_store_id', storeId);
+    if (storeId != null) {
+      await prefs.setString('moimoi_background_store_id', storeId);
+    }
     
+    // Check if background run is allowed by the user setting
+    final bgEnabled = prefs.getBool('isBackgroundEnabled') ?? true;
+    if (!bgEnabled) {
+      debugPrint('[BackgroundService] Disabled in settings, skipping start');
+      return;
+    }
+
     final service = FlutterBackgroundService();
     
     // Check if already running to avoid duplicate starts
@@ -208,7 +223,7 @@ class BackgroundServiceHelper {
     }
     
     service.startService();
-    debugPrint('[BackgroundService] Started for store: $storeId');
+    debugPrint('[BackgroundService] Started');
   }
 
   /// Stop the service (call on logout or when user disables)
