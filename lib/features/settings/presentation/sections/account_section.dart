@@ -188,7 +188,7 @@ class _AccountSectionState extends State<AccountSection> {
     );
   }
 
-  /// Sadmin-only simplified view
+  /// Sadmin-only simplified view (no widget sync, bank, delete, policy, logout)
   Widget _buildSadminView(AuthStore store, UserModel? user) {
     return Column(
       children: [
@@ -200,68 +200,40 @@ class _AccountSectionState extends State<AccountSection> {
               child: Column(
                 children: [
                   SizedBox(height: 12),
-                  // Widget sync
                   _SectionCard(
                     child: Column(
                       children: [
+                        _buildAvatarSection(store, user),
+                        SizedBox(height: 28),
+                        _buildIdentitySection(user),
+                        SizedBox(height: 16),
+                        _buildSecuritySeparator(),
+                        SizedBox(height: 16),
+                        // Only password + biometrics for sadmin
                         _SecurityRow(
-                          icon: Icons.widgets_rounded,
-                          label: 'Hiện số liệu lên Widget',
-                          trailing: Switch(
-                            value: _widgetSyncEnabled,
-                            activeTrackColor: AppColors.emerald500,
-                            onChanged: _toggleWidgetSync,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  // Bank info
-                  _buildBankSection(store),
-                  SizedBox(height: 16),
-                  // Danger zone
-                  _SectionCard(
-                    child: Column(
-                      children: [
-                        _SecurityRow(
-                          icon: Icons.no_accounts_rounded,
-                          label: 'Xóa tài khoản',
-                          labelColor: AppColors.red500,
-                          trailing: Icon(
-                            Icons.chevron_right_rounded,
-                            size: 20,
-                            color: AppColors.red400,
-                          ),
-                          onTap: () => _showDeleteAccountDialog(context, store),
-                        ),
-                        SizedBox(height: 10),
-                        _SecurityRow(
-                          icon: Icons.privacy_tip_outlined,
-                          label: 'Chính sách bảo mật & Điều khoản sử dụng',
-                          trailing: Icon(
-                            Icons.open_in_new_rounded,
-                            size: 20,
-                            color: AppColors.slate400,
-                          ),
-                          onTap: () => launchUrl(
-                            Uri.parse(
-                              'https://docs.google.com/document/d/1A0i6Gq__4pY6Z8FqweItaelxnvEYGeQNRgQIabx9kks/edit?usp=sharing',
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                        _SecurityRow(
-                          icon: Icons.logout_rounded,
-                          label: 'Đăng xuất',
+                          icon: Icons.lock_outline_rounded,
+                          label: 'Đổi mật khẩu',
                           trailing: Icon(
                             Icons.chevron_right_rounded,
                             size: 20,
                             color: AppColors.slate400,
                           ),
-                          onTap: () {
-                            store.logout();
-                          },
+                          onTap: () => _showChangePasswordDialog(context, store),
+                        ),
+                        SizedBox(height: 10),
+                        _SecurityRow(
+                          icon: Icons.fingerprint_rounded,
+                          label: 'Vân tay / FaceID',
+                          trailing: _biometricAvailable
+                              ? Switch(
+                                  value: _biometricEnabled,
+                                  activeTrackColor: AppColors.emerald500,
+                                  onChanged: _toggleBiometric,
+                                )
+                              : Text(
+                                  'Không hỗ trợ',
+                                  style: TextStyle(fontSize: 13, color: AppColors.slate400),
+                                ),
                         ),
                       ],
                     ),
