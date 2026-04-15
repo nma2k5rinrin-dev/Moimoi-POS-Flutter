@@ -33,6 +33,14 @@ class _AuthPageState extends State<AuthPage>
   final _regUsernameController = TextEditingController();
   final _regPasswordController = TextEditingController();
   final _regConfirmPassController = TextEditingController();
+
+  final _regEmailFocus = FocusNode();
+  final _regFullnameFocus = FocusNode();
+  final _regPhoneFocus = FocusNode();
+  final _regStoreNameFocus = FocusNode();
+  final _regUsernameFocus = FocusNode();
+  final _regPasswordFocus = FocusNode();
+  final _regConfirmPassFocus = FocusNode();
   bool _showRegPassword = false;
   bool _showRegConfirmPass = false;
 
@@ -118,6 +126,13 @@ class _AuthPageState extends State<AuthPage>
     _regUsernameController.dispose();
     _regPasswordController.dispose();
     _regConfirmPassController.dispose();
+    _regEmailFocus.dispose();
+    _regFullnameFocus.dispose();
+    _regPhoneFocus.dispose();
+    _regStoreNameFocus.dispose();
+    _regUsernameFocus.dispose();
+    _regPasswordFocus.dispose();
+    _regConfirmPassFocus.dispose();
     super.dispose();
   }
 
@@ -151,20 +166,50 @@ class _AuthPageState extends State<AuthPage>
     }
   }
 
+  void _clearRegisterForm() {
+    _regEmailController.clear();
+    _regFullnameController.clear();
+    _regPhoneController.clear();
+    _regStoreNameController.clear();
+    _regAddressController.clear();
+    _regUsernameController.clear();
+    _regPasswordController.clear();
+    _regConfirmPassController.clear();
+  }
+
   Future<void> _handleRegister() async {
     final store = context.read<AuthStore>();
-    if (_regEmailController.text.isEmpty ||
-        _regUsernameController.text.isEmpty ||
-        _regPasswordController.text.isEmpty ||
-        _regFullnameController.text.isEmpty ||
-        _regPhoneController.text.isEmpty) {
-      setState(() => _errorMessage = 'Vui lòng nhập đầy đủ thông tin bắt buộc');
+    
+    if (_regEmailController.text.isEmpty) {
+      _regEmailFocus.requestFocus();
+      setState(() => _errorMessage = 'Vui lòng nhập Email');
+      return;
+    }
+    if (_regFullnameController.text.isEmpty) {
+      _regFullnameFocus.requestFocus();
+      setState(() => _errorMessage = 'Vui lòng nhập Họ và Tên');
+      return;
+    }
+    if (_regPhoneController.text.isEmpty) {
+      _regPhoneFocus.requestFocus();
+      setState(() => _errorMessage = 'Vui lòng nhập Số Điện Thoại');
+      return;
+    }
+    if (_regUsernameController.text.isEmpty) {
+      _regUsernameFocus.requestFocus();
+      setState(() => _errorMessage = 'Vui lòng nhập Tên Đăng Nhập');
+      return;
+    }
+    if (_regPasswordController.text.isEmpty) {
+      _regPasswordFocus.requestFocus();
+      setState(() => _errorMessage = 'Vui lòng nhập Mật Khẩu');
       return;
     }
 
     // Validation Email
     final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
     if (!emailRegex.hasMatch(_regEmailController.text.trim())) {
+      _regEmailFocus.requestFocus();
       setState(() => _errorMessage = 'Email không hợp lệ');
       return;
     }
@@ -172,6 +217,7 @@ class _AuthPageState extends State<AuthPage>
     // Validation SĐT
     final phoneRegex = RegExp(r'^(03|05|07|08|09)\d{8}$');
     if (!phoneRegex.hasMatch(_regPhoneController.text.trim())) {
+      _regPhoneFocus.requestFocus();
       setState(
         () => _errorMessage =
             'Số điện thoại phải đủ 10 số (Bắt đầu bằng 03/05/07/08/09)',
@@ -183,6 +229,7 @@ class _AuthPageState extends State<AuthPage>
     final nameRegex = RegExp(r'^[\w\sA-Za-zĂăÂâĐđÊêÔôƠơƯưÀ-ỹ]+$');
     final nameTrimmed = _regFullnameController.text.trim();
     if (nameTrimmed.split(' ').length < 2 || !nameRegex.hasMatch(nameTrimmed)) {
+      _regFullnameFocus.requestFocus();
       setState(
         () => _errorMessage =
             'Họ và tên phải đầy đủ (gồm 2 từ) và không chứa số hay ký tự đặc biệt',
@@ -192,13 +239,16 @@ class _AuthPageState extends State<AuthPage>
 
     final passError = validatePassword(_regPasswordController.text);
     if (passError != null) {
+      _regPasswordFocus.requestFocus();
       setState(() => _errorMessage = passError);
       return;
     }
     if (_regPasswordController.text != _regConfirmPassController.text) {
+      _regConfirmPassFocus.requestFocus();
       setState(() => _errorMessage = 'Mật khẩu xác nhận không khớp');
       return;
     }
+
     setState(() {
       isLoading = true;
       _errorMessage = null;
@@ -223,8 +273,10 @@ class _AuthPageState extends State<AuthPage>
 
     setState(() => isLoading = false);
     if (result == 'success' && mounted) {
+      _clearRegisterForm();
       context.go('/');
     } else if (result == 'confirm_email') {
+      _clearRegisterForm();
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -258,6 +310,7 @@ class _AuthPageState extends State<AuthPage>
         ),
       );
     } else if (result == 'exists') {
+      _regEmailFocus.requestFocus();
       setState(() => _errorMessage = 'Email này đã tồn tại trên hệ thống');
     } else {
       setState(() => _errorMessage = 'Đăng ký thất bại, vui lòng thử lại');
@@ -918,6 +971,7 @@ class _AuthPageState extends State<AuthPage>
       children: [
         _buildField(
           controller: _regEmailController,
+          focusNode: _regEmailFocus,
           label: 'Email',
           icon: Icons.email_outlined,
           hint: 'moimoipos@gmail.com',
@@ -926,6 +980,7 @@ class _AuthPageState extends State<AuthPage>
         SizedBox(height: 12),
         _buildField(
           controller: _regFullnameController,
+          focusNode: _regFullnameFocus,
           label: 'Họ và Tên',
           icon: Icons.badge_outlined,
           hint: 'Nguyễn Văn A',
@@ -933,6 +988,7 @@ class _AuthPageState extends State<AuthPage>
         SizedBox(height: 12),
         _buildField(
           controller: _regPhoneController,
+          focusNode: _regPhoneFocus,
           label: 'Số Điện Thoại',
           icon: Icons.phone_outlined,
           hint: '0987654321',
@@ -941,6 +997,7 @@ class _AuthPageState extends State<AuthPage>
         SizedBox(height: 12),
         _buildField(
           controller: _regStoreNameController,
+          focusNode: _regStoreNameFocus,
           label: 'Tên Cửa Hàng',
           icon: Icons.storefront_outlined,
           hint: 'Quán Ăn ABC / Cửa Hàng ABC',
@@ -948,6 +1005,7 @@ class _AuthPageState extends State<AuthPage>
         SizedBox(height: 12),
         _buildField(
           controller: _regUsernameController,
+          focusNode: _regUsernameFocus,
           label: 'Tên Đăng Nhập',
           icon: Icons.alternate_email_rounded,
           hint: 'Viết thường, không dấu',
@@ -955,6 +1013,7 @@ class _AuthPageState extends State<AuthPage>
         SizedBox(height: 12),
         _buildField(
           controller: _regPasswordController,
+          focusNode: _regPasswordFocus,
           label: 'Mật Khẩu',
           icon: Icons.lock_outline_rounded,
           hint: 'Nhập mật khẩu',
@@ -965,6 +1024,7 @@ class _AuthPageState extends State<AuthPage>
         SizedBox(height: 12),
         _buildField(
           controller: _regConfirmPassController,
+          focusNode: _regConfirmPassFocus,
           label: 'Xác Nhận Mật Khẩu',
           icon: Icons.lock_outline_rounded,
           hint: 'Nhập lại mật khẩu',
@@ -988,6 +1048,7 @@ class _AuthPageState extends State<AuthPage>
     required String label,
     required IconData icon,
     required String hint,
+    FocusNode? focusNode,
     bool isPassword = false,
     bool showPassword = false,
     VoidCallback? onToggle,
@@ -1007,6 +1068,7 @@ class _AuthPageState extends State<AuthPage>
         SizedBox(height: 6),
         TextField(
           controller: controller,
+          focusNode: focusNode,
           obscureText: isPassword && !showPassword,
           keyboardType: keyboardType,
           style: TextStyle(
