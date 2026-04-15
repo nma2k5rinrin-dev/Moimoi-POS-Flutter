@@ -1294,7 +1294,6 @@ class _StoreCard extends StatelessWidget {
           ),
         ),
       ),
-      onLongPress: () => _showStoreMenu(context),
       child: Container(
         padding: EdgeInsets.all(cardPad),
         clipBehavior: Clip.hardEdge,
@@ -1385,17 +1384,17 @@ class _StoreCard extends StatelessWidget {
                             _badge('', 'Chờ duyệt', Color(0xFFD97706), AppColors.orange50)
                           else if (isPremium)
                             Container(
-                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [Color(0xFFFDE68A), Color(0xFFF59E0B)], // Gold gradient
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                                 boxShadow: [BoxShadow(color: Color(0xFFF59E0B).withValues(alpha: 0.3), blurRadius: 4, offset: Offset(0, 2))],
                               ),
-                              child: Text('Premium', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+                              child: Text('Premium', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
                             )
                           else
                             _badge('', 'Cơ bản', Color(0xFF6B7280), Color(0xFFF3F4F6)),
@@ -1484,9 +1483,7 @@ class _StoreCard extends StatelessWidget {
                   children: [
                     // Gia hạn button
                     InkWell(
-                      onTap: () {
-                        // TODO: Gia hạn logic
-                      },
+                      onTap: () => _showPremiumPopup(context, storeName),
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
                         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -1496,7 +1493,7 @@ class _StoreCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         alignment: Alignment.center,
-                        child: Text('Gia hạn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.emerald600)),
+                        child: Text('Gia hạn ngay', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.emerald600)),
                       ),
                     ),
                     SizedBox(width: 8),
@@ -1531,24 +1528,74 @@ class _StoreCard extends StatelessWidget {
     );
   }
 
+  void _showPremiumPopup(BuildContext context, String storeName) {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) {
+        return Container(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.slate200, borderRadius: BorderRadius.circular(2))),
+              SizedBox(height: 20),
+              Icon(Icons.workspace_premium, size: 48, color: Color(0xFFF59E0B)),
+              SizedBox(height: 16),
+              Text(
+                'Gia hạn Premium',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.slate900),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Bạn đang nâng cấp/gia hạn gói Premium cho "$storeName". Tính năng này sẽ sớm ra mắt.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: AppColors.slate500),
+              ),
+              SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        context.read<UIStore>().showToast('Tính năng gia hạn đang được phát triển');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: Color(0xFFF59E0B),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text('Đã hiểu', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _badge(String emoji, String label, Color textColor, Color bg) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (emoji.isNotEmpty) ...[
-            Text(emoji, style: TextStyle(fontSize: 10)),
-            SizedBox(width: 3),
+            Text(emoji, style: TextStyle(fontSize: 12)),
+            SizedBox(width: 4),
           ],
           Text(
             label,
             style: TextStyle(
-              fontSize: 9,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
               color: textColor,
             ),
