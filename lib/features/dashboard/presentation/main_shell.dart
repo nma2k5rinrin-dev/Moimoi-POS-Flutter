@@ -205,9 +205,13 @@ class _MainShellState extends State<MainShell> {
 
             // 3. Jump to Main Role Screen
             final role = context.read<AuthStore>().currentUser?.role;
+            final mgmtStore = context.read<ManagementStore>();
             String homePath = '/';
-            if (role == 'sadmin') homePath = '/admin';
-            if (role == 'admin') homePath = '/dashboard';
+            if (role == 'sadmin') {
+              homePath = '/admin';
+            } else if (role == 'admin' || mgmtStore.hasPermission('tab_dashboard')) {
+              homePath = '/dashboard';
+            }
 
             final location = GoRouterState.of(context).matchedLocation;
             if (location != homePath) {

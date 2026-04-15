@@ -525,14 +525,8 @@ class OrderStore extends ChangeNotifier with BaseMixin {
                         isNewlyAdded: item.isNewlyAdded || groupedItems[findIdx].isNewlyAdded,
                       );
                     } else {
-                      // Giữ lại doneQuantity lớn hơn (phòng trường hợp event db đi chệch nhịp)
-                      final localMatch = existing.items.where((li) => li.id == item.id).firstOrNull ?? 
-                                         existing.items.where((li) => li.name.trim().toLowerCase() == item.name.trim().toLowerCase()).firstOrNull;
-                      int resolvedDoneQty = item.doneQuantity;
-                      if (localMatch != null && localMatch.doneQuantity > item.doneQuantity) {
-                         resolvedDoneQty = localMatch.doneQuantity;
-                      }
-                      groupedItems.add(item.copyWith(doneQuantity: resolvedDoneQty));
+                      // Lấy đúng số liệu doneQuantity từ server (để user có thể bỏ tích)
+                      groupedItems.add(item);
                     }
                   }
                   updatedItems = groupedItems;
