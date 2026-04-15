@@ -1141,6 +1141,11 @@ class _AddCategoryDialogContentState extends State<_AddCategoryDialogContent> {
               ),
               child: TextField(
                 controller: _nameCtrl,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.slate800,
+                ),
                 decoration: InputDecoration(
                   hintText: 'VD: Bảo trì, Thuế...',
                   hintStyle: TextStyle(color: AppColors.slate400, fontSize: 13),

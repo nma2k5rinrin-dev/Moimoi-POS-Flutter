@@ -280,6 +280,27 @@ class AuthStore extends ChangeNotifier with BaseMixin {
         return 'Lỗi DB: Không tìm thấy profile userResponse';
       }
 
+      if (userResponse['deleted_at'] != null) {
+        await _supabase.auth.signOut();
+        return 'Tài khoản này đã bị khóa hoặc yêu cầu xóa.';
+      }
+
+      // If staff, also check if owner admin's account has been deleted
+      final createdBy = userResponse['created_by'];
+      if (createdBy != null && createdBy.toString().isNotEmpty) {
+        try {
+          final ownerRow = await _supabase
+              .from('users')
+              .select('deleted_at')
+              .eq('username', createdBy)
+              .maybeSingle();
+          if (ownerRow != null && ownerRow['deleted_at'] != null) {
+            await _supabase.auth.signOut();
+            return 'Cửa hàng đã ngừng hoạt động. Liên hệ chủ cửa hàng.';
+          }
+        } catch (_) {}
+      }
+
       var user = UserModel.fromMap(userResponse);
 
       // ── Single-device login check (staff only) ──
@@ -411,17 +432,18 @@ class AuthStore extends ChangeNotifier with BaseMixin {
     final user = currentUser;
     if (user == null) return;
 
-    // For compliance with Google Play Store:
-    // This performs a soft-delete (disabling the user) by marking them deleted.
-    // In a real production setup, this would call an Edge Function or RPC logic.
+    // Soft-delete via RPC (SECURITY DEFINER) to bypass RLS
     try {
-      await _supabase
-          .from('users')
-          .update({'deleted_at': DateTime.now().toIso8601String()})
-          .eq('username', user.username);
+      await _supabase.rpc('soft_delete_own_account');
+      debugPrint('[Auth] ✅ Soft-deleted user ${user.username}');
     } catch (e) {
-      // Ignore errors if we can't soft-delete them safely via client side RLS
+      debugPrint('[Auth] ❌ Failed to soft-delete account: $e');
+      showToast('Không thể xóa tài khoản: $e', 'error');
+      return; // Don't logout if delete failed
     }
+
+    // Clear cached biometric credentials so deleted account can't auto-login
+    await clearCachedCredentials();
 
     // Then log them out
     logout();

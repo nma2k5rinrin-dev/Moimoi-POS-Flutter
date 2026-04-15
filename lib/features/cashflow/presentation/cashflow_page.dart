@@ -693,13 +693,13 @@ class _CashflowPageState extends State<CashflowPage> {
                         clipBehavior: Clip.antiAlias,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [Colors.white, AppColors.blue50.withValues(alpha: 0.5)],
+                            colors: [AppColors.cardBg, AppColors.blue50.withValues(alpha: 0.5)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppColors.blue100),
-                          boxShadow: [
+                          border: Border.all(color: AppColors.isDarkMode ? AppColors.slate200 : AppColors.blue100),
+                          boxShadow: AppColors.isDarkMode ? [] : [
                             BoxShadow(
                               color: AppColors.blue200.withValues(alpha: 0.3),
                               blurRadius: 20,
@@ -761,13 +761,13 @@ class _CashflowPageState extends State<CashflowPage> {
                               clipBehavior: Clip.antiAlias,
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [Colors.white, AppColors.emerald50.withValues(alpha: 0.5)],
+                                  colors: [AppColors.cardBg, AppColors.emerald50.withValues(alpha: 0.5)],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: AppColors.emerald100),
-                                boxShadow: [
+                                border: Border.all(color: AppColors.isDarkMode ? AppColors.slate200 : AppColors.emerald100),
+                                boxShadow: AppColors.isDarkMode ? [] : [
                                   BoxShadow(
                                     color: AppColors.emerald200.withValues(alpha: 0.3),
                                     blurRadius: 15,
@@ -821,13 +821,13 @@ class _CashflowPageState extends State<CashflowPage> {
                               clipBehavior: Clip.antiAlias,
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [Colors.white, AppColors.red50.withValues(alpha: 0.5)],
+                                  colors: [AppColors.cardBg, AppColors.red50.withValues(alpha: 0.5)],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: AppColors.red100),
-                                boxShadow: [
+                                border: Border.all(color: AppColors.isDarkMode ? AppColors.slate200 : AppColors.red100),
+                                boxShadow: AppColors.isDarkMode ? [] : [
                                   BoxShadow(
                                     color: AppColors.red200.withValues(alpha: 0.3),
                                     blurRadius: 15,
@@ -975,18 +975,27 @@ class _CashflowPageState extends State<CashflowPage> {
                             else
                               ...(() {
                                 final List<Widget> txnWidgets = [];
-                                String? lastDateStr;
+                                final Set<String> _renderedKeys = {};
                                 for (final t in filteredTxns) {
                                   final currentKeyStr =
                                       "${t.date.year}-${t.date.month}-${t.date.day}";
-                                  Key? itemKey;
-                                  if (currentKeyStr != lastDateStr) {
+                                  
+                                  if (!_renderedKeys.contains(currentKeyStr)) {
                                     _dateKeys.putIfAbsent(
                                       currentKeyStr,
                                       () => GlobalKey(),
                                     );
-                                    itemKey = _dateKeys[currentKeyStr];
-                                    lastDateStr = currentKeyStr;
+                                    _renderedKeys.add(currentKeyStr);
+                                    
+                                    // Insert an invisible anchor element for the GlobalKey.
+                                    // This prevents the element._lifecycleState assertion crash caused
+                                    // by attaching the GlobalKey to the dynamic Container below.
+                                    txnWidgets.add(
+                                      SizedBox(
+                                        key: _dateKeys[currentKeyStr],
+                                        height: 0,
+                                      )
+                                    );
                                   }
 
                                   final isSelected =
@@ -997,7 +1006,6 @@ class _CashflowPageState extends State<CashflowPage> {
 
                                   txnWidgets.add(
                                     Container(
-                                      key: itemKey,
                                       decoration: isSelected
                                           ? BoxDecoration(
                                               color: AppColors.blue50
@@ -2140,7 +2148,7 @@ class _CashflowPageState extends State<CashflowPage> {
           child: Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.blue50 : (isToday ? AppColors.slate50 : Colors.white),
+              color: isSelected ? AppColors.blue50 : (isToday ? AppColors.slate50 : AppColors.cardBg),
               border: isSelected
                   ? Border.all(color: AppColors.blue500, width: 1.5)
                   : Border(
