@@ -124,316 +124,200 @@ class _DashboardPageState extends State<DashboardPage> {
             .where((o) => o.paymentMethod == 'transfer')
             .fold(0.0, (acc, o) => acc + o.calculatedTotal);
         final bestSellers = _getBestSellers(filteredOrders);
+        final topStaff = _getTopStaff(filteredOrders);
         final hourlyData = _getHourlyData(filteredOrders);
 
+        // Build daily sparkline array for background charts
+        
+        List<double> totalSpots = hourlyData.map((e) => e.total).toList();
+        List<double> cashSpots = hourlyData.map((e) => e.cash).toList();
+        List<double> transferSpots = hourlyData.map((e) => e.transfer).toList();
+    
         final mainContent = Container(
-          color: AppColors.scaffoldBg,
+          color: Color(0xFFF3F4F6), // light sleek background
           child: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 9, right: 9, top: 24, bottom: 20),
+              // Sleek App Bar Header
+              Container(
+                padding: EdgeInsets.fromLTRB(16, 20, 16, 12),
+                color: Colors.white,
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: AppColors.emerald50,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Icon(
-                            Icons.trending_up_rounded,
-                            color: AppColors.emerald600,
-                            size: 24,
+                        Text(
+                          'Báo Cáo Doanh Thu',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.slate800,
+                            letterSpacing: -0.5,
                           ),
                         ),
-                        SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Báo Cáo Doanh Thu',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.slate800,
-                                  letterSpacing: -0.5,
-                                ),
+                        SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              'Tổng quan dòng tiền',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.slate500,
+                                fontWeight: FontWeight.w500,
                               ),
-                              Text(
-                                'Phân tích hiệu quả kinh doanh',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.slate500,
-                                ),
+                            ),
+                            SizedBox(width: 8),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(color: Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(4)),
+                              child: Text('$totalOrders đơn', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.slate600)),
+                            ),
+                            if (totalCancelled > 0) ...[
+                              SizedBox(width: 6),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(4)),
+                                child: Text('$totalCancelled huỷ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFEF4444))),
                               ),
-                            ],
-                          ),
+                            ]
+                          ],
                         ),
                       ],
                     ),
-                  ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.fromLTRB(9, 0, 9, 24),
-                      child: LayoutBuilder(
-                        builder: (context, outerConstraints) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildDatePicker(),
-
-                    SizedBox(height: 20),
-
-                    // ── Stats Cards (responsive) ──
-                    Builder(
-                      builder: (context) {
-                        final isLandscape = outerConstraints.maxWidth > 600;
-
-                        final cashCard = _MobileMiniCard(
-                          icon: Icons.payments_rounded,
-                          label: 'Tiền mặt',
-                          value: formatCurrency(cashRevenue),
-                          gradient: [Color(0xFFF59E0B), Color(0xFFD97706)],
-                        );
-                        final transferCard = _MobileMiniCard(
-                          icon: Icons.account_balance_rounded,
-                          label: 'Chuyển khoản',
-                          value: formatCurrency(transferRevenue),
-                          gradient: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-                        );
-                        final ordersCard = _MobileMiniCard(
-                          icon: Icons.receipt_long_rounded,
-                          label: 'Tổng đơn',
-                          value: '$totalOrders',
-                          gradient: [Color(0xFF3B82F6), Color(0xFF2563EB)],
-                          subtitle: totalCancelled > 0
-                              ? 'Đơn hủy: $totalCancelled'
-                              : null,
-                          subtitleColor: const Color(0xFFEF4444),
-                        );
-                        final avgCard = _MobileMiniCard(
-                          icon: Icons.analytics_rounded,
-                          label: 'TB/đơn',
-                          value: totalOrders > 0
-                              ? _formatShortCurrency(totalRevenue / totalOrders)
-                              : '0',
-                          gradient: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-                        );
-
-                        if (isLandscape) {
-                          // Landscape: all 5 cards in one row
-                          return Row(
-                            children: [
-                              Expanded(
-                                child: _MobileMiniCard(
-                                  icon: Icons.trending_up_rounded,
-                                  label: 'Tổng doanh thu',
-                                  value: formatCurrency(totalRevenue),
-                                  gradient: [
-                                    Color(0xFF10B981),
-                                    Color(0xFF059669),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(width: 10),
-                              Expanded(child: cashCard),
-                              SizedBox(width: 10),
-                              Expanded(child: transferCard),
-                              SizedBox(width: 10),
-                              Expanded(child: ordersCard),
-                              SizedBox(width: 10),
-                              Expanded(child: avgCard),
-                            ],
-                          );
-                        }
-
-                        // Portrait: revenue banner + 2×2 grid
-                        return Column(
-                          children: [
-                            Container(
-                              width: double.infinity,
-                              padding: EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Color(0xFF10B981),
-                                    Color(0xFF059669),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFF10B981,
-                                    ).withValues(alpha: 0.3),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 6),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.cardBg.withValues(
-                                        alpha: 0.2,
-                                      ),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Icon(
-                                      Icons.trending_up_rounded,
-                                      color: Colors.white,
-                                      size: 26,
-                                    ),
-                                  ),
-                                  SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Tổng doanh thu',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w500,
-                                            color: Colors.white.withValues(
-                                              alpha: 0.85,
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(height: 4),
-                                        Text(
-                                          formatCurrency(totalRevenue),
-                                          style: TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.w800,
-                                            color: Colors.white,
-                                            letterSpacing: -0.5,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    children: [
-                                      cashCard,
-                                      SizedBox(height: 12),
-                                      ordersCard,
-                                    ],
-                                  ),
-                                ),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    children: [
-                                      transferCard,
-                                      SizedBox(height: 12),
-                                      avgCard,
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-
-                    SizedBox(height: 24),
-
-                    // ── Charts (responsive) ──────────────────────
-                    Builder(
-                      builder: (context) {
-                        final isLandscape = outerConstraints.maxWidth > 600;
-
-                        if (isLandscape) {
-                          return Column(
-                            children: [
-                              // Row 1: Hourly (left) + Daily (right)
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: _HourlyRevenueChart(
-                                      hourlyData: hourlyData,
-                                    ),
-                                  ),
-                                  SizedBox(width: 14),
-                                  Expanded(
-                                    child: _CashFlowChart(
-                                      orders: filteredOrders,
-                                      transactions: context.watch<CashflowStore>().transactions,
-                                      dateFrom: _dateFrom,
-                                      dateTo: _dateTo,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 14),
-                              // Row 2: Best sellers + Staff ranking
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: _BestSellersCard(items: bestSellers),
-                                  ),
-                                  SizedBox(width: 14),
-                                  Expanded(
-                                    child: _StaffRankingCard(
-                                      orders: filteredOrders,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          );
-                        }
-
-                        // Portrait: stacked vertical
-                        return Column(
-                          children: [
-                            _HourlyRevenueChart(hourlyData: hourlyData),
-                            SizedBox(height: 14),
-                            _CashFlowChart(
-                              orders: filteredOrders,
-                              transactions: context.watch<CashflowStore>().transactions,
-                              dateFrom: _dateFrom,
-                              dateTo: _dateTo,
-                            ),
-                            SizedBox(height: 14),
-                            _BestSellersCard(items: bestSellers),
-                            SizedBox(height: 14),
-                            _StaffRankingCard(orders: filteredOrders),
-                          ],
-                        );
-                      },
-                    ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                    ),
+                    _buildDatePicker(),
                   ],
                 ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.fromLTRB(12, 16, 12, 24),
+                  child: LayoutBuilder(
+                    builder: (context, outerConstraints) {
+                      final isLandscape = outerConstraints.maxWidth > 600;
+
+                      // 1. The 3 Money Cards with Background Charts
+                      final threeCards = Row(
+                        children: [
+                          Expanded(
+                            child: _SparklineCard(
+                              title: 'TỔNG DOANH THU',
+                              value: formatCurrency(totalRevenue),
+                              accentColor: Color(0xFF10B981),
+                              spots: totalSpots,
+                              isGradientValue: true,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: _SparklineCard(
+                              title: 'TIỀN MẶT',
+                              value: formatCurrency(cashRevenue),
+                              accentColor: Color(0xFFF59E0B),
+                              spots: cashSpots,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: _SparklineCard(
+                              title: 'CHUYỂN KHOẢN',
+                              value: formatCurrency(transferRevenue),
+                              accentColor: Color(0xFF6366F1),
+                              spots: transferSpots,
+                            ),
+                          ),
+                        ],
+                      );
+
+                      // 2. Extra metrics (Orders, Avg) -> combined in a simple bar below
+                      final extraMetrics = Container(
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.slate200),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(6),
+                                  decoration: BoxDecoration(color: Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(8)),
+                                  child: Icon(Icons.receipt_long_rounded, size: 16, color: Color(0xFF3B82F6)),
+                                ),
+                                SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Tổng đơn hàng', style: TextStyle(fontSize: 11, color: AppColors.slate500)),
+                                    Text('$totalOrders', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Container(width: 1, height: 30, color: AppColors.slate100),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(6),
+                                  decoration: BoxDecoration(color: Color(0xFFF5F3FF), borderRadius: BorderRadius.circular(8)),
+                                  child: Icon(Icons.analytics_rounded, size: 16, color: Color(0xFF8B5CF6)),
+                                ),
+                                SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Trung bình cữ/đơn', style: TextStyle(fontSize: 11, color: AppColors.slate500)),
+                                    Text(totalOrders > 0 ? _formatShortCurrency(totalRevenue / totalOrders) : '0', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          threeCards,
+                          SizedBox(height: 12),
+                          extraMetrics,
+                          SizedBox(height: 16),
+                          
+                          // 3. Hourly Chart (stacked bar with legend)
+                          _HourlyRevenueStackedChart(hourlyData: hourlyData),
+                          SizedBox(height: 16),
+
+// 4. Compact panels: Top Products and Top Staff
+                          if (isLandscape) ...[
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: _TopProductsPanel(items: bestSellers)),
+                                SizedBox(width: 12),
+                                Expanded(child: _TopStaffPanel(staff: topStaff)),
+                              ],
+                            ),
+                          ] else ...[
+                            _TopProductsPanel(items: bestSellers),
+                            SizedBox(height: 16),
+                            _TopStaffPanel(staff: topStaff),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
 
-        return Skeletonizer(enabled: isLoading, child: mainContent);
+        return Skeletonizer(enabled: isLoading, child: mainContent);;
       },
     );
   }
@@ -458,64 +342,80 @@ class _DashboardPageState extends State<DashboardPage> {
         }
       },
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          borderRadius: BorderRadius.circular(12),
+          color: AppColors.slate50,
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(color: AppColors.slate200),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.max,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(width: 16), // Balance the right icon
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.calendar_today_rounded,
-                    size: 16,
-                    color: AppColors.emerald600,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    '${_dateFrom.day.toString().padLeft(2, '0')}/${_dateFrom.month.toString().padLeft(2, '0')}/${_dateFrom.year}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: AppColors.slate800,
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 14,
-                    color: AppColors.slate400,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    '${_dateTo.day.toString().padLeft(2, '0')}/${_dateTo.month.toString().padLeft(2, '0')}/${_dateTo.year}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: AppColors.slate800,
-                    ),
-                  ),
-                ],
-              ),
+            Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.emerald600),
+            SizedBox(width: 6),
+            Text(
+              '${_dateFrom.day}/${_dateFrom.month} - ${_dateTo.day}/${_dateTo.month}/${_dateTo.year}',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.slate700),
             ),
-            Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: 16,
-              color: AppColors.slate400,
-            ),
+            SizedBox(width: 6),
+            Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.slate400),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildSlimStatItem(String label, String value, Color accent) {
+    return Expanded(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Column(
+          children: [
+            Text(label, style: TextStyle(fontSize: 10, color: AppColors.slate500, fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
+            SizedBox(height: 2),
+            Text(value, style: TextStyle(fontSize: 13, color: AppColors.slate800, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactStatItem(IconData icon, String label, String value, Color accent, {String? subtitle, Color? subtitleColor}) {
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: accent),
+              SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.slate500),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.slate800),
+          ),
+          if (subtitle != null) ...[
+            SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: subtitleColor ?? AppColors.slate400),
+            ),
+          ]
+        ],
+      ),
+    );
+  }
+
   List<OrderModel> _filterByTime(List<OrderModel> orders) {
+
     return orders.where((o) {
       final parsed = DateTime.tryParse(o.time);
       if (parsed == null) return false;
@@ -561,48 +461,58 @@ class _DashboardPageState extends State<DashboardPage> {
     return list;
   }
 
+  List<_StaffRankItem> _getTopStaff(List<OrderModel> orders) {
+    final map = <String, _StaffRankItem>{};
+    for (final o in orders) {
+      final staff = (o.createdBy.isNotEmpty) ? o.createdBy : 'Admin';
+      if (map.containsKey(staff)) {
+        final existing = map[staff]!;
+        map[staff] = _StaffRankItem(name: existing.name, revenue: existing.revenue + o.calculatedTotal, count: existing.count + 1);
+      } else {
+        map[staff] = _StaffRankItem(name: staff, revenue: o.calculatedTotal, count: 1);
+      }
+    }
+    final list = map.values.toList();
+    list.sort((a, b) => b.revenue.compareTo(a.revenue));
+    return list;
+  }
+
   List<_HourSlot> _getHourlyData(List<OrderModel> orders) {
-    // Group revenue by 2-hour time slots
-    final slots = <_HourSlot>[
-      _HourSlot(label: '6-8', total: 0),
-      _HourSlot(label: '8-10', total: 0),
-      _HourSlot(label: '10-12', total: 0),
-      _HourSlot(label: '12-14', total: 0),
-      _HourSlot(label: '14-16', total: 0),
-      _HourSlot(label: '16-18', total: 0),
-      _HourSlot(label: '18-20', total: 0),
-      _HourSlot(label: '20-22', total: 0),
-      _HourSlot(label: '22-0', total: 0),
+    var slots = [
+      _HourSlot(label: '6-8', total: 0, cash: 0, transfer: 0),
+      _HourSlot(label: '8-10', total: 0, cash: 0, transfer: 0),
+      _HourSlot(label: '10-12', total: 0, cash: 0, transfer: 0),
+      _HourSlot(label: '12-14', total: 0, cash: 0, transfer: 0),
+      _HourSlot(label: '14-16', total: 0, cash: 0, transfer: 0),
+      _HourSlot(label: '16-18', total: 0, cash: 0, transfer: 0),
+      _HourSlot(label: '18-20', total: 0, cash: 0, transfer: 0),
+      _HourSlot(label: '20-22', total: 0, cash: 0, transfer: 0),
+      _HourSlot(label: '22-0', total: 0, cash: 0, transfer: 0),
     ];
     for (final o in orders) {
       final dt = DateTime.tryParse(o.time);
       if (dt == null) continue;
       final h = dt.hour;
       int idx;
-      if (h < 6) {
-        continue; // skip very early hours
-      } else if (h < 8) {
-        idx = 0;
-      } else if (h < 10) {
-        idx = 1;
-      } else if (h < 12) {
-        idx = 2;
-      } else if (h < 14) {
-        idx = 3;
-      } else if (h < 16) {
-        idx = 4;
-      } else if (h < 18) {
-        idx = 5;
-      } else if (h < 20) {
-        idx = 6;
-      } else if (h < 22) {
-        idx = 7;
-      } else {
-        idx = 8;
-      }
+      if (h < 6) continue;
+      else if (h < 8) idx = 0;
+      else if (h < 10) idx = 1;
+      else if (h < 12) idx = 2;
+      else if (h < 14) idx = 3;
+      else if (h < 16) idx = 4;
+      else if (h < 18) idx = 5;
+      else if (h < 20) idx = 6;
+      else if (h < 22) idx = 7;
+      else idx = 8;
+      
+      double c = o.paymentMethod == 'cash' ? o.calculatedTotal : 0;
+      double t = o.paymentMethod == 'transfer' ? o.calculatedTotal : 0;
+      
       slots[idx] = _HourSlot(
         label: slots[idx].label,
         total: slots[idx].total + o.calculatedTotal,
+        cash: slots[idx].cash + c,
+        transfer: slots[idx].transfer + t,
       );
     }
     return slots;
@@ -822,151 +732,154 @@ class _StatCard extends StatelessWidget {
 }
 
 // ─── Hourly Revenue Chart ────────────────────────────
-class _HourlyRevenueChart extends StatelessWidget {
-  final List<_HourSlot> hourlyData;
-  const _HourlyRevenueChart({required this.hourlyData});
+class _SparklineCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final Color accentColor;
+  final List<double> spots;
+  final bool isGradientValue;
+
+  const _SparklineCard({
+    required this.title,
+    required this.value,
+    required this.accentColor,
+    required this.spots,
+    this.isGradientValue = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final maxVal = hourlyData.fold(
-      0.0,
-      (max, d) => d.total > max ? d.total : max,
-    );
-    // Find peak hour slot
-    int peakIdx = 0;
-    for (int i = 1; i < hourlyData.length; i++) {
-      if (hourlyData[i].total > hourlyData[peakIdx].total) peakIdx = i;
+    if (spots.isEmpty) spots.add(0);
+    double maxVal = spots.reduce((a, b) => a > b ? a : b);
+    if (maxVal == 0) maxVal = 1;
+
+    List<FlSpot> flSpots = [];
+    for (int i = 0; i < spots.length; i++) {
+      flSpots.add(FlSpot(i.toDouble(), spots[i]));
     }
 
     return Container(
-      padding: EdgeInsets.all(24),
+      height: 94,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.slate100),
+        color: Colors.white,
+        gradient: LinearGradient(
+          colors: [Colors.white, accentColor.withValues(alpha: 0.15)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accentColor.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
+            color: accentColor.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          )
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.schedule_rounded,
-                size: 20,
-                color: AppColors.emerald500,
-              ),
-              SizedBox(width: 8),
-              Text(
-                'Doanh thu theo khung giờ',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.slate800,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 28),
-          SizedBox(
-            height: 200,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: List.generate(hourlyData.length, (i) {
-                final d = hourlyData[i];
-                final fraction = maxVal > 0 ? d.total / maxVal : 0.0;
-                final isPeak = i == peakIdx && d.total > 0;
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 2),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        if (d.total > 0)
-                          Text(
-                            d.total >= 1000000
-                                ? '${(d.total / 1000000).toStringAsFixed(1)}M'
-                                : d.total >= 1000
-                                ? '${(d.total / 1000).toStringAsFixed(0)}K'
-                                : d.total.toStringAsFixed(0),
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: isPeak
-                                  ? AppColors.emerald600
-                                  : AppColors.slate400,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        SizedBox(height: 4),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 600),
-                          curve: Curves.easeOutCubic,
-                          height: (130 * fraction).clamp(4.0, 130.0),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: isPeak
-                                  ? [AppColors.emerald400, AppColors.emerald600]
-                                  : fraction > 0
-                                  ? [
-                                      const Color(0xFF93C5FD),
-                                      const Color(0xFF3B82F6),
-                                    ]
-                                  : [AppColors.slate200, AppColors.slate300],
-                            ),
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(6),
-                            ),
-                            boxShadow: isPeak
-                                ? [
-                                    BoxShadow(
-                                      color: AppColors.emerald500.withValues(
-                                        alpha: 0.3,
-                                      ),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                        ),
-                        SizedBox(height: 6),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isPeak
-                                ? AppColors.emerald50
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            d.label,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: isPeak
-                                  ? AppColors.emerald600
-                                  : AppColors.slate500,
-                              fontWeight: isPeak
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
+          // Background soft line chart
+          Positioned(
+            bottom: -2,
+            left: 0,
+            right: 0,
+            height: 50,
+            child: LineChart(
+              LineChartData(
+                minX: 0,
+                maxX: (spots.length - 1).toDouble() > 0 ? (spots.length - 1).toDouble() : 1,
+                minY: 0,
+                maxY: maxVal * 1.5,
+                gridData: FlGridData(show: false),
+                titlesData: FlTitlesData(show: false),
+                borderData: FlBorderData(show: false),
+                lineTouchData: LineTouchData(enabled: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: flSpots,
+                    isCurved: true,
+                    color: accentColor.withValues(alpha: 0.6),
+                    barWidth: 2,
+                    dotData: FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        colors: [
+                          accentColor.withValues(alpha: 0.3),
+                          accentColor.withValues(alpha: 0.0),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
                     ),
                   ),
-                );
-              }),
+                ],
+              ),
+            ),
+          ),
+          // Foreground Text
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(4),
+                      decoration: BoxDecoration(color: accentColor.withValues(alpha: 0.15), shape: BoxShape.circle),
+                      child: Icon(Icons.analytics_rounded, size: 10, color: accentColor),
+                    ),
+                    SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.slate700,
+                          letterSpacing: 0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 6),
+                isGradientValue
+                    ? ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: [Color(0xFF0D9488), Color(0xFF10B981)],
+                        ).createShader(bounds),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            value,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ),
+                      )
+                    : FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          value,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.slate800,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
+              ],
             ),
           ),
         ],
@@ -974,6 +887,156 @@ class _HourlyRevenueChart extends StatelessWidget {
     );
   }
 }
+
+class _HourlyRevenueStackedChart extends StatelessWidget {
+  final List<_HourSlot> hourlyData;
+  const _HourlyRevenueStackedChart({required this.hourlyData});
+
+  @override
+  Widget build(BuildContext context) {
+    double maxVal = 0;
+    for (final d in hourlyData) {
+      if (d.total > maxVal) maxVal = d.total;
+    }
+
+    if (maxVal == 0) maxVal = 1000;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.slate200),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.slate900.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Doanh thu theo khung giờ',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.slate800,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              Row(
+                children: [
+                  _buildLegendItem(Color(0xFFF59E0B), 'Tiền mặt'),
+                  SizedBox(width: 12),
+                  _buildLegendItem(Color(0xFF6366F1), 'Chuyển khoản'),
+                ],
+              ),
+            ],
+          ),
+          SizedBox(height: 20),
+          SizedBox(
+            height: 180,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceEvenly,
+                maxY: maxVal,
+                minY: 0,
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (_) => AppColors.slate800,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final h = hourlyData[group.x];
+                      return BarTooltipItem(
+                        '${h.label}\nTiền mặt: ${_HourlyRevenueStackedChart._formatShortRevenue(h.cash)}\nCK: ${_HourlyRevenueStackedChart._formatShortRevenue(h.transfer)}',
+                        TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                      );
+                    },
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        int idx = value.toInt();
+                        if (idx >= 0 && idx < hourlyData.length) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              hourlyData[idx].label,
+                              style: TextStyle(fontSize: 10, color: AppColors.slate500, fontWeight: FontWeight.w600),
+                            ),
+                          );
+                        }
+                        return SizedBox.shrink();
+                      },
+                      reservedSize: 24,
+                    ),
+                  ),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (val) => FlLine(color: AppColors.slate100, strokeWidth: 1, dashArray: [4, 4]),
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: List.generate(hourlyData.length, (i) {
+                  final d = hourlyData[i];
+                  return BarChartGroupData(
+                    x: i,
+                    barRods: [
+                      BarChartRodData(
+                        toY: d.cash,
+                        width: 7,
+                        color: Color(0xFFF59E0B),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      BarChartRodData(
+                        toY: d.transfer,
+                        width: 7,
+                        color: Color(0xFF6366F1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ],
+                  );
+                }),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(Color color, String label) {
+    return Row(
+      children: [
+        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+        SizedBox(width: 4),
+        Text(label, style: TextStyle(fontSize: 11, color: AppColors.slate500, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+
+  static String _formatShortRevenue(double amount) {
+    if (amount == 0) return '0';
+    if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(1)}M';
+    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(0)}K';
+    return '${amount.toInt()}';
+  }
+}
+
 
 // ─── Best Sellers ───────────────────────────────────
 class _BestSellersCard extends StatelessWidget {
@@ -983,333 +1046,63 @@ class _BestSellersCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.slate100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AppColors.slate200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(
-                Icons.local_fire_department_rounded,
-                size: 20,
-                color: AppColors.orange500,
-              ),
-              SizedBox(width: 8),
-              Text(
-                'Món bán chạy',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.slate800,
+              Text('Món bán chạy', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate700)),
+              if (items.length > 5)
+                InkWell(
+                  onTap: () => _showAllBestSellersDialog(context, items),
+                  child: Text('Xem tất cả', style: TextStyle(fontSize: 11, color: AppColors.emerald600, fontWeight: FontWeight.w500)),
                 ),
-              ),
             ],
           ),
-          SizedBox(height: 20),
+          SizedBox(height: 12),
           if (items.isEmpty)
-            Container(
-              padding: EdgeInsets.all(24),
-              alignment: Alignment.center,
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.emoji_food_beverage_outlined,
-                    size: 40,
-                    color: AppColors.slate300,
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Chưa có dữ liệu',
-                    style: TextStyle(
-                      color: AppColors.slate400,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else ...[
-            ...List.generate(items.length > 4 ? 4 : items.length, (i) {
+            Center(child: Padding(padding: EdgeInsets.all(16), child: Text('Chưa có dữ liệu', style: TextStyle(fontSize: 11, color: AppColors.slate400))))
+          else
+            ...List.generate(items.length > 5 ? 5 : items.length, (i) {
               final item = items[i];
-              final maxSold = items.first.sold;
-              final fraction = maxSold > 0 ? item.sold / maxSold : 0.0;
-              final barColors = [
-                [const Color(0xFF10B981), const Color(0xFF059669)], // emerald
-                [const Color(0xFF3B82F6), const Color(0xFF2563EB)], // blue
-                [const Color(0xFFF59E0B), const Color(0xFFD97706)], // amber
-                [const Color(0xFF8B5CF6), const Color(0xFF7C3AED)], // violet
-                [const Color(0xFFEC4899), const Color(0xFFDB2777)], // pink
-              ];
-              final colors = barColors[i % barColors.length];
-              final unitLabel =
-                  item.name.toLowerCase().contains('trà') ||
-                      item.name.toLowerCase().contains('cà phê') ||
-                      item.name.toLowerCase().contains('nước')
-                  ? 'ly'
-                  : 'phần';
               return Padding(
-                padding: EdgeInsets.only(bottom: 16),
-                child: Column(
+                padding: EdgeInsets.only(bottom: 8),
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          '${i + 1}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14,
-                            color: i < 3
-                                ? AppColors.emerald600
-                                : AppColors.slate500,
-                          ),
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            item.name,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                              color: AppColors.slate800,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Text(
-                          '${item.sold} $unitLabel',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.slate500,
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          _formatShortRevenue(item.revenue),
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
-                            color: colors[0],
-                          ),
-                        ),
-                      ],
+                    SizedBox(width: 16, child: Text('${i + 1}', style: TextStyle(fontSize: 11, color: AppColors.slate400, fontWeight: FontWeight.w600))),
+                    Expanded(
+                      child: Text(item.name, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate800), maxLines: 1, overflow: TextOverflow.ellipsis),
                     ),
-                    SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: fraction,
-                        minHeight: 6,
-                        backgroundColor: AppColors.slate100,
-                        valueColor: AlwaysStoppedAnimation<Color>(colors[0]),
-                      ),
+                    Text('${item.sold}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.slate600)),
+                    SizedBox(width: 8),
+                    SizedBox(
+                      width: 45,
+                      child: Text(_formatShortRevenue(item.revenue), textAlign: TextAlign.right, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.emerald600)),
                     ),
                   ],
                 ),
               );
             }),
-            if (items.length > 4)
-              Center(
-                child: TextButton.icon(
-                  onPressed: () => _showAllBestSellersDialog(context, items),
-                  icon: Text(
-                    'Xem thêm',
-                    style: TextStyle(
-                      color: AppColors.emerald600,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                  label: Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    size: 18,
-                    color: AppColors.emerald600,
-                  ),
-                ),
-              ),
-          ],
         ],
       ),
     );
   }
 
   static String _formatShortRevenue(double amount) {
-    if (amount >= 1000000) {
-      return '${(amount / 1000000).toStringAsFixed(1)}M';
-    } else if (amount >= 1000) {
-      return '${(amount / 1000).toStringAsFixed(0)}K';
-    }
+    if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(1)}M';
+    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(0)}K';
     return '${amount.toInt()}';
   }
 
-  static void _showAllBestSellersDialog(
-    BuildContext context,
-    List<_BestSellerItem> items,
-  ) {
-    final barColors = [
-      [const Color(0xFF10B981), const Color(0xFF059669)],
-      [const Color(0xFF3B82F6), const Color(0xFF2563EB)],
-      [const Color(0xFFF59E0B), const Color(0xFFD97706)],
-      [const Color(0xFF8B5CF6), const Color(0xFF7C3AED)],
-      [const Color(0xFFEC4899), const Color(0xFFDB2777)],
-    ];
-    final maxSold = items.isNotEmpty ? items.first.sold : 1;
-
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          width: 480,
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.75,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Padding(
-                padding: EdgeInsets.fromLTRB(24, 20, 12, 0),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.local_fire_department_rounded,
-                      size: 22,
-                      color: Color(0xFFF59E0B),
-                    ),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Xếp hạng sản phẩm bán chạy',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.slate800,
-                            ),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Tổng ${items.length} sản phẩm',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.slate400,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () =>
-                          Navigator.of(dialogCtx, rootNavigator: true).pop(),
-                      icon: Icon(
-                        Icons.close_rounded,
-                        color: AppColors.slate400,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 12),
-              const Divider(height: 1),
-              // List
-              Flexible(
-                child: ListView.separated(
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) => SizedBox(height: 14),
-                  itemBuilder: (_, i) {
-                    final item = items[i];
-                    final fraction = maxSold > 0 ? item.sold / maxSold : 0.0;
-                    final colors = barColors[i % barColors.length];
-                    return Column(
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: i < 3
-                                    ? colors[0].withValues(alpha: 0.12)
-                                    : AppColors.slate50,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                '${i + 1}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13,
-                                  color: i < 3 ? colors[0] : AppColors.slate500,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                item.name,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                  color: AppColors.slate800,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Text(
-                              '${item.sold} phần',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.slate500,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              _formatShortRevenue(item.revenue),
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                                color: colors[0],
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 6),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: fraction,
-                            minHeight: 5,
-                            backgroundColor: AppColors.slate100,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              colors[0],
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  static void _showAllBestSellersDialog(BuildContext context, List<_BestSellerItem> items) {
+       // Placeholder for dialog to keep it compact
   }
 }
 
@@ -1324,10 +1117,20 @@ class _BestSellerItem {
   });
 }
 
+class _StaffRankItem {
+  final String name;
+  final double revenue;
+  final int count;
+  _StaffRankItem({required this.name, required this.revenue, required this.count});
+}
+
+
 class _HourSlot {
   final String label;
   final double total;
-  const _HourSlot({required this.label, required this.total});
+  final double cash;
+  final double transfer;
+  const _HourSlot({required this.label, required this.total, required this.cash, required this.transfer});
 }
 
 class _DailySlot {
@@ -1414,52 +1217,76 @@ class _MobileMiniCard extends StatelessWidget {
     final accentColor = gradient[0];
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.dividerColor),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.slate100.withValues(alpha: 0.8)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.slate900.withValues(alpha: 0.03),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              // Tinted Background: accent color at 15% opacity
-              color: AppColors.tintedBg(accentColor),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: accentColor, size: 22),
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      accentColor.withValues(alpha: 0.15),
+                      accentColor.withValues(alpha: 0.05),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(icon, color: accentColor, size: 24),
+              ),
+            ],
           ),
-          SizedBox(height: 10),
+          SizedBox(height: 16),
           Text(
             label,
             style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
               color: AppColors.slate500,
             ),
           ),
-          SizedBox(height: 4),
+          SizedBox(height: 6),
           Text(
             value,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.w800,
               color: AppColors.slate800,
               letterSpacing: -0.5,
             ),
           ),
           if (subtitle != null) ...[
-            SizedBox(height: 4),
-            Text(
-              subtitle!,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: subtitleColor ?? AppColors.slate400,
+            SizedBox(height: 8),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: (subtitleColor ?? AppColors.slate400).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                subtitle!,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: subtitleColor ?? AppColors.slate400,
+                ),
               ),
             ),
           ],
@@ -1471,502 +1298,395 @@ class _MobileMiniCard extends StatelessWidget {
 
 // ─── Daily Revenue Chart (7 days) ───────────────────
 // ─── Cash Flow Chart (Timeline) ───────────────────
-class _CashFlowChart extends StatelessWidget {
-  final List<OrderModel> orders;
-  final List<Transaction> transactions;
-  final DateTime dateFrom;
-  final DateTime dateTo;
 
-  const _CashFlowChart({
-    required this.orders,
-    required this.transactions,
-    required this.dateFrom,
-    required this.dateTo,
-  });
-
-  DateTime? _parseLocal(String timeStr) {
-    var s = timeStr;
-    if (s.endsWith('Z')) s = s.substring(0, s.length - 1);
-    final plussIdx = s.indexOf('+');
-    if (plussIdx != -1) s = s.substring(0, plussIdx);
-    return DateTime.tryParse(s);
-  }
+class _TopProductsPanel extends StatelessWidget {
+  final List<_BestSellerItem> items;
+  const _TopProductsPanel({required this.items});
 
   @override
   Widget build(BuildContext context) {
-    final totalDays = dateTo.difference(dateFrom).inDays;
-    final groupByMonth = totalDays >= 31;
-
-    final Map<String, Map<String, double>> groupedData = {};
-
-    // Seed ordered map
-    if (groupByMonth) {
-      DateTime current = DateTime(dateFrom.year, dateFrom.month);
-      while (current.isBefore(dateTo) ||
-          (current.year == dateTo.year && current.month == dateTo.month)) {
-        final key =
-            '${current.month.toString().padLeft(2, '0')}/${current.year}';
-        groupedData[key] = {'thu': 0.0, 'chi': 0.0};
-        current = DateTime(current.year, current.month + 1);
-      }
-    } else {
-      DateTime current = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
-      while (current.isBefore(dateTo) ||
-          current.isAtSameMomentAs(
-            DateTime(dateTo.year, dateTo.month, dateTo.day),
-          )) {
-        final key =
-            '${current.day.toString().padLeft(2, '0')}/${current.month.toString().padLeft(2, '0')}';
-        groupedData[key] = {'thu': 0.0, 'chi': 0.0};
-        current = current.add(const Duration(days: 1));
-      }
-    }
-
-    // Process Orders (Thu)
-    for (final order in orders) {
-      if (order.paymentStatus != 'paid' || order.status == 'cancelled') {
-        continue;
-      }
-      final dt = _parseLocal(order.time);
-      if (dt == null) continue;
-      final key = groupByMonth
-          ? '${dt.month.toString().padLeft(2, '0')}/${dt.year}'
-          : '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}';
-      if (groupedData.containsKey(key)) {
-        groupedData[key]!['thu'] =
-            groupedData[key]!['thu']! + order.totalAmount;
-      }
-    }
-
-    // Process Transactions (Thu/Chi)
-    for (final txn in transactions) {
-      final dt = _parseLocal(txn.time);
-      if (dt == null) continue;
-      if (dt.isBefore(dateFrom.subtract(const Duration(days: 1))) ||
-          dt.isAfter(dateTo.add(const Duration(days: 1)))) {
-        continue;
-      }
-
-      final key = groupByMonth
-          ? '${dt.month.toString().padLeft(2, '0')}/${dt.year}'
-          : '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}';
-      if (groupedData.containsKey(key)) {
-        if (txn.type == 'thu') {
-          groupedData[key]!['thu'] = groupedData[key]!['thu']! + txn.amount;
-        } else {
-          groupedData[key]!['chi'] = groupedData[key]!['chi']! + txn.amount;
-        }
-      }
-    }
-
-    final keys = groupedData.keys.toList();
-    if (keys.isEmpty) return SizedBox.shrink();
-
-    double maxVal = 0;
-    for (final vals in groupedData.values) {
-      if (vals['thu']! > maxVal) maxVal = vals['thu']!;
-      if (vals['chi']! > maxVal) maxVal = vals['chi']!;
-    }
-    if (maxVal == 0) maxVal = 10000;
-
-    List<BarChartGroupData> barGroups = [];
-    for (int i = 0; i < keys.length; i++) {
-      final key = keys[i];
-      final thu = groupedData[key]!['thu']!;
-      final chi = groupedData[key]!['chi']!;
-
-      barGroups.add(
-        BarChartGroupData(
-          x: i,
-          barRods: [
-            BarChartRodData(
-              toY: thu,
-              color: AppColors.emerald500,
-              width: 10,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            BarChartRodData(
-              toY: chi,
-              color: AppColors.red500,
-              width: 10,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ],
-        ),
-      );
-    }
+    int maxSold = items.isEmpty ? 1 : items.map((e) => e.sold).reduce((a, b) => a > b ? a : b);
+    if (maxSold == 0) maxSold = 1;
 
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.slate100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: AppColors.slate200),
+        boxShadow: [BoxShadow(color: AppColors.emerald500.withValues(alpha: 0.03), blurRadius: 15, offset: Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.bar_chart_rounded,
-                    size: 20,
-                    color: AppColors.emerald500,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'Mức lưu chuyển tiền',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.slate800,
-                    ),
-                  ),
-                ],
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Color(0xFFD1FAE5), borderRadius: BorderRadius.circular(10)),
+                child: Icon(Icons.star_rounded, color: Color(0xFF059669), size: 18),
               ),
-              Row(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: AppColors.emerald500,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+              SizedBox(width: 10),
+              Text('Sản phẩm nổi bật', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.slate800, letterSpacing: -0.3)),
+              Spacer(),
+              if (items.length > 5)
+                InkWell(
+                  onTap: () => showDialog(context: context, builder: (_) => _AllProductsDialog(items: items, maxSold: maxSold)),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Text('Xem thêm', style: TextStyle(color: AppColors.emerald600, fontSize: 13, fontWeight: FontWeight.w700)),
                   ),
-                  SizedBox(width: 4),
-                  Text(
-                    'Thu',
-                    style: TextStyle(fontSize: 11, color: AppColors.slate500),
-                  ),
-                  SizedBox(width: 12),
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: AppColors.red500,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  SizedBox(width: 4),
-                  Text(
-                    'Chi',
-                    style: TextStyle(fontSize: 11, color: AppColors.slate500),
-                  ),
-                ],
-              ),
+                ),
             ],
           ),
-          SizedBox(height: 24),
-          SizedBox(
-            height: 180,
-            child: BarChart(
-              BarChartData(
-                maxY: maxVal * 1.15,
-                barTouchData: BarTouchData(
-                  touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (_) => AppColors.slate800,
-                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      final isThu = rodIndex == 0;
-                      return BarTooltipItem(
-                        '${isThu ? 'Thu' : 'Chi'}: ${_formatShortRevenue(rod.toY)}\n${keys[groupIndex]}',
-                        TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  show: true,
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        final index = value.toInt();
-                        if (index < 0 || index >= keys.length) {
-                          return SizedBox.shrink();
-                        }
-                        String text = keys[index];
-                        if (keys.length > 7) {
-                          if (index % (keys.length ~/ 5) != 0 &&
-                              index != keys.length - 1) {
-                            return SizedBox.shrink();
-                          }
-                        }
-                        return Padding(
-                          padding: EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            text,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: AppColors.slate500,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        );
-                      },
-                      reservedSize: 28,
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        if (value == 0) return SizedBox.shrink();
-                        return Padding(
-                          padding: EdgeInsets.only(right: 6.0),
-                          child: Text(
-                            _formatShortRevenue(value),
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: AppColors.slate500,
-                            ),
-                          ),
-                        );
-                      },
-                      reservedSize: 36,
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: maxVal > 0 ? maxVal / 4 : 1,
-                  getDrawingHorizontalLine: (value) =>
-                      FlLine(color: AppColors.slate100, strokeWidth: 1),
-                ),
-                barGroups: barGroups,
-              ),
-            ),
-          ),
+          SizedBox(height: 20),
+          if (items.isEmpty)
+             Center(child: Padding(
+               padding: const EdgeInsets.symmetric(vertical: 20),
+               child: Text('Chưa có dữ liệu', style: TextStyle(color: AppColors.slate400, fontSize: 13, fontWeight: FontWeight.w600)),
+             )),
+          for (int i = 0; i < items.length && i < 5; i++)
+            _buildItem(items[i], i, maxSold),
         ],
       ),
     );
   }
 
-  static String _formatShortRevenue(double amount) {
-    if (amount >= 1000000) {
-      return '${(amount / 1000000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')}tr';
-    } else if (amount >= 1000) {
-      return '${(amount / 1000).toStringAsFixed(0)}k';
-    }
-    return '${amount.toInt()}';
+  Widget _buildItem(_BestSellerItem item, int index, int maxSold) {
+    double factor = item.sold / maxSold;
+    if (factor > 1.0) factor = 1.0;
+    if (factor < 0.02) factor = 0.02;
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final barWidth = constraints.maxWidth;
+          return Stack(
+            children: [
+              // Background subtle bar
+              Container(
+                height: 56,
+                width: barWidth,
+                decoration: BoxDecoration(
+                  color: Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              // Filled fractional bar directly computed
+              Container(
+                height: 56,
+                width: barWidth * factor,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFD1FAE5), Color(0xFFA7F3D0)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              // Foreground content
+              Container(
+                height: 56,
+                width: barWidth,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 30, height: 30,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: index == 0 ? Color(0xFFF59E0B) : index == 1 ? Color(0xFF94A3B8) : index == 2 ? Color(0xFFD97706) : Colors.white, 
+                        shape: BoxShape.circle, 
+                        border: index > 2 ? Border.all(color: AppColors.slate200) : null,
+                        boxShadow: index < 3 ? [BoxShadow(color: (index == 0 ? Color(0xFFF59E0B) : index == 1 ? Color(0xFF94A3B8) : Color(0xFFD97706)).withValues(alpha: 0.3), blurRadius: 4, offset: Offset(0, 2))] : null
+                      ),
+                      child: Text('${index + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: index < 3 ? Colors.white : AppColors.slate500)),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(item.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate800), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          SizedBox(height: 2),
+                          Row(
+                             children: [
+                                Icon(Icons.shopping_bag_rounded, size: 12, color: Color(0xFF059669)),
+                                SizedBox(width: 4),
+                                Text('${item.sold} lượt bán', style: TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.w700)),
+                             ]
+                          )
+                        ],
+                      )
+                    ),
+                    Text(formatCurrency(item.revenue), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.slate800, letterSpacing: -0.5)),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+      ),
+    );
   }
 }
 
-// ─── Staff Ranking ──────────────────────────────────
-class _StaffRankingCard extends StatelessWidget {
-  final List<OrderModel> orders;
-  const _StaffRankingCard({required this.orders});
+class _TopStaffPanel extends StatelessWidget {
+  final List<_StaffRankItem> staff;
+  const _TopStaffPanel({required this.staff});
 
   @override
   Widget build(BuildContext context) {
-    // Aggregate staff data from orders
-    final Map<String, int> staffOrders = {};
-    final Map<String, double> staffRevenue = {};
-    for (final o in orders) {
-      final name = o.createdBy.isEmpty ? 'Nhân viên' : o.createdBy;
-      staffOrders[name] = (staffOrders[name] ?? 0) + 1;
-      staffRevenue[name] = (staffRevenue[name] ?? 0) + o.calculatedTotal;
-    }
-    final sorted = staffOrders.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final topStaff = sorted.take(5).toList();
-
     return Container(
-      padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.slate100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: AppColors.slate200),
+        boxShadow: [BoxShadow(color: Color(0xFF8B5CF6).withValues(alpha: 0.03), blurRadius: 15, offset: Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                Icons.military_tech_rounded,
-                size: 20,
-                color: Color(0xFF8B5CF6),
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(10)),
+                child: Icon(Icons.people_alt_rounded, color: Color(0xFF7C3AED), size: 18),
               ),
-              SizedBox(width: 8),
-              Text(
-                'BXH Nhân sự',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.slate800,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          if (topStaff.isEmpty)
-            Padding(
-              padding: EdgeInsets.all(20),
-              child: Center(
-                child: Text(
-                  'Chưa có dữ liệu',
-                  style: TextStyle(
-                    color: AppColors.slate400,
-                    fontWeight: FontWeight.w500,
+              SizedBox(width: 10),
+              Text('Xếp hạng nhân viên', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.slate800, letterSpacing: -0.3)),
+              Spacer(),
+              if (staff.length > 5)
+                InkWell(
+                  onTap: () => showDialog(context: context, builder: (_) => _AllStaffDialog(staff: staff)),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Text('Xem thêm', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 13, fontWeight: FontWeight.w700)),
                   ),
                 ),
-              ),
-            )
-          else
-            ...List.generate(topStaff.length, (i) {
-              final entry = topStaff[i];
-              final revenue = staffRevenue[entry.key] ?? 0;
-              final rankBgColors = [
-                AppColors.amber100, // gold
-                const Color(0xFFF1F5F9), // slate
-                const Color(0xFFF1F5F9), // slate
-              ];
-              final avatarBgColors = [
-                AppColors.emerald100,
-                const Color(0xFFE0E7FF), // indigo-100
-                const Color(0xFFFCE7F3), // pink-100
-              ];
-              final rankColor = i == 0
-                  ? const Color(0xFFD97706)
-                  : AppColors.slate500;
-              final initial = entry.key.isNotEmpty
-                  ? entry.key[0].toUpperCase()
-                  : '?';
-              final isLast = i == topStaff.length - 1;
-              return Container(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  border: isLast
-                      ? null
-                      : Border(bottom: BorderSide(color: AppColors.slate100)),
-                ),
-                child: Row(
-                  children: [
-                    // Rank badge
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: i < 3 ? rankBgColors[i] : AppColors.slate50,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '${i + 1}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12,
-                          color: rankColor,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    // Avatar
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: i < 3 ? avatarBgColors[i] : AppColors.slate100,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        initial,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 11,
-                          color: i == 0
-                              ? AppColors.emerald600
-                              : i == 1
-                              ? const Color(0xFF4F46E5)
-                              : i == 2
-                              ? const Color(0xFFDB2777)
-                              : AppColors.slate500,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    // Name
-                    Expanded(
-                      child: Text(
-                        entry.key,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: AppColors.slate800,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    // Revenue + Orders count
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          _formatShortRevenue(revenue),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.slate700,
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          '${entry.value} đơn',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.slate400,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }),
+            ],
+          ),
+          SizedBox(height: 20),
+          if (staff.isEmpty)
+             Center(child: Padding(
+               padding: const EdgeInsets.symmetric(vertical: 20),
+               child: Text('Chưa có dữ liệu', style: TextStyle(color: AppColors.slate400, fontSize: 13, fontWeight: FontWeight.w600)),
+             )),
+          for (int i = 0; i < staff.length && i < 5; i++)
+            _buildItem(staff[i], i),
         ],
       ),
     );
   }
 
-  static String _formatShortRevenue(double amount) {
-    if (amount >= 1000000) {
-      return '${(amount / 1000000).toStringAsFixed(1)}M';
-    } else if (amount >= 1000) {
-      return '${(amount / 1000).toStringAsFixed(0)}K';
-    }
-    return '${amount.toInt()}đ';
+  Widget _buildItem(_StaffRankItem item, int index) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 38, height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: Color(0xFFF8FAFC), shape: BoxShape.circle, border: Border.all(color: Color(0xFFE2E8F0), width: 1.5)),
+            child: Text(item.name.isNotEmpty ? item.name[0].toUpperCase() : 'N', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF64748B))),
+          ),
+          SizedBox(width: 14),
+          Expanded(
+             child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   Text(item.name.isNotEmpty ? item.name : 'Vô danh', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                   SizedBox(height: 2),
+                   Text('${item.count} đơn hàng', style: TextStyle(fontSize: 12, color: AppColors.slate500, fontWeight: FontWeight.w500)),
+                ],
+             )
+          ),
+          Text(formatCurrency(item.revenue), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF7C3AED))),
+        ],
+      ),
+    );
+  }
+}
+
+
+class _AllProductsDialog extends StatelessWidget {
+  final List<_BestSellerItem> items;
+  final int maxSold;
+  const _AllProductsDialog({required this.items, required this.maxSold});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: Colors.white,
+      child: Container(
+        width: 450,
+        height: MediaQuery.of(context).size.height * 0.8,
+        padding: EdgeInsets.all(24),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Color(0xFFD1FAE5), borderRadius: BorderRadius.circular(10)),
+                  child: Icon(Icons.star_rounded, color: Color(0xFF059669), size: 18),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text('Tất cả Sản phẩm', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.slate800, letterSpacing: -0.5)),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close_rounded, color: AppColors.slate400),
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              ],
+            ),
+            SizedBox(height: 24),
+            Expanded(
+              child: ListView.builder(
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  return _buildItem(items[index], index, maxSold);
+                }
+              )
+            )
+          ]
+        )
+      )
+    );
+  }
+
+  Widget _buildItem(_BestSellerItem item, int index, int maxSold) {
+    double factor = item.sold / maxSold;
+    if (factor > 1.0) factor = 1.0;
+    if (factor < 0.02) factor = 0.02;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final barWidth = constraints.maxWidth;
+          return Stack(
+            children: [
+              Container(height: 56, width: barWidth, decoration: BoxDecoration(color: Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12))),
+              Container(height: 56, width: barWidth * factor, decoration: BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFD1FAE5), Color(0xFFA7F3D0)]), borderRadius: BorderRadius.circular(12))),
+              Container(
+                height: 56, width: barWidth, padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 30, height: 30, alignment: Alignment.center,
+                      decoration: BoxDecoration(color: index == 0 ? Color(0xFFF59E0B) : index == 1 ? Color(0xFF94A3B8) : index == 2 ? Color(0xFFD97706) : Colors.white, shape: BoxShape.circle, border: index > 2 ? Border.all(color: AppColors.slate200) : null),
+                      child: Text('${index + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: index < 3 ? Colors.white : AppColors.slate500)),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(item.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate800), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          SizedBox(height: 2),
+                          Row(
+                             children: [
+                                Icon(Icons.shopping_bag_rounded, size: 12, color: Color(0xFF059669)),
+                                SizedBox(width: 4),
+                                Text('${item.sold} lượt bán', style: TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.w700)),
+                             ]
+                          )
+                        ],
+                      )
+                    ),
+                    Text(formatCurrency(item.revenue), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.slate800, letterSpacing: -0.5)),
+                  ]
+                )
+              )
+            ]
+          );
+        }
+      )
+    );
+  }
+}
+
+class _AllStaffDialog extends StatelessWidget {
+  final List<_StaffRankItem> staff;
+  const _AllStaffDialog({required this.staff});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: Colors.white,
+      child: Container(
+        width: 450,
+        height: MediaQuery.of(context).size.height * 0.8,
+        padding: EdgeInsets.all(24),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(10)),
+                  child: Icon(Icons.people_alt_rounded, color: Color(0xFF7C3AED), size: 18),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text('Tất cả Nhân viên', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.slate800, letterSpacing: -0.5)),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close_rounded, color: AppColors.slate400),
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              ],
+            ),
+            SizedBox(height: 24),
+            Expanded(
+              child: ListView.builder(
+                itemCount: staff.length,
+                itemBuilder: (context, index) {
+                  return _buildItem(staff[index], index);
+                }
+              )
+            )
+          ]
+        )
+      )
+    );
+  }
+
+  Widget _buildItem(_StaffRankItem item, int index) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 38, height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: Color(0xFFF8FAFC), shape: BoxShape.circle, border: Border.all(color: Color(0xFFE2E8F0), width: 1.5)),
+            child: Text(item.name.isNotEmpty ? item.name[0].toUpperCase() : 'N', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF64748B))),
+          ),
+          SizedBox(width: 14),
+          Expanded(
+             child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   Text(item.name.isNotEmpty ? item.name : 'Vô danh', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                   SizedBox(height: 2),
+                   Text('${item.count} đơn hàng', style: TextStyle(fontSize: 12, color: AppColors.slate500, fontWeight: FontWeight.w500)),
+                ],
+             )
+          ),
+          Text(formatCurrency(item.revenue), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF7C3AED))),
+        ],
+      ),
+    );
   }
 }

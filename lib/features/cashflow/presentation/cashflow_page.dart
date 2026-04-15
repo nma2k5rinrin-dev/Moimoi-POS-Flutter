@@ -688,194 +688,36 @@ class _CashflowPageState extends State<CashflowPage> {
                       ),
                       SizedBox(height: 8),
                       // ── Stats (Số dư | Thu nhập | Chi tiêu) ──
-                      Container(
-                        width: double.infinity,
-                        clipBehavior: Clip.antiAlias,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [AppColors.cardBg, AppColors.blue50.withValues(alpha: 0.5)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppColors.isDarkMode ? AppColors.slate200 : AppColors.blue100),
-                          boxShadow: AppColors.isDarkMode ? [] : [
-                            BoxShadow(
-                              color: AppColors.blue200.withValues(alpha: 0.3),
-                              blurRadius: 20,
-                              offset: Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Stack(
-                          children: [
-                            Positioned(
-                              left: 0,
-                              right: 0,
-                              bottom: -2,
-                              height: 60,
-                              child: _buildSparkline(
-                                color: AppColors.blue400,
-                                spots: balanceSpots,
-                              ),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Số dư hiện tại',
-                                    style: TextStyle(
-                                      color: AppColors.slate600,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  SizedBox(height: 8),
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: Text(
-                                      '${balance >= 0 ? '+' : ''}${_formatAmount(balance)} đ',
-                                      style: TextStyle(
-                                        color: AppColors.slate800,
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.w900,
-                                        letterSpacing: -0.5,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      
-                      SizedBox(height: 12),
-                      
                       Row(
                         children: [
                           Expanded(
-                            child: Container(
-                              clipBehavior: Clip.antiAlias,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [AppColors.cardBg, AppColors.emerald50.withValues(alpha: 0.5)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: AppColors.isDarkMode ? AppColors.slate200 : AppColors.emerald100),
-                                boxShadow: AppColors.isDarkMode ? [] : [
-                                  BoxShadow(
-                                    color: AppColors.emerald200.withValues(alpha: 0.3),
-                                    blurRadius: 15,
-                                    offset: Offset(0, 6),
-                                  ),
-                                ]
-                              ),
-                              child: Stack(
-                                children: [
-                                  Positioned(
-                                    left: 0,
-                                    right: 0,
-                                    bottom: -2,
-                                    height: 40,
-                                    child: _buildSparkline(
-                                      color: AppColors.emerald200,
-                                      spots: incomeSpots,
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Container(
-                                              padding: EdgeInsets.all(4),
-                                              decoration: BoxDecoration(color: AppColors.emerald50, shape: BoxShape.circle),
-                                              child: Icon(Icons.arrow_downward_rounded, color: AppColors.emerald500, size: 16),
-                                            ),
-                                            SizedBox(width: 8),
-                                            Text('Thu nhập', style: TextStyle(color: AppColors.slate700, fontSize: 13, fontWeight: FontWeight.w600)),
-                                          ]
-                                        ),
-                                        SizedBox(height: 12),
-                                        FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text('${_formatAmount(totalIncome)} đ', style: TextStyle(color: AppColors.slate800, fontSize: 20, fontWeight: FontWeight.w800)),
-                                        ),
-                                      ]
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
+                            child: _SparklineCard(
+                              title: 'SỐ DƯ HIỆN TẠI',
+                              value: '${balance >= 0 ? '+' : ''}${_formatAmount(balance)}',
+                              accentColor: Color(0xFF3B82F6),
+                              spots: balanceSpots.map((e) => e.y).toList(),
+                              isGradientValue: true,
+                            ),
                           ),
-                          SizedBox(width: 12),
+                          SizedBox(width: 8),
                           Expanded(
-                            child: Container(
-                              clipBehavior: Clip.antiAlias,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [AppColors.cardBg, AppColors.red50.withValues(alpha: 0.5)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: AppColors.isDarkMode ? AppColors.slate200 : AppColors.red100),
-                                boxShadow: AppColors.isDarkMode ? [] : [
-                                  BoxShadow(
-                                    color: AppColors.red200.withValues(alpha: 0.3),
-                                    blurRadius: 15,
-                                    offset: Offset(0, 6),
-                                  ),
-                                ]
-                              ),
-                              child: Stack(
-                                children: [
-                                  Positioned(
-                                    left: 0,
-                                    right: 0,
-                                    bottom: -2,
-                                    height: 40,
-                                    child: _buildSparkline(
-                                      color: AppColors.red200,
-                                      spots: expenseSpots,
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Container(
-                                              padding: EdgeInsets.all(4),
-                                              decoration: BoxDecoration(color: AppColors.red50, shape: BoxShape.circle),
-                                              child: Icon(Icons.arrow_upward_rounded, color: AppColors.red500, size: 16),
-                                            ),
-                                            SizedBox(width: 8),
-                                            Text('Chi tiêu', style: TextStyle(color: AppColors.slate700, fontSize: 13, fontWeight: FontWeight.w600)),
-                                          ]
-                                        ),
-                                        SizedBox(height: 12),
-                                        FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text('${_formatAmount(totalExpense)} đ', style: TextStyle(color: AppColors.slate800, fontSize: 20, fontWeight: FontWeight.w800)),
-                                        ),
-                                      ]
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
+                            child: _SparklineCard(
+                              title: 'THU NHẬP',
+                              value: _formatAmount(totalIncome),
+                              accentColor: Color(0xFF10B981),
+                              spots: incomeSpots.map((e) => e.y).toList(),
+                            ),
                           ),
-                        ]
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: _SparklineCard(
+                              title: 'CHI TIÊU',
+                              value: _formatAmount(totalExpense),
+                              accentColor: Color(0xFFEF4444),
+                              spots: expenseSpots.map((e) => e.y).toList(),
+                            ),
+                          ),
+                        ],
                       ),
                       SizedBox(height: 14),
 
@@ -1844,7 +1686,7 @@ class _CashflowPageState extends State<CashflowPage> {
                 return AnimatedBuilder(
                   animation: tabCtrl,
                   builder: (context, child) {
-                    final isThu = tabCtrl.index == 0;
+                    final isThu = tabCtrl.index == 1;
                     return Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -1941,12 +1783,12 @@ class _CashflowPageState extends State<CashflowPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(
-                                      Icons.trending_up,
+                                      Icons.trending_down,
                                       size: 16,
-                                      color: AppColors.emerald500,
+                                      color: AppColors.red500,
                                     ),
                                     SizedBox(width: 6),
-                                    Text('Nhập thu'),
+                                    Text('Nhập chi'),
                                   ],
                                 ),
                               ),
@@ -1955,12 +1797,12 @@ class _CashflowPageState extends State<CashflowPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(
-                                      Icons.trending_down,
+                                      Icons.trending_up,
                                       size: 16,
-                                      color: AppColors.red500,
+                                      color: AppColors.emerald500,
                                     ),
                                     SizedBox(width: 6),
-                                    Text('Nhập chi'),
+                                    Text('Nhập thu'),
                                   ],
                                 ),
                               ),
@@ -1971,8 +1813,8 @@ class _CashflowPageState extends State<CashflowPage> {
                         Expanded(
                           child: TabBarView(
                             children: [
-                              IncomePage(
-                                key: thuKey,
+                              ExpensePage(
+                                key: chiKey,
                                 asDialog: true,
                                 initialDate: date,
                                 onSaved: () {
@@ -1980,8 +1822,8 @@ class _CashflowPageState extends State<CashflowPage> {
                                   _optimisticSync();
                                 },
                               ),
-                              ExpensePage(
-                                key: chiKey,
+                              IncomePage(
+                                key: thuKey,
                                 asDialog: true,
                                 initialDate: date,
                                 onSaved: () {
@@ -2287,4 +2129,160 @@ class _DisplayTxn {
     required this.source,
     this.originalTxn,
   });
+}
+
+class _SparklineCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final Color accentColor;
+  final List<double> spots;
+  final bool isGradientValue;
+
+  const _SparklineCard({
+    required this.title,
+    required this.value,
+    required this.accentColor,
+    required this.spots,
+    this.isGradientValue = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (spots.isEmpty) spots.add(0);
+    double maxVal = spots.reduce((a, b) => a > b ? a : b);
+    if (maxVal == 0) maxVal = 1;
+
+    List<FlSpot> flSpots = [];
+    for (int i = 0; i < spots.length; i++) {
+      flSpots.add(FlSpot(i.toDouble(), spots[i]));
+    }
+
+    return Container(
+      height: 94,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        gradient: LinearGradient(
+          colors: [Colors.white, accentColor.withValues(alpha: 0.15)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          )
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Background soft line chart
+          Positioned(
+            bottom: -2,
+            left: 0,
+            right: 0,
+            height: 50,
+            child: LineChart(
+              LineChartData(
+                minX: 0,
+                maxX: (spots.length - 1).toDouble() > 0 ? (spots.length - 1).toDouble() : 1,
+                minY: 0,
+                maxY: maxVal * 1.5,
+                gridData: FlGridData(show: false),
+                titlesData: FlTitlesData(show: false),
+                borderData: FlBorderData(show: false),
+                lineTouchData: LineTouchData(enabled: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: flSpots,
+                    isCurved: true,
+                    color: accentColor.withValues(alpha: 0.6),
+                    barWidth: 2,
+                    dotData: FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        colors: [
+                          accentColor.withValues(alpha: 0.3),
+                          accentColor.withValues(alpha: 0.0),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Foreground Text
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(4),
+                      decoration: BoxDecoration(color: accentColor.withValues(alpha: 0.15), shape: BoxShape.circle),
+                      child: Icon(Icons.analytics_rounded, size: 10, color: accentColor),
+                    ),
+                    SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.slate700,
+                          letterSpacing: 0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 6),
+                isGradientValue
+                    ? ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: [Color(0xFF3B82F6), Color(0xFF6366F1)],
+                        ).createShader(bounds),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            value,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ),
+                      )
+                    : FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          value,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.slate800,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

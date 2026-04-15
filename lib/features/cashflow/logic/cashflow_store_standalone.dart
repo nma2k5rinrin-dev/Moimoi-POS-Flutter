@@ -66,6 +66,10 @@ class CashflowStore extends ChangeNotifier with BaseMixin {
         }
       }
 
+      if (storeId != 'sadmin' && (customTransactionCategories[storeId] == null || customTransactionCategories[storeId]!.isEmpty)) {
+        await _seedDefaultCategories(storeId);
+      }
+
       transactions = (results[1]).map((r) => Transaction.fromMap(r)).toList();
 
       if (db != null) {
@@ -110,6 +114,24 @@ class CashflowStore extends ChangeNotifier with BaseMixin {
       }
     } catch (e) {
       debugPrint('[initCashflowStore] $e');
+    }
+  }
+
+  Future<void> _seedDefaultCategories(String storeId) async {
+    final defaults = [
+      TransactionCategory(type: 'chi', emoji: '📦', label: 'Nhập hàng', color: const Color(0xFFEF4444), isCustom: true),
+      TransactionCategory(type: 'chi', emoji: '🥦', label: 'Nguyên liệu', color: const Color(0xFFF97316), isCustom: true),
+      TransactionCategory(type: 'chi', emoji: '⚡', label: 'Điện nước', color: const Color(0xFF3B82F6), isCustom: true),
+      TransactionCategory(type: 'chi', emoji: '🏠', label: 'Mặt bằng', color: const Color(0xFF8B5CF6), isCustom: true),
+      TransactionCategory(type: 'chi', emoji: '💰', label: 'Lương nhân viên', color: const Color(0xFF14B8A6), isCustom: true),
+      TransactionCategory(type: 'chi', emoji: '📝', label: 'Khác', color: const Color(0xFF64748B), isCustom: true),
+      TransactionCategory(type: 'thu', emoji: '💵', label: 'Bán hàng', color: const Color(0xFF10B981), isCustom: true),
+      TransactionCategory(type: 'thu', emoji: '🎁', label: 'Thanh lý', color: const Color(0xFFF59E0B), isCustom: true),
+      TransactionCategory(type: 'thu', emoji: '📝', label: 'Khác', color: const Color(0xFF64748B), isCustom: true),
+    ];
+
+    for (final cat in defaults) {
+      addTransactionCategory(cat);
     }
   }
 

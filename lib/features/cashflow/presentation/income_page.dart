@@ -40,8 +40,7 @@ class IncomePageState extends State<IncomePage> {
   late DateTime _selectedDate;
   bool _isEditMode = false;
 
-  final List<TransactionCategory> _defaultCategories =
-      []; // Removed, now seeded in AppStore
+  final List<TransactionCategory> _defaultCategories = [];
 
   List<TransactionCategory> _getCategories(CashflowStore store) {
     final customCats = store.currentCustomThuChiCategories
@@ -195,212 +194,146 @@ class IncomePageState extends State<IncomePage> {
                       SizedBox(height: 8),
 
                       // ── Amount, Note & Date ──────────────
-                      Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).cardColor,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.emerald500.withOpacity(0.08),
-                              blurRadius: 24,
-                              offset: const Offset(0, 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(
+                            'SỐ TIỀN THU',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.2,
+                              color: AppColors.slate500,
                             ),
-                          ],
-                          border: Border.all(
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? AppColors.emerald400.withOpacity(0.3)
-                                : AppColors.emerald200.withOpacity(0.5),
                           ),
-                        ),
-                        child: Column(
-                          children: [
-                            // --- Amount Area ---
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                top: 24,
-                                bottom: 16,
-                                left: 16,
-                                right: 16,
+                          const SizedBox(height: 4),
+                          TextField(
+                            controller: _amountCtrl,
+                            keyboardType: TextInputType.number,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 36,
+                              height: 1.1,
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? AppColors.emerald400
+                                  : AppColors.emerald500,
+                              letterSpacing: -1,
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              _ThousandSeparatorFormatter(),
+                            ],
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              hintText: '0',
+                              hintStyle: TextStyle(
+                                fontSize: 36,
+                                height: 1.1,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.slate300,
                               ),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    'SỐ TIỀN THU',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 1.2,
-                                      color: AppColors.emerald700.withOpacity(
-                                        0.8,
-                                      ),
-                                    ),
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  height: 44,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).cardColor,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: AppColors.slate200),
                                   ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
+                                  child: Row(
                                     children: [
+                                      Icon(
+                                        Icons.edit_note_rounded,
+                                        size: 20,
+                                        color: AppColors.slate400,
+                                      ),
+                                      const SizedBox(width: 8),
                                       Expanded(
                                         child: TextField(
-                                          controller: _amountCtrl,
-                                          keyboardType: TextInputType.number,
-                                          textAlign: TextAlign.center,
+                                          controller: _noteCtrl,
                                           style: TextStyle(
-                                            fontSize: 42,
-                                            height: 1.1,
-                                            fontWeight: FontWeight.w800,
-                                            color:
-                                                Theme.of(context).brightness ==
-                                                    Brightness.dark
-                                                ? AppColors.emerald400
-                                                : AppColors.emerald700,
-                                            letterSpacing: -1,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? Colors.white
+                                                : AppColors.slate700,
                                           ),
-                                          inputFormatters: [
-                                            FilteringTextInputFormatter
-                                                .digitsOnly,
-                                            _ThousandSeparatorFormatter(),
-                                          ],
                                           decoration: InputDecoration(
-                                            border: InputBorder.none,
-                                            hintText: '0',
+                                            hintText: 'Thêm ghi chú...',
                                             hintStyle: TextStyle(
-                                              fontSize: 42,
-                                              height: 1.1,
-                                              fontWeight: FontWeight.w800,
-                                              color: AppColors.emerald400
-                                                  .withOpacity(0.5),
+                                              fontSize: 14,
+                                              fontStyle: FontStyle.italic,
+                                              color: AppColors.slate400,
                                             ),
+                                            border: InputBorder.none,
+                                            contentPadding: EdgeInsets.zero,
                                             isDense: true,
                                           ),
                                         ),
                                       ),
                                     ],
                                   ),
-                                ],
+                                ),
                               ),
-                            ),
-
-                            Divider(
-                              height: 1,
-                              thickness: 1,
-                              color: AppColors.slate200.withOpacity(0.4),
-                            ),
-
-                            // --- Metadata Area ---
-                            IntrinsicHeight(
-                              child: Row(
-                                children: [
-                                  // Note
-                                  Expanded(
-                                    flex: 1,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 4,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.edit_note_rounded,
-                                            size: 20,
-                                            color: AppColors.slate400,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: TextField(
-                                              controller: _noteCtrl,
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500,
-                                                color:
-                                                    Theme.of(
-                                                          context,
-                                                        ).brightness ==
-                                                        Brightness.dark
-                                                    ? Colors.white
-                                                    : AppColors.slate700,
-                                              ),
-                                              decoration: InputDecoration(
-                                                hintText: 'Thêm ghi chú...',
-                                                hintStyle: TextStyle(
-                                                  fontSize: 14,
-                                                  fontStyle: FontStyle.italic,
-                                                  fontWeight: FontWeight.w400,
-                                                  color: AppColors.slate400,
-                                                ),
-                                                border: InputBorder.none,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                              const SizedBox(width: 12),
+                              GestureDetector(
+                                onTap: () async {
+                                  FocusScope.of(context).unfocus();
+                                  final picked = await showCompactDatePicker(
+                                    context: context,
+                                    initialDate: _selectedDate,
+                                    firstDate: DateTime(2020),
+                                    lastDate: DateTime.now(),
+                                  );
+                                  if (picked != null) {
+                                    setState(() => _selectedDate = picked);
+                                  }
+                                },
+                                child: Container(
+                                  height: 44,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.emerald50,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: AppColors.emerald200.withOpacity(0.5)),
                                   ),
-
-                                  VerticalDivider(
-                                    width: 1,
-                                    thickness: 1,
-                                    color: AppColors.slate200.withOpacity(0.4),
-                                  ),
-
-                                  // Date
-                                  GestureDetector(
-                                    onTap: () async {
-                                      final picked =
-                                          await showCompactDatePicker(
-                                            context: context,
-                                            initialDate: _selectedDate,
-                                            firstDate: DateTime(2020),
-                                            lastDate: DateTime.now(),
-                                          );
-                                      if (picked != null) {
-                                        setState(() => _selectedDate = picked);
-                                      }
-                                    },
-                                    behavior: HitTestBehavior.opaque,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 20,
-                                        vertical: 16,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.calendar_month_rounded,
+                                        size: 18,
+                                        color: AppColors.emerald600,
                                       ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.calendar_month_rounded,
-                                            size: 18,
-                                            color: AppColors.emerald700,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            '${_selectedDate.day.toString().padLeft(2, "0")}/${_selectedDate.month.toString().padLeft(2, "0")}',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.emerald700,
-                                            ),
-                                          ),
-                                        ],
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '${_selectedDate.day.toString().padLeft(2, "0")}/${_selectedDate.month.toString().padLeft(2, "0")}/${_selectedDate.year}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.emerald600,
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ),
-                                ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                        ],
                       ),
 
-                      SizedBox(height: 14),
+                      SizedBox(height: 6),
 
                       // ── Panel 2: Category + Note + Date ──
                       Expanded(
@@ -429,15 +362,15 @@ class IncomePageState extends State<IncomePage> {
                                           ),
                                           child: Container(
                                             padding: EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 4,
+                                              horizontal: 16,
+                                              vertical: 8,
                                             ),
                                             decoration: BoxDecoration(
                                               color: _isEditMode
                                                   ? AppColors.emerald100
                                                   : AppColors.slate100,
                                               borderRadius:
-                                                  BorderRadius.circular(8),
+                                                  BorderRadius.circular(10),
                                             ),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
@@ -445,17 +378,17 @@ class IncomePageState extends State<IncomePage> {
                                                 if (!_isEditMode) ...[
                                                   Icon(
                                                     Icons.tune_rounded,
-                                                    size: 14,
+                                                    size: 16,
                                                     color: AppColors.slate500,
                                                   ),
-                                                  SizedBox(width: 4),
+                                                  SizedBox(width: 6),
                                                 ],
                                                 Text(
                                                   _isEditMode
                                                       ? 'Xong'
                                                       : 'Chỉnh sửa',
                                                   style: TextStyle(
-                                                    fontSize: 12,
+                                                    fontSize: 14,
                                                     fontWeight: FontWeight.w600,
                                                     color: _isEditMode
                                                         ? AppColors.emerald600
@@ -789,16 +722,16 @@ class IncomePageState extends State<IncomePage> {
           child: Material(
             color: Colors.transparent,
             child: Container(
-              margin: EdgeInsets.symmetric(horizontal: 24),
-              padding: EdgeInsets.all(24),
+              margin: EdgeInsets.symmetric(horizontal: 32),
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 20),
               decoration: BoxDecoration(
                 color: AppColors.cardBg,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black12,
-                    blurRadius: 24,
-                    offset: Offset(0, 10),
+                    blurRadius: 16,
+                    offset: Offset(0, 8),
                   ),
                 ],
               ),
@@ -808,17 +741,21 @@ class IncomePageState extends State<IncomePage> {
                   Text(
                     'Tùy chỉnh danh mục',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: AppColors.slate800,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: 4),
                   Text(
                     '${cat.emoji} ${cat.label}',
-                    style: TextStyle(fontSize: 16, color: AppColors.slate600),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.slate500,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                  SizedBox(height: 32),
+                  SizedBox(height: 20),
                   Row(
                     children: [
                       Expanded(
@@ -838,10 +775,10 @@ class IncomePageState extends State<IncomePage> {
                           },
                           borderRadius: BorderRadius.circular(16),
                           child: Ink(
-                            padding: EdgeInsets.symmetric(vertical: 16),
+                            padding: EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: AppColors.red50,
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             child: Column(
                               children: [
@@ -895,10 +832,10 @@ class IncomePageState extends State<IncomePage> {
                           },
                           borderRadius: BorderRadius.circular(16),
                           child: Ink(
-                            padding: EdgeInsets.symmetric(vertical: 16),
+                            padding: EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: AppColors.emerald50,
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             child: Column(
                               children: [
