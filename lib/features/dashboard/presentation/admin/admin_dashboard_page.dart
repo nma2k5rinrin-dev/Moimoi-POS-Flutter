@@ -259,71 +259,37 @@ class _FilterChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive
-              ? activeBg
-              : (isHighlighted ? AppColors.orange50 : AppColors.cardBg),
-          borderRadius: BorderRadius.circular(12),
+          color: isActive ? activeColor : Colors.white,
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isActive
-                ? activeColor
-                : (isHighlighted ? Color(0xFFFDE68A) : AppColors.dividerColor),
-            width: isActive ? 1.5 : 1,
+            color: isActive ? activeColor : AppColors.slate200,
+            width: 1,
           ),
           boxShadow: isActive
-              ? [
-                  BoxShadow(
-                    color: activeColor.withValues(alpha: 0.15),
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
-                  ),
-                ]
+              ? [BoxShadow(color: activeColor.withValues(alpha: 0.2), blurRadius: 4, offset: Offset(0, 2))]
               : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (icon != null) ...[
+            if (icon != null && !isActive) ...[
               Icon(
                 icon,
                 size: 14,
-                color: isActive
-                    ? activeColor
-                    : (isHighlighted ? Color(0xFFF59E0B) : Color(0xFF9CA3AF)),
+                color: Color(0xFFF59E0B),
               ),
-              SizedBox(width: 5),
+              SizedBox(width: 4),
             ],
             Text(
-              label,
+              '$label $count',
               style: TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isActive
-                    ? activeColor
-                    : (isHighlighted ? Color(0xFFD97706) : Color(0xFF6B7280)),
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                color: isActive ? Colors.white : AppColors.slate600,
               ),
             ),
-            if (count > 0) ...[
-              SizedBox(width: 6),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isActive
-                      ? activeColor
-                      : (isHighlighted ? Color(0xFFF59E0B) : Color(0xFF9CA3AF)),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '$count',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),
@@ -466,64 +432,63 @@ class _PortraitLayout extends StatelessWidget {
                   padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Color(0xFFF0FDF4), Color(0xFFECFDF5), Colors.white],
+                      colors: [Color(0xFFB5E4CA), Color(0xFFD1F2E0)], // Vibrant mint gradient
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: AppColors.emerald100),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
-                      BoxShadow(color: AppColors.emerald500.withValues(alpha: 0.06), blurRadius: 12, offset: Offset(0, 2)),
+                      BoxShadow(color: AppColors.emerald500.withValues(alpha: 0.15), blurRadius: 10, offset: Offset(0, 3)),
                     ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Container(
-                            width: 36, height: 36,
-                            decoration: BoxDecoration(color: AppColors.emerald500, borderRadius: BorderRadius.circular(10)),
+                            width: 42, height: 42,
+                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
                             alignment: Alignment.center,
-                            child: Icon(Icons.account_balance_wallet, size: 18, color: Colors.white),
+                            child: Icon(Icons.account_balance_wallet_outlined, size: 24, color: AppColors.emerald600),
                           ),
-                          SizedBox(width: 10),
+                          SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Doanh thu Premium', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.slate500)),
+                                Text('Doanh thu Premium', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.slate700)),
                                 SizedBox(height: 2),
-                                Text(_formatCurrency(totalRevenue), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.slate800)),
+                                Text(_formatCurrency(totalRevenue), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.slate900)),
                               ],
                             ),
                           ),
                         ],
                       ),
-                      SizedBox(height: 12),
-                      Container(height: 1, color: AppColors.emerald100),
-                      SizedBox(height: 12),
+                      SizedBox(height: 16),
+                      // Divider line has been removed to match the image, using text separation instead
                       Row(
                         children: [
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Gói Năm ($yearlyCount)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: AppColors.slate400)),
+                                Text('Gói Năm ($yearlyCount):', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.slate700)),
                                 SizedBox(height: 2),
-                                Text(_formatCurrency(yearlyRevenue), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                                Text(_formatCurrency(yearlyRevenue), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.slate900)),
                               ],
                             ),
                           ),
-                          Container(width: 1, height: 28, color: AppColors.emerald100),
+                          Container(width: 1, height: 28, color: AppColors.emerald500.withValues(alpha: 0.2)),
                           SizedBox(width: 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Gói Tháng ($monthlyCount)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: AppColors.slate400)),
+                                Text('Gói Tháng ($monthlyCount):', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.slate700)),
                                 SizedBox(height: 2),
-                                Text(_formatCurrency(monthlyRevenue), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                                Text(_formatCurrency(monthlyRevenue), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.slate900)),
                               ],
                             ),
                           ),
@@ -535,27 +500,112 @@ class _PortraitLayout extends StatelessWidget {
                 SizedBox(height: 12),
 
                 // ── 3-column Stat Row ──
-                Row(
-                  children: [
-                    Expanded(child: _StatCard(
-                      icon: Icons.storefront,
-                      iconBg: AppColors.emerald50, iconColor: AppColors.emerald500,
-                      value: '$totalStores', label: 'Cửa hàng',
-                      subtitle: '$premiumCount Premium • $basicCount Basic',
-                    )),
-                    SizedBox(width: 8),
-                    Expanded(child: _StatCard(
-                      icon: Icons.group,
-                      iconBg: Color(0xFFEEF2FF), iconColor: Color(0xFF6366F1),
-                      value: '$totalStaff', label: 'Nhân viên',
-                    )),
-                    SizedBox(width: 8),
-                    Expanded(child: _StatCard(
-                      icon: Icons.wifi,
-                      iconBg: Color(0xFFEFF6FF), iconColor: Color(0xFF3B82F6),
-                      value: '$onlineCount/$totalStores', label: 'Đang online',
-                    )),
-                  ],
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Cửa hàng (Width ~50%)
+                      Expanded(
+                        flex: 11,
+                        child: Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.emerald500,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.storefront, size: 20, color: Colors.white),
+                                  SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text('$totalStores Cửa hàng', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 4),
+                              Text('$premiumCount Premium • $basicCount Basic', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.9))),
+                              SizedBox(height: 10),
+                              // Progress bar
+                              Container(
+                                height: 6,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                alignment: Alignment.centerLeft,
+                                child: FractionallySizedBox(
+                                  widthFactor: totalStores > 0 ? (premiumCount / totalStores) : 0,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      // Nhân viên (Width ~25%)
+                      Expanded(
+                        flex: 6,
+                        child: Container(
+                          padding: EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF4338CA), // Deep Indigo
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.group, size: 18, color: Colors.white),
+                                ],
+                              ),
+                              SizedBox(height: 6),
+                              Text('$totalStaff', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                              Text('Nhân viên', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.9))),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      // Online (Width ~25%)
+                      Expanded(
+                        flex: 6,
+                        child: Container(
+                          padding: EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF3B82F6), // Blue
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.wifi, size: 18, color: Colors.white),
+                                ],
+                              ),
+                              SizedBox(height: 6),
+                              Text('$onlineCount/$totalStores', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                              Text('Online', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.9))),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -598,17 +648,17 @@ class _PortraitLayout extends StatelessWidget {
                   child: Row(
                     children: [
                       _FilterChip(label: 'Tất cả', count: allEntries.length, isActive: filter == 'all',
-                        onTap: () => onFilterChanged('all'), activeColor: AppColors.emerald500, activeBg: AppColors.emerald50),
+                        onTap: () => onFilterChanged('all'), activeColor: AppColors.emerald500, activeBg: AppColors.emerald500),
                       SizedBox(width: 8),
                       _FilterChip(label: 'Cần chú ý', count: attentionCount, isActive: filter == 'attention',
-                        onTap: () => onFilterChanged('attention'), activeColor: Color(0xFFD97706), activeBg: AppColors.orange50,
-                        icon: Icons.warning_amber_rounded, highlight: attentionCount > 0),
+                        onTap: () => onFilterChanged('attention'), activeColor: AppColors.emerald500, activeBg: AppColors.emerald500,
+                        highlight: attentionCount > 0),
                       SizedBox(width: 8),
                       _FilterChip(label: 'Online', count: onlineCount, isActive: filter == 'online',
-                        onTap: () => onFilterChanged('online'), activeColor: AppColors.emerald500, activeBg: AppColors.emerald50),
+                        onTap: () => onFilterChanged('online'), activeColor: AppColors.emerald500, activeBg: AppColors.emerald500),
                       SizedBox(width: 8),
                       _FilterChip(label: 'Sắp hết hạn', count: expiringCount, isActive: filter == 'expiring',
-                        onTap: () => onFilterChanged('expiring'), activeColor: Color(0xFFEF4444), activeBg: AppColors.red50,
+                        onTap: () => onFilterChanged('expiring'), activeColor: AppColors.emerald500, activeBg: AppColors.emerald500,
                         highlight: expiringCount > 0),
                     ],
                   ),
@@ -1270,128 +1320,139 @@ class _StoreCard extends StatelessWidget {
                     );
                   },
                 ),
-                SizedBox(width: 10),
+                SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        storeName,
-                        style: TextStyle(
-                          fontSize: nameSize,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.slate800,
-                          height: 1.2,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 4),
-                      // Status + Tier in one row
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Online/Offline dot
-                          Container(
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: isOnline ? AppColors.emerald500 : Color(0xFFEF4444),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            isOnline ? 'Hoạt động' : 'Ngoại tuyến',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                              color: isOnline ? AppColors.emerald600 : Color(0xFFEF4444),
+                          Expanded(
+                            child: Text(
+                              storeName,
+                              style: TextStyle(
+                                fontSize: nameSize + 1,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.slate900,
+                                height: 1.2,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           SizedBox(width: 8),
-                          // Tier badge
                           if (hasPendingUpgrade)
-                            _badge('⏳', 'Chờ duyệt', Color(0xFFD97706), AppColors.orange50)
+                            _badge('', 'Chờ duyệt', Color(0xFFD97706), AppColors.orange50)
                           else if (isPremium)
-                            _badge('👑', 'Premium', AppColors.emerald500, AppColors.emerald50)
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [Color(0xFFFDE68A), Color(0xFFF59E0B)], // Gold gradient
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: [BoxShadow(color: Color(0xFFF59E0B).withValues(alpha: 0.3), blurRadius: 4, offset: Offset(0, 2))],
+                              ),
+                              child: Text('Premium', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+                            )
                           else
-                            _badge('', 'Cơ bản', Color(0xFF9CA3AF), Color(0xFFF3F4F6)),
+                            _badge('', 'Cơ bản', Color(0xFF6B7280), Color(0xFFF3F4F6)),
                         ],
+                      ),
+                      SizedBox(height: 6),
+                      // Online/Offline badge
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isOnline ? AppColors.emerald50 : Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          isOnline ? 'Online' : 'Ngoại tuyến',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: isOnline ? AppColors.emerald600 : Color(0xFFEF4444),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-            SizedBox(height: compact ? 10 : 14),
+            SizedBox(height: 16),
 
-            // ── Stats Row ──
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.slate50,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  // Created date
-                  Expanded(
-                    child: _statChip(
-                      Icons.calendar_today,
-                      _formatDate(info.createdAt ?? DateTime.now()),
-                      AppColors.slate500,
-                    ),
-                  ),
-                  Container(
-                    width: 1,
-                    height: 16,
-                    color: AppColors.slate200,
-                  ),
-                  // Staff count
-                  Expanded(
-                    child: _statChip(
-                      Icons.people_outline,
-                      '$staffCount NV',
-                      AppColors.slate500,
-                    ),
-                  ),
-                  if (offlineDays > 0) ...[
-                    Container(
-                      width: 1,
-                      height: 16,
-                      color: AppColors.slate200,
-                    ),
-                    // Offline days
-                    Expanded(
-                      child: _statChip(
-                        Icons.wifi_off,
-                        '$offlineDays ngày',
-                        Color(0xFFEF4444),
+            // ── Body: Expiry & Revenue ──
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                RichText(
+                  text: TextSpan(
+                    text: 'Hết hạn: ',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate500),
+                    children: [
+                      TextSpan(
+                        text: info.daysUntilExpiry != null ? '${_formatDate(DateTime.now().add(Duration(days: info.daysUntilExpiry!)))}' : 'Không có',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate800),
                       ),
+                    ],
+                  ),
+                ),
+                RichText(
+                  text: TextSpan(
+                    text: 'Doanh thu: ',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate500),
+                    children: [
+                      TextSpan(
+                        text: 'N/A', // Assuming no per-store revenue info yet
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate800),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+
+            // ── Footer: Last online & Action Buttons ──
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  info.lastLoginAt != null ? _formatDate(info.lastLoginAt!) : 'Chưa đăng nhập',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.slate400),
+                ),
+                Row(
+                  children: [
+                    // Gia hạn button
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: AppColors.emerald500),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text('Gia hạn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.emerald600)),
+                    ),
+                    SizedBox(width: 8),
+                    // Chi tiết button
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.emerald500,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [BoxShadow(color: AppColors.emerald500.withValues(alpha: 0.3), blurRadius: 4, offset: Offset(0, 2))],
+                      ),
+                      child: Text('Chi tiết', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
                     ),
                   ],
-                ],
-              ),
+                ),
+              ],
             ),
-
-            // ── Premium expiry ──
-            if (isPremium) ...[
-              SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(Icons.workspace_premium, size: 12, color: AppColors.emerald500),
-                  SizedBox(width: 4),
-                  Text(
-                    'Còn ${info.daysUntilExpiry ?? 0} ngày',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.emerald600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ],
         ),
       ),
