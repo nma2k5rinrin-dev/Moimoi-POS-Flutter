@@ -528,11 +528,13 @@ class _PortraitLayout extends StatelessWidget {
                           ),
                         ],
                       ),
-                      ),
                     ],
                   ),
                 ),
-                SizedBox(height: 12),
+              ],
+            ),
+          ),
+          SizedBox(height: 12),
 
                 // ── 3-column Stat Row ──
                 IntrinsicHeight(
@@ -846,6 +848,7 @@ class _LandscapeLayout extends StatelessWidget {
   final VoidCallback onPickDateRange;
   final int totalRevenue, yearlyRevenue, monthlyRevenue;
   final int yearlyCount, monthlyCount;
+  final List<double> revenuePoints;
 
   const _LandscapeLayout({
     required this.store,
@@ -864,6 +867,7 @@ class _LandscapeLayout extends StatelessWidget {
     required this.monthlyRevenue,
     required this.yearlyCount,
     required this.monthlyCount,
+    required this.revenuePoints,
   });
 
   @override
