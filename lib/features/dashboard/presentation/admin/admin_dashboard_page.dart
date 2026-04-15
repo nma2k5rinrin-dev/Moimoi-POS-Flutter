@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:ui';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:moimoi_pos/features/settings/logic/management_store_standalone.dart';
@@ -143,6 +144,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         final yearlyCount = payments.where((p) => p.months >= 12).length;
         final monthlyCount = payments.where((p) => p.months < 12).length;
 
+        // Calculate daily revenue points for the sparkline chart
+        final dayCount = _dateRange.end.difference(_dateRange.start).inDays + 1;
+        final List<double> revenuePoints = List.filled(dayCount > 0 ? dayCount : 1, 0.0);
+        for (final p in payments) {
+          final idx = p.paidAt.difference(_dateRange.start).inDays;
+          if (idx >= 0 && idx < revenuePoints.length) {
+            revenuePoints[idx] += p.amount;
+          }
+        }
+
         return Scaffold(
           backgroundColor: AppColors.scaffoldBg,
           body: LayoutBuilder(
@@ -166,6 +177,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   monthlyRevenue: monthlyRevenue,
                   yearlyCount: yearlyCount,
                   monthlyCount: monthlyCount,
+                  revenuePoints: revenuePoints,
                 );
               }
               return _PortraitLayout(
@@ -189,6 +201,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 monthlyRevenue: monthlyRevenue,
                 yearlyCount: yearlyCount,
                 monthlyCount: monthlyCount,
+                revenuePoints: revenuePoints,
               );
             },
           ),
@@ -314,6 +327,7 @@ class _PortraitLayout extends StatelessWidget {
   final VoidCallback onPickDateRange;
   final int totalRevenue, yearlyRevenue, monthlyRevenue;
   final int yearlyCount, monthlyCount;
+  final List<double> revenuePoints;
 
   const _PortraitLayout({
     required this.store,
@@ -336,6 +350,7 @@ class _PortraitLayout extends StatelessWidget {
     required this.monthlyRevenue,
     required this.yearlyCount,
     required this.monthlyCount,
+    required this.revenuePoints,
   });
 
   @override
@@ -429,7 +444,7 @@ class _PortraitLayout extends StatelessWidget {
                 // ── Revenue Card ──
                 Container(
                   width: double.infinity,
-                  padding: EdgeInsets.all(16),
+                  clipBehavior: Clip.hardEdge,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [Color(0xFFB5E4CA), Color(0xFFD1F2E0)], // Vibrant mint gradient
@@ -441,10 +456,29 @@ class _PortraitLayout extends StatelessWidget {
                       BoxShadow(color: AppColors.emerald500.withValues(alpha: 0.15), blurRadius: 10, offset: Offset(0, 3)),
                     ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Stack(
                     children: [
-                      Row(
+                      // Background Sparkline
+                      Positioned.fill(
+                        bottom: 0,
+                        child: Padding(
+                          padding: EdgeInsets.only(top: 40), 
+                          child: CustomPaint(
+                            painter: _SparklinePainter(
+                              data: revenuePoints,
+                                // Using a slightly darker mint color for the line
+                              color: Color(0xFF10B981).withValues(alpha: 0.6), 
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Foreground Content
+                      Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Container(
@@ -493,6 +527,7 @@ class _PortraitLayout extends StatelessWidget {
                             ),
                           ),
                         ],
+                      ),
                       ),
                     ],
                   ),
@@ -1388,30 +1423,39 @@ class _StoreCard extends StatelessWidget {
 
             // ── Body: Expiry & Revenue ──
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                RichText(
-                  text: TextSpan(
-                    text: 'Hết hạn: ',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate500),
-                    children: [
-                      TextSpan(
-                        text: info.daysUntilExpiry != null ? '${_formatDate(DateTime.now().add(Duration(days: info.daysUntilExpiry!)))}' : 'Không có',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate800),
-                      ),
-                    ],
+                Expanded(
+                  child: RichText(
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    text: TextSpan(
+                      text: 'Hết hạn: ',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate500),
+                      children: [
+                        TextSpan(
+                          text: info.daysUntilExpiry != null ? '${_formatDate(DateTime.now().add(Duration(days: info.daysUntilExpiry!)))}' : 'Không có',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate800),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                RichText(
-                  text: TextSpan(
-                    text: 'Doanh thu: ',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate500),
-                    children: [
-                      TextSpan(
-                        text: 'N/A', // Assuming no per-store revenue info yet
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate800),
-                      ),
-                    ],
+                SizedBox(width: 8),
+                Expanded(
+                  child: RichText(
+                    textAlign: TextAlign.right,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    text: TextSpan(
+                      text: 'DT: ',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate500),
+                      children: [
+                        TextSpan(
+                          text: 'N/A', // Assuming no per-store revenue info yet
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate800),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -1422,10 +1466,15 @@ class _StoreCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  info.lastLoginAt != null ? _formatDate(info.lastLoginAt!) : 'Chưa đăng nhập',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.slate400),
+                Expanded(
+                  child: Text(
+                    info.lastLoginAt != null ? _formatDate(info.lastLoginAt!) : 'Chưa đăng nhập',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.slate400),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
+                SizedBox(width: 8),
                 Row(
                   children: [
                     // Gia hạn button
@@ -2920,3 +2969,67 @@ class _StoreDetailPage extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════
 // BROADCAST DIALOG
 // ═══════════════════════════════════════════════════════════
+
+class _SparklinePainter extends CustomPainter {
+  final List<double> data;
+  final Color color;
+
+  _SparklinePainter({required this.data, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (data.isEmpty || data.every((val) => val == 0)) return;
+
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        colors: [color.withValues(alpha: 0.4), color.withValues(alpha: 0.0)],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..style = PaintingStyle.fill;
+
+    final double maxVal = data.reduce(max) == 0 ? 1 : data.reduce(max);
+    final double minVal = data.reduce(min);
+
+    final double range = maxVal - minVal;
+    
+    final path = Path();
+    final fillPath = Path();
+
+    final stepX = data.length > 1 ? size.width / (data.length - 1) : size.width;
+
+    for (int i = 0; i < data.length; i++) {
+      final x = i * stepX;
+      // Normalizing y between 0.1 * height and 0.9 * height 
+      final normalizedY = range == 0 ? 0.5 : (data[i] - minVal) / range;
+      final y = size.height - (normalizedY * size.height * 0.8 + size.height * 0.1); 
+
+      if (i == 0) {
+        path.moveTo(x, y);
+        fillPath.moveTo(x, size.height);
+        fillPath.lineTo(x, y);
+      } else {
+        path.lineTo(x, y);
+        fillPath.lineTo(x, y);
+      }
+    }
+    
+    if (data.length > 1) {
+      fillPath.lineTo(size.width, size.height);
+      fillPath.close();
+      canvas.drawPath(fillPath, fillPaint);
+    }
+    
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SparklinePainter oldDelegate) => 
+      oldDelegate.data != data || oldDelegate.color != color;
+}
