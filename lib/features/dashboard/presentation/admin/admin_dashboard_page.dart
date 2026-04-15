@@ -32,7 +32,8 @@ class AdminDashboardPage extends StatefulWidget {
 }
 
 class _AdminDashboardPageState extends State<AdminDashboardPage> {
-  String _filter = 'all'; // 'all' | 'pending_vip'
+  String _filter = 'all'; // 'all' | 'attention' | 'online' | 'expiring'
+  String _searchQuery = '';
 
   // Date range state — default: first of current month to today
   late DateTimeRange _dateRange;
@@ -76,12 +77,59 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             .where((e) => e.key != 'sadmin')
             .toList();
 
-        final filteredEntries = storeEntries;
-
         final totalStores = storeEntries.length;
         final totalStaff = context.watch<ManagementStore>().users.where((u) => u.role != 'sadmin' && u.role != 'admin').length;
-        final totalProducts = 0; // Product count not loaded in sadmin view
-        final pendingVipCount = 0;
+        final totalProducts = 0;
+
+        // ── Online count ──
+        final users = context.watch<ManagementStore>().users;
+        final onlineCount = storeEntries.where((e) {
+          final admin = users.where((u) => u.username == e.key).firstOrNull;
+          return admin?.isOnline ?? false;
+        }).length;
+
+        // ── Expiring soon count (≤7 days) ──
+        final expiringCount = storeEntries.where((e) =>
+            e.value.isPremium && (e.value.daysUntilExpiry ?? 999) <= 7).length;
+
+        // ── Attention count (offline + expiring) ──
+        final attentionEntries = storeEntries.where((e) {
+          final admin = users.where((u) => u.username == e.key).firstOrNull;
+          final isOffline = !(admin?.isOnline ?? false);
+          final isExpiring = e.value.isPremium && (e.value.daysUntilExpiry ?? 999) <= 7;
+          return isOffline || isExpiring;
+        }).toList();
+
+        // ── Apply filters ──
+        List<MapEntry<String, StoreInfoModel>> filteredEntries;
+        switch (_filter) {
+          case 'online':
+            filteredEntries = storeEntries.where((e) {
+              final admin = users.where((u) => u.username == e.key).firstOrNull;
+              return admin?.isOnline ?? false;
+            }).toList();
+            break;
+          case 'expiring':
+            filteredEntries = storeEntries.where((e) =>
+                e.value.isPremium && (e.value.daysUntilExpiry ?? 999) <= 7).toList();
+            break;
+          case 'attention':
+            filteredEntries = attentionEntries;
+            break;
+          default:
+            filteredEntries = storeEntries;
+        }
+
+        // ── Apply search ──
+        if (_searchQuery.isNotEmpty) {
+          final q = _searchQuery.toLowerCase();
+          filteredEntries = filteredEntries.where((e) {
+            final name = e.value.name.toLowerCase();
+            final phone = e.value.phone.toLowerCase();
+            final id = e.key.toLowerCase();
+            return name.contains(q) || phone.contains(q) || id.contains(q);
+          }).toList();
+        }
 
         // ── Date-filtered payment metrics ──
         final payments = _filteredPayments(store);
@@ -108,7 +156,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   totalStores: totalStores,
                   totalStaff: totalStaff,
                   totalProducts: totalProducts,
-                  pendingVipCount: pendingVipCount,
+                  pendingVipCount: expiringCount,
                   filter: _filter,
                   onFilterChanged: (f) => setState(() => _filter = f),
                   dateRange: _dateRange,
@@ -127,9 +175,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 totalStores: totalStores,
                 totalStaff: totalStaff,
                 totalProducts: totalProducts,
-                pendingVipCount: pendingVipCount,
+                onlineCount: onlineCount,
+                expiringCount: expiringCount,
+                attentionCount: attentionEntries.length,
                 filter: _filter,
                 onFilterChanged: (f) => setState(() => _filter = f),
+                searchQuery: _searchQuery,
+                onSearchChanged: (q) => setState(() => _searchQuery = q),
                 dateRange: _dateRange,
                 onPickDateRange: _pickDateRange,
                 totalRevenue: totalRevenue,
@@ -280,15 +332,18 @@ class _FilterChip extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════
-// PORTRAIT LAYOUT
+// PORTRAIT LAYOUT — Fintech-style Dashboard
 // ═══════════════════════════════════════════════════════════
 class _PortraitLayout extends StatelessWidget {
   final ManagementStore store;
   final List<MapEntry<String, StoreInfoModel>> storeEntries;
   final List<MapEntry<String, StoreInfoModel>> allEntries;
-  final int totalStores, totalStaff, totalProducts, pendingVipCount;
+  final int totalStores, totalStaff, totalProducts;
+  final int onlineCount, expiringCount, attentionCount;
   final String filter;
   final ValueChanged<String> onFilterChanged;
+  final String searchQuery;
+  final ValueChanged<String> onSearchChanged;
   final DateTimeRange dateRange;
   final VoidCallback onPickDateRange;
   final int totalRevenue, yearlyRevenue, monthlyRevenue;
@@ -301,9 +356,13 @@ class _PortraitLayout extends StatelessWidget {
     required this.totalStores,
     required this.totalStaff,
     required this.totalProducts,
-    required this.pendingVipCount,
+    required this.onlineCount,
+    required this.expiringCount,
+    required this.attentionCount,
     required this.filter,
     required this.onFilterChanged,
+    required this.searchQuery,
+    required this.onSearchChanged,
     required this.dateRange,
     required this.onPickDateRange,
     required this.totalRevenue,
@@ -315,11 +374,8 @@ class _PortraitLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ── Computed values for overview cards ──
     final premiumCount = allEntries.where((e) => e.value.isPremium).length;
     final basicCount = allEntries.length - premiumCount;
-
-    final allStaffCount = context.watch<ManagementStore>().users.where((u) => u.role != 'sadmin').length;
 
     return CustomScrollView(
       slivers: [
@@ -332,20 +388,12 @@ class _PortraitLayout extends StatelessWidget {
               children: [
                 Text(
                   'Quản lý tài khoản hệ thống',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.slate800,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.slate800),
                 ),
                 SizedBox(height: 2),
                 Text(
                   'Super Admin Dashboard',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.slate400,
-                  ),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate400),
                 ),
               ],
             ),
@@ -355,10 +403,10 @@ class _PortraitLayout extends StatelessWidget {
         // ── Overview Section ──
         SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
+            padding: EdgeInsets.fromLTRB(20, 14, 20, 0),
             child: Column(
               children: [
-                // Date picker (interactive)
+                // Date picker
                 GestureDetector(
                   onTap: onPickDateRange,
                   child: Container(
@@ -372,338 +420,141 @@ class _PortraitLayout extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.calendar_today_outlined,
-                          size: 14,
-                          color: AppColors.slate400,
-                        ),
+                        Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.slate400),
                         SizedBox(width: 8),
                         Text(
                           '${_formatDate(dateRange.start)} - ${_formatDate(dateRange.end)}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.slate500,
-                          ),
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.slate500),
                         ),
                         SizedBox(width: 6),
-                        Icon(
-                          Icons.keyboard_arrow_down,
-                          size: 16,
-                          color: AppColors.slate400,
-                        ),
+                        Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.slate400),
                       ],
                     ),
                   ),
                 ),
-                SizedBox(height: 16),
+                SizedBox(height: 12),
 
-                // Revenue Card
+                // ── Alert Card ──
+                if (expiringCount > 0) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.red50,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Color(0xFFFCA5A5)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, size: 20, color: Color(0xFFEF4444)),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Cảnh báo: $expiringCount cửa hàng sắp hết hạn trong 7 ngày',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFDC2626)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                ],
+
+                // ── Revenue Card ──
                 Container(
                   width: double.infinity,
                   padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.cardBg,
+                    gradient: LinearGradient(
+                      colors: [Color(0xFFF0FDF4), Color(0xFFECFDF5), Colors.white],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.emerald100),
                     boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 12,
-                        offset: Offset(0, 2),
-                      ),
+                      BoxShadow(color: AppColors.emerald500.withValues(alpha: 0.06), blurRadius: 12, offset: Offset(0, 2)),
                     ],
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Icon
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFFF59E0B), Color(0xFFEA580C)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                      Row(
+                        children: [
+                          Container(
+                            width: 36, height: 36,
+                            decoration: BoxDecoration(color: AppColors.emerald500, borderRadius: BorderRadius.circular(10)),
+                            alignment: Alignment.center,
+                            child: Icon(Icons.account_balance_wallet, size: 18, color: Colors.white),
                           ),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        alignment: Alignment.center,
-                        child: Icon(
-                          Icons.account_balance_wallet,
-                          size: 24,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      // Info
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Doanh thu gói Premium',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.slate400,
-                              ),
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              _formatCurrency(totalRevenue),
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.slate800,
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                            Container(height: 1, color: AppColors.inputBg),
-                            SizedBox(height: 8),
-                            Row(
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Gói Năm ($yearlyCount)',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w500,
-                                          color: AppColors.slate400,
-                                        ),
-                                      ),
-                                      SizedBox(height: 2),
-                                      Text(
-                                        _formatCurrency(yearlyRevenue),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.slate800,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Gói Tháng ($monthlyCount)',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w500,
-                                          color: AppColors.slate400,
-                                        ),
-                                      ),
-                                      SizedBox(height: 2),
-                                      Text(
-                                        _formatCurrency(monthlyRevenue),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.slate800,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                Text('Doanh thu Premium', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.slate500)),
+                                SizedBox(height: 2),
+                                Text(_formatCurrency(totalRevenue), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.slate800)),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+                      Container(height: 1, color: AppColors.emerald100),
+                      SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Gói Năm ($yearlyCount)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: AppColors.slate400)),
+                                SizedBox(height: 2),
+                                Text(_formatCurrency(yearlyRevenue), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                              ],
+                            ),
+                          ),
+                          Container(width: 1, height: 28, color: AppColors.emerald100),
+                          SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Gói Tháng ($monthlyCount)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: AppColors.slate400)),
+                                SizedBox(height: 2),
+                                Text(_formatCurrency(monthlyRevenue), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
                 SizedBox(height: 12),
 
-                // 2-column stat grid: Stores + Staff
+                // ── 3-column Stat Row ──
                 Row(
                   children: [
-                    // Store Card
-                    Expanded(
-                      child: Container(
-                        padding: EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.cardBg,
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 12,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.emerald50,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Icon(
-                                    Icons.storefront,
-                                    size: 18,
-                                    color: AppColors.emerald500,
-                                  ),
-                                ),
-                                Text(
-                                  '$totalStores',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.emerald500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Cửa hàng',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.slate400,
-                              ),
-                            ),
-                            SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Text(
-                                  '$premiumCount Premium',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF8B5CF6),
-                                  ),
-                                ),
-                                Text(
-                                  ' • ',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: AppColors.dividerColor,
-                                  ),
-                                ),
-                                Text(
-                                  '$basicCount Basic',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.slate500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 6),
-                            // Premium/Basic ratio bar
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(3),
-                              child: Row(
-                                children: [
-                                  if (premiumCount > 0)
-                                    Expanded(
-                                      flex: premiumCount,
-                                      child: Container(
-                                        height: 6,
-                                        color: Color(0xFF8B5CF6),
-                                      ),
-                                    ),
-                                  if (basicCount > 0)
-                                    Expanded(
-                                      flex: basicCount,
-                                      child: Container(
-                                        height: 6,
-                                        color: AppColors.dividerColor,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    // Staff Card
-                    Expanded(
-                      child: Container(
-                        padding: EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.cardBg,
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 12,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.blue50,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Icon(
-                                    Icons.group,
-                                    size: 18,
-                                    color: Color(0xFF6366F1),
-                                  ),
-                                ),
-                                Text(
-                                  '$allStaffCount',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF6366F1),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Nhân viên',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.slate400,
-                              ),
-                            ),
-                            SizedBox(height: 6),
-                            Text(
-                              'Tổng nhân viên tất cả cửa hàng',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.slate500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    Expanded(child: _StatCard(
+                      icon: Icons.storefront,
+                      iconBg: AppColors.emerald50, iconColor: AppColors.emerald500,
+                      value: '$totalStores', label: 'Cửa hàng',
+                      subtitle: '$premiumCount Premium • $basicCount Basic',
+                    )),
+                    SizedBox(width: 8),
+                    Expanded(child: _StatCard(
+                      icon: Icons.group,
+                      iconBg: Color(0xFFEEF2FF), iconColor: Color(0xFF6366F1),
+                      value: '$totalStaff', label: 'Nhân viên',
+                    )),
+                    SizedBox(width: 8),
+                    Expanded(child: _StatCard(
+                      icon: Icons.wifi,
+                      iconBg: Color(0xFFEFF6FF), iconColor: Color(0xFF3B82F6),
+                      value: '$onlineCount/$totalStores', label: 'Đang online',
+                    )),
                   ],
                 ),
               ],
@@ -711,54 +562,95 @@ class _PortraitLayout extends StatelessWidget {
           ),
         ),
 
-        // ── Section Title + Filter ──
+        // ── Section Title + Search + Filters ──
         SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
+            padding: EdgeInsets.fromLTRB(20, 18, 20, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Danh sách cửa hàng',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.slate800,
+                Text('Danh sách cửa hàng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                SizedBox(height: 10),
+                // Search bar
+                Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBg,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.dividerColor),
+                  ),
+                  child: TextField(
+                    onChanged: onSearchChanged,
+                    style: TextStyle(fontSize: 13, color: AppColors.slate800),
+                    decoration: InputDecoration(
+                      hintText: 'Tìm tên, SĐT chủ shop...',
+                      hintStyle: TextStyle(fontSize: 13, color: AppColors.slate400),
+                      prefixIcon: Icon(Icons.search, size: 18, color: AppColors.slate400),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 10),
+                    ),
                   ),
                 ),
                 SizedBox(height: 10),
-                _FilterChipsRow(
-                  filter: filter,
-                  totalCount: allEntries.length,
-                  pendingVipCount: pendingVipCount,
-                  onFilterChanged: onFilterChanged,
+                // Filter chips
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _FilterChip(label: 'Tất cả', count: allEntries.length, isActive: filter == 'all',
+                        onTap: () => onFilterChanged('all'), activeColor: AppColors.emerald500, activeBg: AppColors.emerald50),
+                      SizedBox(width: 8),
+                      _FilterChip(label: 'Cần chú ý', count: attentionCount, isActive: filter == 'attention',
+                        onTap: () => onFilterChanged('attention'), activeColor: Color(0xFFD97706), activeBg: AppColors.orange50,
+                        icon: Icons.warning_amber_rounded, highlight: attentionCount > 0),
+                      SizedBox(width: 8),
+                      _FilterChip(label: 'Online', count: onlineCount, isActive: filter == 'online',
+                        onTap: () => onFilterChanged('online'), activeColor: AppColors.emerald500, activeBg: AppColors.emerald50),
+                      SizedBox(width: 8),
+                      _FilterChip(label: 'Sắp hết hạn', count: expiringCount, isActive: filter == 'expiring',
+                        onTap: () => onFilterChanged('expiring'), activeColor: Color(0xFFEF4444), activeBg: AppColors.red50,
+                        highlight: expiringCount > 0),
+                    ],
+                  ),
                 ),
+                SizedBox(height: 12),
               ],
             ),
           ),
         ),
 
-        // ── Main Content Area ──
-
-        // ── 2-Column Grid ──
+        // ── Store Grid ──
         SliverPadding(
           padding: EdgeInsets.symmetric(horizontal: 20),
           sliver: SliverToBoxAdapter(
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final width = constraints.maxWidth;
-                final colCount = width > 1200
-                    ? 6
-                    : (width > 1000
-                          ? 5
-                          : (width > 800
-                                ? 4
-                                : (width > 600 ? 3 : (width > 340 ? 2 : 1))));
+                final colCount = width > 600 ? 3 : (width > 340 ? 2 : 1);
                 final useCompactCard = width < 500;
-
                 final bool showAddCard = filter == 'all';
                 final totalItems = storeEntries.length + (showAddCard ? 1 : 0);
                 final rowCount = (totalItems / colCount).ceil();
+
+                if (storeEntries.isEmpty && filter != 'all') {
+                  return Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.check_circle_outline, size: 48, color: AppColors.emerald500.withValues(alpha: 0.4)),
+                          SizedBox(height: 12),
+                          Text(
+                            filter == 'expiring' ? 'Không có cửa hàng sắp hết hạn' :
+                            filter == 'online' ? 'Không có cửa hàng đang online' :
+                            'Không có cửa hàng cần chú ý',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate400),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
 
                 return ListView.builder(
                   shrinkWrap: true,
@@ -771,44 +663,23 @@ class _PortraitLayout extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: List.generate(colCount, (colIndex) {
                           final itemIndex = rowIndex * colCount + colIndex;
-
                           Widget buildItem(int idx) {
                             if (showAddCard) {
-                              if (idx == 0) {
-                                return _AddStoreCard(
-                                  store: store,
-                                  compact: useCompactCard,
-                                );
-                              }
+                              if (idx == 0) return _AddStoreCard(store: store, compact: useCompactCard);
                               final storeIdx = idx - 1;
                               if (storeIdx < storeEntries.length) {
-                                return _StoreCard(
-                                  storeId: storeEntries[storeIdx].key,
-                                  info: storeEntries[storeIdx].value,
-                                  store: store,
-                                  colorIndex: storeIdx,
-                                  compact: useCompactCard,
-                                );
+                                return _StoreCard(storeId: storeEntries[storeIdx].key, info: storeEntries[storeIdx].value, store: store, colorIndex: storeIdx, compact: useCompactCard);
                               }
                             } else {
                               if (idx < storeEntries.length) {
-                                return _StoreCard(
-                                  storeId: storeEntries[idx].key,
-                                  info: storeEntries[idx].value,
-                                  store: store,
-                                  colorIndex: idx,
-                                  compact: useCompactCard,
-                                );
+                                return _StoreCard(storeId: storeEntries[idx].key, info: storeEntries[idx].value, store: store, colorIndex: idx, compact: useCompactCard);
                               }
                             }
                             return SizedBox();
                           }
-
                           return Expanded(
                             child: Padding(
-                              padding: EdgeInsets.only(
-                                left: colIndex > 0 ? 12 : 0,
-                              ),
+                              padding: EdgeInsets.only(left: colIndex > 0 ? 12 : 0),
                               child: buildItem(itemIndex),
                             ),
                           );
@@ -826,6 +697,55 @@ class _PortraitLayout extends StatelessWidget {
     );
   }
 }
+
+// ── Stat Card Widget ──
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconBg, iconColor;
+  final String value, label;
+  final String? subtitle;
+
+  const _StatCard({
+    required this.icon, required this.iconBg, required this.iconColor,
+    required this.value, required this.label, this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 28, height: 28,
+                decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(8)),
+                alignment: Alignment.center,
+                child: Icon(icon, size: 15, color: iconColor),
+              ),
+              Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: iconColor)),
+            ],
+          ),
+          SizedBox(height: 6),
+          Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: AppColors.slate400)),
+          if (subtitle != null) ...[
+            SizedBox(height: 2),
+            Text(subtitle!, style: TextStyle(fontSize: 8, fontWeight: FontWeight.w600, color: AppColors.slate500), maxLines: 1, overflow: TextOverflow.ellipsis),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 
 // ═══════════════════════════════════════════════════════════
 // LANDSCAPE LAYOUT
