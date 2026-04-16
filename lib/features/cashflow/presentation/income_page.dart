@@ -213,7 +213,7 @@ class IncomePageState extends State<IncomePage> {
                             keyboardType: TextInputType.number,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 28,
+                              fontSize: 32,
                               height: 1.1,
                               fontWeight: FontWeight.w700,
                               color: Theme.of(context).brightness == Brightness.dark
@@ -229,7 +229,7 @@ class IncomePageState extends State<IncomePage> {
                               border: InputBorder.none,
                               hintText: '0',
                               hintStyle: TextStyle(
-                                fontSize: 28,
+                                fontSize: 32,
                                 height: 1.1,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.slate300,
