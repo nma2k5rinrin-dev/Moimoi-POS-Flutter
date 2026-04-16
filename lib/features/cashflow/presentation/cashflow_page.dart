@@ -921,9 +921,6 @@ class _CashflowPageState extends State<CashflowPage> {
   Widget _buildCategoryStats(CashflowStore store, List<_DisplayTxn> txns) {
     if (txns.isEmpty) return SizedBox.shrink();
 
-    // Filter txns based on current active tab: 0=All, 1=Thu, 2=Chi. But actually we want to show stats of whatever is passing.
-    // Let's rely on txns, which is `allTxns` passed in. Wait, allTxns includes everything. Let's filter by _tabIndex locally if needed,
-    // or just show total Thu, total Chi. Actually, separate lists!
     final List<_DisplayTxn> statTxns;
     if (_tabIndex == 1) {
       statTxns = txns.where((t) => t.isIncome).toList();
@@ -937,35 +934,19 @@ class _CashflowPageState extends State<CashflowPage> {
 
     final customCats = store.currentCustomThuChiCategories;
     final List<TransactionCategory> allKnownCats = [
-      TransactionCategory(
-        type: 'thu',
-        emoji: '🎉',
-        label: 'Doanh thu',
-        color: AppColors.emerald500,
-        isCustom: false,
-      ),
-      TransactionCategory(
-        type: 'thu',
-        emoji: '+',
-        label: 'Thêm mới',
-        color: AppColors.slate400,
-        isCustom: false,
-      ),
-      TransactionCategory(
-        type: 'chi',
-        emoji: '+',
-        label: 'Thêm mới',
-        color: AppColors.slate400,
-        isCustom: false,
-      ),
+      TransactionCategory(type: 'thu', emoji: '🎉', label: 'Doanh thu', color: AppColors.emerald500, isCustom: false),
+      TransactionCategory(type: 'thu', emoji: '+', label: 'Thêm mới', color: AppColors.slate400, isCustom: false),
+      TransactionCategory(type: 'chi', emoji: '+', label: 'Thêm mới', color: AppColors.slate400, isCustom: false),
       ...customCats,
     ];
 
     final Map<String, double> categoryTotals = {};
+    final Map<String, int> categoryCounts = {};
     for (final t in statTxns) {
       final key = t.category;
       if (key.isEmpty) continue;
       categoryTotals[key] = (categoryTotals[key] ?? 0) + t.amount;
+      categoryCounts[key] = (categoryCounts[key] ?? 0) + 1;
     }
 
     if (categoryTotals.isEmpty) return SizedBox.shrink();
@@ -973,108 +954,89 @@ class _CashflowPageState extends State<CashflowPage> {
     final sortedEntries = categoryTotals.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    final maxTotal = sortedEntries.first.value > 0
-        ? sortedEntries.first.value
-        : 1.0;
+    final maxTotal = sortedEntries.first.value > 0 ? sortedEntries.first.value : 1.0;
 
     final displayEntries = sortedEntries.take(5).toList();
     final hasMore = sortedEntries.length > 5;
 
-    return _panel(
+    final bool isExpenseTab = _tabIndex == 2;
+    final Color accentColor = isExpenseTab ? AppColors.red500 : AppColors.emerald500;
+    final Color accentLight = isExpenseTab ? AppColors.red50 : AppColors.emerald50;
+    final Color accentDark = isExpenseTab ? AppColors.red600 : AppColors.emerald600;
+
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.slate200),
+        boxShadow: [BoxShadow(color: accentColor.withValues(alpha: 0.03), blurRadius: 15, offset: Offset(0, 4))],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Thống kê theo danh mục',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppColors.slate800,
-            ),
-          ),
-          SizedBox(height: 16),
-          ...displayEntries.map(
-            (e) => _buildCategoryStatRow(e, allKnownCats, maxTotal),
-          ),
-          if (hasMore)
-            Center(
-              child: TextButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => Dialog(
-                      backgroundColor: AppColors.cardBg,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: 400,
-                          maxHeight: MediaQuery.of(context).size.height * 0.8,
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Tất cả danh mục',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.slate800,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.close_rounded,
-                                      color: AppColors.slate500,
-                                    ),
-                                    onPressed: () => Navigator.pop(ctx),
-                                    padding: EdgeInsets.zero,
-                                    constraints: BoxConstraints(),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Divider(height: 1, color: AppColors.slate200),
-                            Flexible(
-                              child: SingleChildScrollView(
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(color: accentLight, borderRadius: BorderRadius.circular(10)),
+                child: Icon(Icons.category_rounded, color: accentDark, size: 18),
+              ),
+              SizedBox(width: 10),
+              Text('Thống kê danh mục', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.slate800, letterSpacing: -0.3)),
+              Spacer(),
+              if (hasMore)
+                InkWell(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => Dialog(
+                        backgroundColor: AppColors.cardBg,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: 400, maxHeight: MediaQuery.of(context).size.height * 0.8),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Padding(
                                 padding: const EdgeInsets.all(20),
-                                child: Column(
-                                  children: sortedEntries
-                                      .map(
-                                        (e) => _buildCategoryStatRow(
-                                          e,
-                                          allKnownCats,
-                                          maxTotal,
-                                        ),
-                                      )
-                                      .toList(),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Tất cả danh mục', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                                    IconButton(icon: Icon(Icons.close_rounded, color: AppColors.slate500), onPressed: () => Navigator.pop(ctx), padding: EdgeInsets.zero, constraints: BoxConstraints()),
+                                  ],
                                 ),
                               ),
-                            ),
-                          ],
+                              Divider(height: 1, color: AppColors.slate200),
+                              Flexible(
+                                child: SingleChildScrollView(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    children: [
+                                      for (int i = 0; i < sortedEntries.length; i++)
+                                        _buildCategoryStatRow(sortedEntries[i], allKnownCats, maxTotal, i, categoryCounts, accentColor),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.emerald600,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Text('Xem thêm', style: TextStyle(color: accentDark, fontSize: 13, fontWeight: FontWeight.w700)),
+                  ),
                 ),
-                child: Text(
-                  'Xem thêm',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
+            ],
+          ),
+          SizedBox(height: 20),
+          for (int i = 0; i < displayEntries.length; i++)
+            _buildCategoryStatRow(displayEntries[i], allKnownCats, maxTotal, i, categoryCounts, accentColor),
         ],
       ),
     );
@@ -1084,92 +1046,92 @@ class _CashflowPageState extends State<CashflowPage> {
     MapEntry<String, double> e,
     List<TransactionCategory> allKnownCats,
     double maxTotal,
+    int index,
+    Map<String, int> categoryCounts,
+    Color accentColor,
   ) {
     final catLabel = e.key;
     final total = e.value;
-    final fraction = total / maxTotal;
+    double factor = total / maxTotal;
+    if (factor > 1.0) factor = 1.0;
+    if (factor < 0.02) factor = 0.02;
+    final count = categoryCounts[catLabel] ?? 0;
 
     final matchedCat = allKnownCats.firstWhere(
       (c) => c.label == catLabel,
-      orElse: () => TransactionCategory(
-        type: 'thu',
-        emoji: '🏷️',
-        label: catLabel,
-        color: AppColors.slate400,
-      ),
+      orElse: () => TransactionCategory(type: 'thu', emoji: '🏷️', label: catLabel, color: AppColors.slate400),
     );
 
     return Padding(
-      padding: EdgeInsets.only(bottom: 16),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: matchedCat.color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(matchedCat.emoji, style: TextStyle(fontSize: 18)),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        catLabel,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.slate800,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Text(
-                      _formatAmount(total),
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.slate800,
-                      ),
-                    ),
-                  ],
+      padding: const EdgeInsets.only(bottom: 12),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final barWidth = constraints.maxWidth;
+          return Stack(
+            children: [
+              Container(
+                height: 56,
+                width: barWidth,
+                decoration: BoxDecoration(
+                  color: AppColors.slate50,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                SizedBox(height: 6),
-                Stack(
+              ),
+              Container(
+                height: 56,
+                width: barWidth * factor,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      accentColor.withValues(alpha: 0.15),
+                      accentColor.withValues(alpha: 0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              Container(
+                height: 56,
+                width: barWidth,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
                   children: [
                     Container(
-                      height: 6,
-                      width: double.infinity,
+                      width: 30, height: 30,
+                      alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: AppColors.slate100,
-                        borderRadius: BorderRadius.circular(3),
+                        color: index == 0 ? Color(0xFFF59E0B) : index == 1 ? Color(0xFF94A3B8) : index == 2 ? Color(0xFFD97706) : AppColors.cardBg,
+                        shape: BoxShape.circle,
+                        border: index > 2 ? Border.all(color: AppColors.slate200) : null,
+                        boxShadow: index < 3 ? [BoxShadow(color: (index == 0 ? Color(0xFFF59E0B) : index == 1 ? Color(0xFF94A3B8) : Color(0xFFD97706)).withValues(alpha: 0.3), blurRadius: 4, offset: Offset(0, 2))] : null,
+                      ),
+                      child: Text('${index + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: index < 3 ? Colors.white : AppColors.slate500)),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(catLabel, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate800), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Text(matchedCat.emoji, style: TextStyle(fontSize: 11)),
+                              SizedBox(width: 4),
+                              Text('$count giao dịch', style: TextStyle(fontSize: 11, color: accentColor, fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    FractionallySizedBox(
-                      widthFactor: fraction.clamp(0.0, 1.0),
-                      child: Container(
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: matchedCat.color,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
-                    ),
+                    Text(_formatAmount(total), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.slate800, letterSpacing: -0.5)),
                   ],
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
