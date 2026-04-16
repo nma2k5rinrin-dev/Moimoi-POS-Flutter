@@ -44,6 +44,8 @@ class _CashflowPageState extends State<CashflowPage> {
 
   final ScrollController _scrollController = ScrollController();
   dart_async.StreamSubscription<String>? _scrollToTopSub;
+  // Local reference to syncEngine for safe listener cleanup in dispose
+  dynamic _syncEngine;
 
   @override
   void initState() {
@@ -56,6 +58,9 @@ class _CashflowPageState extends State<CashflowPage> {
       if (!mounted) return;
       final store = context.read<CashflowStore>();
       _fetchData(store, _dateFrom, _dateTo);
+
+      _syncEngine = store.syncEngine;
+      _syncEngine?.addListener(_onSyncCompleted);
 
       _scrollToTopSub = context.read<UIStore>().scrollToTopStream.listen((path) {
         if (path == '/settings?tab=cashflow' && mounted) {
@@ -75,7 +80,17 @@ class _CashflowPageState extends State<CashflowPage> {
   void dispose() {
     _scrollToTopSub?.cancel();
     _scrollController.dispose();
+    try {
+      _syncEngine?.removeListener(_onSyncCompleted);
+    } catch (_) {}
     super.dispose();
+  }
+
+  void _onSyncCompleted() {
+    if (!mounted) return;
+    final store = context.read<CashflowStore>();
+    // Call silently to update the background model from drift but not show a loader
+    _fetchData(store, _dateFrom, _dateTo, silent: true);
   }
 
   DateTime? _parseLocal(String timeStr) {

@@ -10,7 +10,7 @@ import 'package:moimoi_pos/services/connectivity/connectivity_service.dart';
 /// 1. PUSH: dequeue sync_queue → gọi Supabase API
 /// 2. PULL: query Supabase orders mới → merge vào Drift
 /// 3. Immediate sync khi connectivity thay đổi
-class SyncEngine {
+class SyncEngine extends ChangeNotifier {
   final AppDatabase db;
   final ConnectivityService connectivity;
   final SupabaseClient _supabase;
@@ -61,6 +61,8 @@ class SyncEngine {
 
       await _pushLocalChanges();
       await _pullServerChanges();
+      
+      notifyListeners();
     } catch (e) {
       debugPrint('[SyncEngine] syncAll error: $e');
     } finally {
