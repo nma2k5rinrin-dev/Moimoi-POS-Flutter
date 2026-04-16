@@ -1420,7 +1420,6 @@ class _CashflowPageState extends State<CashflowPage> {
                         initialTransaction: t.originalTxn,
                         onSaved: () {
                           Navigator.pop(ctx);
-                          _optimisticSync();
                         },
                       )
                     : ExpensePage(
@@ -1429,7 +1428,6 @@ class _CashflowPageState extends State<CashflowPage> {
                         initialTransaction: t.originalTxn,
                         onSaved: () {
                           Navigator.pop(ctx);
-                          _optimisticSync();
                         },
                       ),
               ),
@@ -1499,7 +1497,10 @@ class _CashflowPageState extends State<CashflowPage> {
           ),
         ),
       ),
-    );
+    ).then((_) {
+      if (!mounted) return;
+      _optimisticSync();
+    });
   }
 
   void _handleDelete(_DisplayTxn t) {
@@ -1781,7 +1782,6 @@ class _CashflowPageState extends State<CashflowPage> {
                                 initialDate: date,
                                 onSaved: () {
                                   Navigator.pop(ctx);
-                                  _optimisticSync();
                                 },
                               ),
                               IncomePage(
@@ -1790,7 +1790,6 @@ class _CashflowPageState extends State<CashflowPage> {
                                 initialDate: date,
                                 onSaved: () {
                                   Navigator.pop(ctx);
-                                  _optimisticSync();
                                 },
                               ),
                             ],
@@ -1875,7 +1874,11 @@ class _CashflowPageState extends State<CashflowPage> {
           ), // closes DefaultTabController
         ), // closes Container
       ), // closes Dialog
-    ); // closes showAnimatedDialog
+    ).then((_) {
+      // Always refresh data when dialog closes (whether saved or cancelled)
+      if (!mounted) return;
+      _optimisticSync();
+    }); // closes showAnimatedDialog
   }
 
   Widget _buildCalendar(List<_DisplayTxn> txns) {
