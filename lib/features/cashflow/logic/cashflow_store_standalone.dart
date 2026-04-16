@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
-import 'package:drift/drift.dart' show Value;
+import 'package:drift/drift.dart' show Value, OrderingTerm, OrderingMode, CustomExpression;
 import 'package:moimoi_pos/core/state/base_mixin.dart';
 import 'package:moimoi_pos/core/database/app_database.dart';
 import 'package:moimoi_pos/features/cashflow/models/transaction_model.dart';
@@ -475,7 +475,7 @@ class CashflowStore extends ChangeNotifier with BaseMixin {
     DateTime to,
   ) async {
     final storeId = getStoreId();
-    if (storeId.isEmpty || storeId == 'sadmin') return [];
+    if (storeId.isEmpty || storeId == 'sadmin' || db == null) return [];
 
     final fromStr = DateTime(from.year, from.month, from.day).toIso8601String();
     final toStr = DateTime(
@@ -488,16 +488,23 @@ class CashflowStore extends ChangeNotifier with BaseMixin {
     ).toIso8601String();
 
     try {
-      final response = await supabaseClient
-          .from('transactions')
-          .select()
-          .eq('store_id', storeId)
-          .isFilter('deleted_at', null)
-          .gte('time', fromStr)
-          .lte('time', toStr)
-          .order('time', ascending: false);
+      final query = db!.select(db!.localTransactions)
+        ..where((t) => t.storeId.equals(storeId))
+        ..where((t) => CustomExpression<bool>("time >= '$fromStr' AND time <= '$toStr'"))
+        ..where((t) => t.deletedAt.isNull())
+        ..orderBy([(t) => OrderingTerm(expression: t.time, mode: OrderingMode.desc)]);
 
-      return (response as List).map((t) => Transaction.fromMap(t)).toList();
+      final records = await query.get();
+      return records.map((r) => Transaction(
+        id: r.id,
+        storeId: r.storeId,
+        type: r.type,
+        amount: r.amount,
+        category: r.category,
+        time: r.time,
+        note: r.note,
+        createdBy: r.createdBy,
+      )).toList();
     } catch (e) {
       debugPrint('[fetchTransactionsByDateRange] $e');
       return [];

@@ -4,6 +4,7 @@ import 'package:moimoi_pos/features/auth/logic/auth_store_standalone.dart';
 import 'package:moimoi_pos/features/pos_order/logic/order_store_standalone.dart';
 import 'package:moimoi_pos/features/pos_order/models/order_model.dart';
 import 'package:moimoi_pos/features/auth/models/user_model.dart';
+import 'package:drift/drift.dart' show OrderingTerm, OrderingMode, CustomExpression;
 
 /// Provides filtered/computed order views that depend on both
 /// OrderStore (orders data) and AuthStore (user/role info).
@@ -156,18 +157,38 @@ class OrderFilterStore extends ChangeNotifier {
     DateTime end,
   ) async {
     final storeId = getStoreId();
-    var query = _supabase.from('orders').select(
-          'id, time, total_amount, status, payment_status, table_name, store_id',
-        );
-    if (storeId != 'sadmin') {
-      query = query.eq('store_id', storeId).isFilter('deleted_at', null);
-    }
-    final response = await query
-        .gte('time', start.toIso8601String())
-        .lte('time', end.toIso8601String())
-        .order('time', ascending: false);
+    final db = _order.db;
+    if (db == null) return [];
 
-    return (response as List).map((o) => OrderModel.fromMap(o)).toList();
+    final fromStr = start.toIso8601String();
+    final toStr = end.toIso8601String();
+
+    try {
+      final query = db.select(db.localOrders)
+        ..where((o) => CustomExpression<bool>("time >= '$fromStr' AND time <= '$toStr'"))
+        ..where((o) => o.deletedAt.isNull())
+        ..orderBy([(o) => OrderingTerm(expression: o.time, mode: OrderingMode.desc)]);
+      
+      if (storeId != 'sadmin') {
+        query.where((o) => o.storeId.equals(storeId));
+      }
+
+      final records = await query.get();
+      return records.map((r) => OrderModel(
+        id: r.id,
+        storeId: r.storeId,
+        table: r.orderTable, // String getter, not nullable
+        items: [], // Chi tiết items không quan trọng cho Cashflow
+        status: r.status,
+        paymentStatus: r.paymentStatus,
+        totalAmount: r.totalAmount,
+        time: r.time,
+        createdBy: r.createdBy,
+        paymentMethod: r.paymentMethod,
+      )).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   @override
