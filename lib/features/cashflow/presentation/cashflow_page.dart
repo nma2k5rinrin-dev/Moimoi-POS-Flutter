@@ -76,6 +76,11 @@ class _CashflowPageState extends State<CashflowPage> {
     });
   }
 
+  Future<void> _onRefresh() async {
+    final store = context.read<CashflowStore>();
+    await _fetchData(store, _dateFrom, _dateTo);
+  }
+
   @override
   void dispose() {
     _scrollToTopSub?.cancel();
@@ -422,10 +427,14 @@ class _CashflowPageState extends State<CashflowPage> {
 
           // ── Content ──
           Expanded(
-            child: Skeletonizer(
-              enabled: _isLoading,
-              child: SingleChildScrollView(
-                controller: _scrollController,
+            child: RefreshIndicator(
+              onRefresh: _onRefresh,
+              color: AppColors.amber500,
+              child: Skeletonizer(
+                enabled: _isLoading,
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.symmetric(
                   horizontal: widget.embedded ? 9 : 9,
                 ),
@@ -905,6 +914,7 @@ class _CashflowPageState extends State<CashflowPage> {
                   ),
                 ),
               ),
+            ),
             ),
           ),
         ],

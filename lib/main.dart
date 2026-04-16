@@ -25,11 +25,18 @@ import 'package:moimoi_pos/core/utils/notification_helper.dart';
 import 'package:moimoi_pos/core/services/background_service.dart';
 import 'package:moimoi_pos/services/connectivity/connectivity_service.dart';
 import 'package:moimoi_pos/core/sync/sync_engine.dart';
-import 'package:moimoi_pos/core/sync/sync_worker.dart';
 import 'package:moimoi_pos/core/utils/security_utils.dart';
 import 'package:moimoi_pos/core/utils/security_rasp.dart';
 import 'package:moimoi_pos/core/utils/env_config.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint("Handling a background message: ${message.messageId}");
+}
 
 // Global instances for offline-first
 AppDatabase? appDb;
@@ -41,6 +48,15 @@ void main() async {
     debugPrint = (String? message, {int? wrapWidth}) {};
   }
   WidgetsFlutterBinding.ensureInitialized();
+  
+  if (!kIsWeb) {
+    try {
+      await Firebase.initializeApp();
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    } catch(e) {
+      debugPrint('[Firebase] init error: $e');
+    }
+  }
   try {
     debugPrint('[ENV] SUPABASE_URL="${EnvConfig.supabaseUrl}"');
     debugPrint(
@@ -80,14 +96,12 @@ void main() async {
     debugPrint('[SyncEngine] Skipped — no local DB');
   }
 
-  // Init Workmanager background sync
-  await SyncWorker.init();
+  // Init Sync worker (Legacy removed)
 
-  // Init Notifications & Background Service
+  // Init Notifications
   if (!kIsWeb) {
     try {
       await NotificationHelper.init();
-      await BackgroundServiceHelper.initialize();
     } catch (e) {
       debugPrint('[Notification] init error: $e');
     }
@@ -260,13 +274,23 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> with WidgetsBindingObserver {
       _orderStore.setupOrdersRealtime(sid, user.role);
       _mgmtStore.setupNotificationsRealtime(user.username);
 
-      // Tự động bật lại Background Service cho phiên duy trì
-      SharedPreferences.getInstance().then((prefs) {
-        final bgEnabled = prefs.getBool('isBackgroundEnabled') ?? true;
-        if (bgEnabled && user.role != 'sadmin' && sid.isNotEmpty && sid != 'sadmin') {
-          BackgroundServiceHelper.startService(sid);
+      // Đăng ký FCM Token khi Đăng nhập xong vào cửa hàng
+      if (!kIsWeb && user.role != 'sadmin' && sid.isNotEmpty && sid != 'sadmin') {
+        try {
+          await FirebaseMessaging.instance.requestPermission(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
+          final token = await FirebaseMessaging.instance.getToken();
+          if (token != null) {
+            debugPrint('[FCM] Token: $token');
+            await SupabaseService.registerFcmToken(token);
+          }
+        } catch (e) {
+          debugPrint('[FCM] Request permission error: $e');
         }
-      });
+      }
     } catch (e) {
       debugPrint('Error loading initial data: $e');
     }

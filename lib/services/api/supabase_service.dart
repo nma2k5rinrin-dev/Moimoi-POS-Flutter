@@ -10,4 +10,18 @@ class SupabaseService {
   static Future<void> initialize() async {
     await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
   }
+
+  static Future<void> registerFcmToken(String token) async {
+    final user = client.auth.currentUser;
+    if (user == null) return;
+    try {
+      await client.from('fcm_tokens').upsert({
+        'token': token,
+        'user_id': user.id,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch(e) {
+      // ignore
+    }
+  }
 }

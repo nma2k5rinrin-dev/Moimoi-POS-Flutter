@@ -161,7 +161,7 @@ class OrderFilterStore extends ChangeNotifier {
   }) async {
     final storeId = getStoreId();
     final db = _order.db;
-    if (db == null) return [];
+    if (!kIsWeb && db == null) return [];
 
     final fromStr = start.toIso8601String();
     final toStr = end.toIso8601String();
@@ -209,8 +209,8 @@ class OrderFilterStore extends ChangeNotifier {
               .isFilter('deleted_at', null);
 
           if (serverData.isNotEmpty) {
-            for (final row in serverData) {
-               await db.upsertOrder(
+             for (final row in serverData) {
+               await db!.upsertOrder(
                 LocalOrdersCompanion(
                   id: Value(row['id']?.toString() ?? ''),
                   storeId: Value(row['store_id'] ?? ''),
@@ -236,7 +236,7 @@ class OrderFilterStore extends ChangeNotifier {
       }
 
       // 2) RETURN nhanh dữ liệu đang có trong Drift ngay lập tức 
-      final query = db.select(db.localOrders)
+      final query = db!.select(db!.localOrders)
         ..where((o) => o.deletedAt.isNull())
         ..orderBy([(o) => OrderingTerm(expression: o.time, mode: OrderingMode.desc)]);
       

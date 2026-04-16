@@ -46,21 +46,23 @@ mixin BaseMixin on ChangeNotifier {
   }
 
   // ── Optimistic UI Helper ─────────────────────────────────
-  void optimistic({
+  Future<void> optimistic({
     required VoidCallback apply,
     required Future<void> Function() remote,
     required VoidCallback rollback,
     String errorMsg = 'Có lỗi xảy ra, đã hoàn tác',
-  }) {
+  }) async {
     apply();
     notifyListeners();
-    remote().catchError((e) {
+    try {
+      await remote();
+    } catch (e) {
       debugPrint('[Optimistic rollback] $e');
       rollback();
       notifyListeners();
       final detail = e.toString();
       showToast('$errorMsg\n$detail', 'error');
-    });
+    }
   }
 
   // ── Offline-First Helper ─────────────────────────────────
@@ -77,7 +79,7 @@ mixin BaseMixin on ChangeNotifier {
     String errorMsg = 'Có lỗi xảy ra',
   }) async {
     if (db == null) {
-      supabaseFallback(
+      await supabaseFallback(
         table: table,
         operation: operation,
         recordId: recordId,
@@ -109,7 +111,7 @@ mixin BaseMixin on ChangeNotifier {
       debugPrint('[offlineFirst] Drift failed: $e — falling back to Supabase');
       rollback?.call();
       notifyListeners();
-      supabaseFallback(
+      await supabaseFallback(
         table: table,
         operation: operation,
         recordId: recordId,
@@ -122,7 +124,7 @@ mixin BaseMixin on ChangeNotifier {
   }
 
   /// Direct Supabase fallback when Drift is unavailable or crashes.
-  void supabaseFallback({
+  Future<void> supabaseFallback({
     required String table,
     required String operation,
     required String recordId,
@@ -130,8 +132,8 @@ mixin BaseMixin on ChangeNotifier {
     required VoidCallback applyInMemory,
     VoidCallback? rollback,
     required String errorMsg,
-  }) {
-    optimistic(
+  }) async {
+    await optimistic(
       apply: applyInMemory,
       remote: () async {
         if (operation == 'INSERT') {

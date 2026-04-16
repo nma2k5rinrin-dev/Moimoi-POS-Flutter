@@ -188,10 +188,50 @@ class AuthStore extends ChangeNotifier with BaseMixin {
     );
   }
 
+  // ── Rate Limit Guard ──────────────────────────────────────
+
+  Future<bool> _canSendAuthEmail() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final historyStrings = prefs.getStringList('auth_email_attempts') ?? [];
+      final now = DateTime.now();
+      final tenMinsAgo = now.subtract(const Duration(minutes: 10));
+
+      final validHistory = historyStrings
+          .map((e) => DateTime.tryParse(e))
+          .where((t) => t != null && t.isAfter(tenMinsAgo))
+          .toList();
+
+      if (validHistory.length >= 2) {
+        return false;
+      }
+      return true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<void> _recordAuthEmailAttempt() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      List<String> history = prefs.getStringList('auth_email_attempts') ?? [];
+      history.add(DateTime.now().toIso8601String());
+      
+      if (history.length > 5) {
+        history = history.sublist(history.length - 5);
+      }
+      await prefs.setStringList('auth_email_attempts', history);
+    } catch (_) {}
+  }
+
   // ── Auth Logic ──────────────────────────────────────────
 
   Future<String> forgotPassword(String email) async {
     try {
+      if (!await _canSendAuthEmail()) {
+        return 'Bạn đã gửi mã quá nhiều lần. Vui lòng chờ 10 phút nữa rồi thử lại.';
+      }
+
       final isDeleted = await _supabase.rpc(
         'check_deleted_email',
         params: {'p_email': email.trim().toLowerCase()},
@@ -202,6 +242,7 @@ class AuthStore extends ChangeNotifier with BaseMixin {
       }
 
       await _supabase.auth.resetPasswordForEmail(email.trim());
+      await _recordAuthEmailAttempt();
       return 'success';
     } on AuthException catch (e) {
       debugPrint('[Auth] Forgot password AuthException: ${e.message}');
@@ -268,11 +309,13 @@ class AuthStore extends ChangeNotifier with BaseMixin {
         final newUser = {
           'id': authResponse.user!.id,
           'username': cleanUsername,
+          'pass': '********', // Dummy pass to bypass legacy NOT NULL constraint
           'role': 'admin',
           'fullname': meta['fullname'] ?? '',
           'phone': meta['phone'] ?? '',
           'email': authResponse.user!.email,
           'is_premium': false,
+          'created_at': DateTime.now().toIso8601String(),
         };
         await _supabase.from('users').insert(newUser);
 
@@ -409,6 +452,11 @@ class AuthStore extends ChangeNotifier with BaseMixin {
     final cleanUsername = username.toLowerCase().replaceAll(RegExp(r'\s'), '');
 
     try {
+      if (!await _canSendAuthEmail()) {
+        showToast('Bạn đã thao tác quá nhiều lần. Vui lòng chờ 10 phút nữa rồi thử lại.', 'error');
+        return 'rate_limit';
+      }
+
       final isOverlap = await _supabase.rpc(
         'check_registration_overlap',
         params: {
@@ -441,6 +489,7 @@ class AuthStore extends ChangeNotifier with BaseMixin {
       }
 
       if (authResponse.session == null) {
+        await _recordAuthEmailAttempt();
         return 'confirm_email';
       }
 

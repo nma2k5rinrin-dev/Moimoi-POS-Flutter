@@ -4,13 +4,13 @@ import 'package:provider/provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:moimoi_pos/features/pos_order/logic/order_store_standalone.dart';
 import 'package:moimoi_pos/core/state/order_filter_store.dart';
-import 'package:moimoi_pos/features/cashflow/logic/cashflow_store_standalone.dart';
+
 import 'package:moimoi_pos/core/state/ui_store.dart';
 import 'package:moimoi_pos/core/utils/constants.dart';
 import 'package:moimoi_pos/core/utils/format.dart';
 import 'package:moimoi_pos/features/pos_order/models/order_model.dart';
 import 'package:moimoi_pos/core/widgets/date_range_picker_dialog.dart';
-import 'package:moimoi_pos/features/cashflow/models/transaction_model.dart';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:moimoi_pos/features/notifications/presentation/notification_bell.dart';
 
@@ -197,8 +197,12 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ),
               Expanded(
-                child: SingleChildScrollView(
-                  controller: _scrollController,
+                child: RefreshIndicator(
+                  onRefresh: _fetchHistoricalOrders,
+                  color: AppColors.emerald500,
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(12, 16, 12, 24),
                   child: LayoutBuilder(
                     builder: (context, outerConstraints) {
@@ -318,13 +322,14 @@ class _DashboardPageState extends State<DashboardPage> {
                       );
                     },
                   ),
+                  ),
                 ),
               ),
             ],
           ),
         );
 
-        return Skeletonizer(enabled: isLoading, child: mainContent);;
+        return Skeletonizer(enabled: isLoading, child: mainContent);
       },
     );
   }

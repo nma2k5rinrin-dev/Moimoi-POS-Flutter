@@ -12,7 +12,7 @@ class SecurityRasp {
       final config = TalsecConfig(
         /// For Android
         androidConfig: AndroidConfig(
-          packageName: 'com.moimoi.moimoi_pos',
+          packageName: 'com.nma.moimoi_pos',
           signingCertHashes: [
             // Cần điền Hash thật của bản Release sau (tạm thời để empty key cho debug)
             'dummy_hash_for_debug',

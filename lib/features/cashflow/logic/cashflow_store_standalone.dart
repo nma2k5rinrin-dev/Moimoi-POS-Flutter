@@ -329,7 +329,18 @@ class CashflowStore extends ChangeNotifier with BaseMixin {
     }
     final storeId = getStoreId();
     final txnId = 'tc_${DateTime.now().millisecondsSinceEpoch}';
-    final txnTime = (date ?? DateTime.now()).toIso8601String();
+    
+    DateTime finalDate = date ?? DateTime.now();
+    if (date != null && date.hour == 0 && date.minute == 0 && date.second == 0) {
+      final now = DateTime.now();
+      if (date.year == now.year && date.month == now.month && date.day == now.day) {
+        finalDate = now;
+      } else {
+        finalDate = DateTime(date.year, date.month, date.day, now.hour, now.minute, now.second);
+      }
+    }
+    final txnTime = finalDate.toIso8601String();
+    
     final createdBy = currentUser?.fullname.isNotEmpty == true
         ? (currentUser?.fullname ?? 'unknown')
         : (currentUser?.username ?? 'unknown');
@@ -398,7 +409,18 @@ class CashflowStore extends ChangeNotifier with BaseMixin {
     if (idx == -1) return;
 
     final oldTxn = transactions[idx];
-    final txnTime = date != null ? date.toIso8601String() : oldTxn.time;
+    
+    DateTime? finalDate = date;
+    if (date != null && date.hour == 0 && date.minute == 0 && date.second == 0) {
+      final now = DateTime.now();
+      if (date.year == now.year && date.month == now.month && date.day == now.day) {
+        finalDate = now;
+      } else {
+        finalDate = DateTime(date.year, date.month, date.day, now.hour, now.minute, now.second);
+      }
+    }
+    final txnTime = finalDate != null ? finalDate.toIso8601String() : oldTxn.time;
+    
     final payload = {
       'amount': amount,
       'category': category,
@@ -477,7 +499,8 @@ class CashflowStore extends ChangeNotifier with BaseMixin {
     bool skipBackgroundUpdate = false,
   }) async {
     final storeId = getStoreId();
-    if (storeId.isEmpty || storeId == 'sadmin' || db == null) return [];
+    if (storeId.isEmpty || storeId == 'sadmin') return [];
+    if (!kIsWeb && db == null) return [];
 
     final fromStr = DateTime(from.year, from.month, from.day).toIso8601String();
     final toStr = DateTime(

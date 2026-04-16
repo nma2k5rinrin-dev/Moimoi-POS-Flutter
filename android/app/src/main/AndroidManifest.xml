@@ -10,13 +10,10 @@
     <!-- Required for Bluetooth scanning on Android 11 and lower -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30"/>
 
-    <!-- Local Notifications & Foreground Service -->
+    <!-- Local Notifications -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <application
         android:label="MoiMoi POS"
         android:name="${applicationName}"
@@ -59,15 +56,6 @@
             android:name="flutterEmbedding"
             android:value="2" />
         
-        <!-- flutter_background_service -->
-        <service
-            android:name="id.flutter.flutter_background_service.BackgroundService"
-            android:foregroundServiceType="dataSync"
-            android:enabled="true"
-            android:exported="true" />
-        <receiver
-            android:name="id.flutter.flutter_background_service.WatchdogReceiver"
-            android:exported="true" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

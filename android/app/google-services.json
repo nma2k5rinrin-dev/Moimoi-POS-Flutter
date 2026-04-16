@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "98317130306",
+    "project_id": "moimoi-pos",
+    "storage_bucket": "moimoi-pos.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:98317130306:android:6b3c2eb6bf93acfd7debdb",
+        "android_client_info": {
+          "package_name": "com.nma.moimoi_pos"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCVnDY4Uvw9_K851EG7MWfZT4s8wRPHiww"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
