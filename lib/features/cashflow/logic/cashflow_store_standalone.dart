@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' show Value, OrderingTerm, OrderingMode, CustomExpression;
@@ -472,8 +473,9 @@ class CashflowStore extends ChangeNotifier with BaseMixin {
   // ── Date Range Fetch ──────────────────────────────────────
   Future<List<Transaction>> fetchTransactionsByDateRange(
     DateTime from,
-    DateTime to,
-  ) async {
+    DateTime to, {
+    bool skipBackgroundUpdate = false,
+  }) async {
     final storeId = getStoreId();
     if (storeId.isEmpty || storeId == 'sadmin' || db == null) return [];
 
@@ -487,10 +489,37 @@ class CashflowStore extends ChangeNotifier with BaseMixin {
       59,
     ).toIso8601String();
 
+    if (kIsWeb) {
+      try {
+        final serverData = await Supabase.instance.client
+            .from('transactions')
+            .select()
+            .eq('store_id', storeId)
+            .gte('time', fromStr)
+            .lte('time', toStr)
+            .isFilter('deleted_at', null)
+            .order('time', ascending: false);
+
+        return serverData.map((row) => Transaction(
+              id: row['id']?.toString() ?? '',
+              storeId: row['store_id'] ?? '',
+              type: row['type'] ?? 'thu',
+              amount: (row['amount'] ?? 0).toDouble(),
+              category: row['category'] ?? '',
+              time: row['time'] ?? '',
+              note: row['note'] ?? '',
+              createdBy: row['created_by'] ?? '',
+            )).toList();
+      } catch (e) {
+        return [];
+      }
+    }
+
     try {
       // 1) PULL ngầm từ Supabase (Stale-While-Revalidate)
-      Future(() async {
-        try {
+      if (!skipBackgroundUpdate) {
+        Future(() async {
+          try {
           final sClient = Supabase.instance.client;
           final serverData = await sClient
               .from('transactions')
@@ -523,6 +552,7 @@ class CashflowStore extends ChangeNotifier with BaseMixin {
              // Bỏ qua lỗi ngầm nếu đang offline
         }
       });
+      }
 
       // 2) Kéo nhanh Local DB ra hiển thị cho người dùng 
       final query = db!.select(db!.localTransactions)

@@ -140,8 +140,8 @@ class _CashflowPageState extends State<CashflowPage> {
       // Dùng fetchCashflowOrdersByDateRange để lấy toàn bộ đơn hàng (minimal fields)
       // Không dùng RPC và Limit nữa để đảm bảo Calendar hiển thị đủ ngày và tổng chuẩn xác
       final results = await Future.wait([
-        context.read<OrderFilterStore>().fetchCashflowOrdersByDateRange(start, endOfDay),
-        store.fetchTransactionsByDateRange(start, endOfDay),
+        context.read<OrderFilterStore>().fetchCashflowOrdersByDateRange(start, endOfDay, skipBackgroundUpdate: silent),
+        store.fetchTransactionsByDateRange(start, endOfDay, skipBackgroundUpdate: silent),
       ]);
       
       final orders = results[0] as List<OrderModel>;

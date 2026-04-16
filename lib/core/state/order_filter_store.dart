@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:moimoi_pos/features/auth/logic/auth_store_standalone.dart';
 import 'package:moimoi_pos/features/pos_order/logic/order_store_standalone.dart';
@@ -155,8 +156,9 @@ class OrderFilterStore extends ChangeNotifier {
 
   Future<List<OrderModel>> fetchCashflowOrdersByDateRange(
     DateTime start,
-    DateTime end,
-  ) async {
+    DateTime end, {
+    bool skipBackgroundUpdate = false,
+  }) async {
     final storeId = getStoreId();
     final db = _order.db;
     if (db == null) return [];
@@ -164,9 +166,38 @@ class OrderFilterStore extends ChangeNotifier {
     final fromStr = start.toIso8601String();
     final toStr = end.toIso8601String();
 
+    if (kIsWeb) {
+      try {
+        final serverData = await Supabase.instance.client
+            .from('orders')
+            .select()
+            .eq('store_id', storeId)
+            .gte('time', fromStr)
+            .lte('time', toStr)
+            .isFilter('deleted_at', null)
+            .order('time', ascending: false);
+
+        return serverData.map((row) => OrderModel(
+              id: row['id']?.toString() ?? '',
+              storeId: row['store_id'] ?? '',
+              table: row['table_name'] ?? '',
+              items: [],
+              status: row['status'] ?? 'pending',
+              paymentStatus: row['payment_status'] ?? 'unpaid',
+              totalAmount: (row['total_amount'] ?? 0).toDouble(),
+              time: row['time'] ?? '',
+              createdBy: row['created_by'] ?? '',
+              paymentMethod: row['payment_method'] ?? '',
+            )).toList();
+      } catch (e) {
+        return [];
+      }
+    }
+
     try {
       // 1) PULL từ Supabase ngầm (Stale-While-Revalidate)
-      Future(() async {
+      if (!skipBackgroundUpdate) {
+        Future(() async {
         try {
           final sClient = Supabase.instance.client;
           final serverData = await sClient
@@ -202,6 +233,7 @@ class OrderFilterStore extends ChangeNotifier {
           // Bỏ qua lỗi ngầm nếu offline
         }
       });
+      }
 
       // 2) RETURN nhanh dữ liệu đang có trong Drift ngay lập tức 
       final query = db.select(db.localOrders)
