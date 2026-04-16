@@ -1508,18 +1508,12 @@ class _CashflowPageState extends State<CashflowPage> {
     final store = context.read<CashflowStore>();
     context.read<UIStore>().showConfirm(
       'Bạn có chắc chắn muốn xóa giao dịch này? Số dư sẽ được cập nhật lại.',
-      () {
+      () async {
         if (t.id != null) {
-          store.deleteTransaction(t.id!);
+          await store.deleteTransaction(t.id!);
           store.showToast('Đã xóa giao dịch');
           if (mounted) {
-            setState(() {
-              if (_customTxns != null) {
-                _customTxns!.removeWhere((x) => x.id == t.id);
-                _processDataAnalytics(_customOrders ?? [], _customTxns!);
-              }
-            });
-            _fetchData(store, _dateFrom, _dateTo, silent: true);
+            await _fetchData(store, _dateFrom, _dateTo, silent: true);
           }
         }
       },
