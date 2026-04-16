@@ -205,7 +205,6 @@ class OrderFilterStore extends ChangeNotifier {
 
       // 2) RETURN nhanh dữ liệu đang có trong Drift ngay lập tức 
       final query = db.select(db.localOrders)
-        ..where((o) => CustomExpression<bool>("time >= '$fromStr' AND time <= '$toStr'"))
         ..where((o) => o.deletedAt.isNull())
         ..orderBy([(o) => OrderingTerm(expression: o.time, mode: OrderingMode.desc)]);
       
@@ -214,7 +213,11 @@ class OrderFilterStore extends ChangeNotifier {
       }
 
       final records = await query.get();
-      return records.map((r) => OrderModel(
+      final filteredRecords = records.where((r) {
+        return r.time.compareTo(fromStr) >= 0 && r.time.compareTo(toStr) <= 0;
+      }).toList();
+
+      return filteredRecords.map((r) => OrderModel(
         id: r.id,
         storeId: r.storeId,
         table: r.orderTable, // String getter, not nullable

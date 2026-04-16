@@ -527,12 +527,15 @@ class CashflowStore extends ChangeNotifier with BaseMixin {
       // 2) Kéo nhanh Local DB ra hiển thị cho người dùng 
       final query = db!.select(db!.localTransactions)
         ..where((t) => t.storeId.equals(storeId))
-        ..where((t) => CustomExpression<bool>("time >= '$fromStr' AND time <= '$toStr'"))
         ..where((t) => t.deletedAt.isNull())
         ..orderBy([(t) => OrderingTerm(expression: t.time, mode: OrderingMode.desc)]);
 
       final records = await query.get();
-      return records.map((r) => Transaction(
+      final filteredRecords = records.where((r) {
+        return r.time.compareTo(fromStr) >= 0 && r.time.compareTo(toStr) <= 0;
+      }).toList();
+
+      return filteredRecords.map((r) => Transaction(
         id: r.id,
         storeId: r.storeId,
         type: r.type,
