@@ -208,34 +208,51 @@ class IncomePageState extends State<IncomePage> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          TextField(
-                            controller: _amountCtrl,
-                            keyboardType: TextInputType.number,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 36,
-                              height: 1.1,
-                              fontWeight: FontWeight.w700,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? AppColors.emerald400
-                                  : AppColors.emerald500,
-                              letterSpacing: -1,
+                          Container(
+                            height: 64,
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).cardColor,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.emerald200.withOpacity(0.5)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.emerald500.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              _ThousandSeparatorFormatter(),
-                            ],
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: '0',
-                              hintStyle: TextStyle(
-                                fontSize: 36,
+                            alignment: Alignment.center,
+                            child: TextField(
+                              controller: _amountCtrl,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 32,
                                 height: 1.1,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.slate300,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? AppColors.emerald400
+                                    : AppColors.emerald500,
+                                letterSpacing: -1,
                               ),
-                              isDense: true,
-                              contentPadding: EdgeInsets.zero,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                _ThousandSeparatorFormatter(),
+                              ],
+                              decoration: InputDecoration(
+                                border: InputBorder.none,
+                                hintText: '0',
+                                hintStyle: TextStyle(
+                                  fontSize: 32,
+                                  height: 1.1,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.slate300,
+                                ),
+                                isDense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -410,8 +427,7 @@ class IncomePageState extends State<IncomePage> {
                               SizedBox(height: 14),
 
                               // ── Buttons ─────────────
-                              if (!widget.asDialog)
-                                Row(
+                              Row(
                                   children: [
                                     Expanded(
                                       child: GestureDetector(

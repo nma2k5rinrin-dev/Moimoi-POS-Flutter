@@ -11,4 +11,5 @@ và dự án này tuân thủ [Semantic Versioning](https://semver.org/spec/v2.0
 ### Phát hành (Release)
 - Phiên bản đầu tiên ứng dụng Moimoi POS.
 
+## 1.0.1+2 - 2026-04-16
 ## 1.0.1 - 2026-03-31
