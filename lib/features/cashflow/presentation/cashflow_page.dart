@@ -2161,9 +2161,9 @@ class _SparklineCard extends StatelessWidget {
       height: 94,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg,
         gradient: LinearGradient(
-          colors: [Colors.white, accentColor.withValues(alpha: 0.15)],
+          colors: [AppColors.cardBg, accentColor.withValues(alpha: AppColors.isDarkMode ? 0.05 : 0.15)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -2251,7 +2251,9 @@ class _SparklineCard extends StatelessWidget {
                 isGradientValue
                     ? ShaderMask(
                         shaderCallback: (bounds) => LinearGradient(
-                          colors: [Color(0xFF3B82F6), Color(0xFF6366F1)],
+                          colors: AppColors.isDarkMode
+                              ? [AppColors.blue400, AppColors.blue200]
+                              : [Color(0xFF3B82F6), Color(0xFF6366F1)],
                         ).createShader(bounds),
                         child: FittedBox(
                           fit: BoxFit.scaleDown,

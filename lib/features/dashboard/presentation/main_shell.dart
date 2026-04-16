@@ -447,7 +447,7 @@ class _MobileCartBar extends StatelessWidget {
                     'Xem giỏ hàng',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: 20,
                       fontWeight: FontWeight.w800,
                     ),
                   ),

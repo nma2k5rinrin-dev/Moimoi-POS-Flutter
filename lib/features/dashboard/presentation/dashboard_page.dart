@@ -12,6 +12,7 @@ import 'package:moimoi_pos/features/pos_order/models/order_model.dart';
 import 'package:moimoi_pos/core/widgets/date_range_picker_dialog.dart';
 import 'package:moimoi_pos/features/cashflow/models/transaction_model.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:moimoi_pos/features/notifications/presentation/notification_bell.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -134,13 +135,13 @@ class _DashboardPageState extends State<DashboardPage> {
         List<double> transferSpots = hourlyData.map((e) => e.transfer).toList();
     
         final mainContent = Container(
-          color: Color(0xFFF3F4F6), // light sleek background
+          color: AppColors.scaffoldBg, // light sleek background -> adapts
           child: Column(
             children: [
               // Sleek App Bar Header
               Container(
                 padding: EdgeInsets.fromLTRB(16, 20, 16, 12),
-                color: Colors.white,
+                color: AppColors.cardBg,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -170,22 +171,28 @@ class _DashboardPageState extends State<DashboardPage> {
                             SizedBox(width: 8),
                             Container(
                               padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(color: Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(4)),
+                              decoration: BoxDecoration(color: AppColors.slate100, borderRadius: BorderRadius.circular(4)),
                               child: Text('$totalOrders đơn', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.slate600)),
                             ),
                             if (totalCancelled > 0) ...[
                               SizedBox(width: 6),
                               Container(
                                 padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(color: Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(4)),
-                                child: Text('$totalCancelled huỷ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFEF4444))),
+                                decoration: BoxDecoration(color: AppColors.red50, borderRadius: BorderRadius.circular(4)),
+                                child: Text('$totalCancelled huỷ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.red500)),
                               ),
                             ]
                           ],
                         ),
                       ],
                     ),
-                    _buildDatePicker(),
+                    Row(
+                      children: [
+                        const NotificationBell(),
+                        SizedBox(width: 8),
+                        _buildDatePicker(),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -204,7 +211,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             child: _SparklineCard(
                               title: 'TỔNG DOANH THU',
                               value: formatCurrency(totalRevenue),
-                              accentColor: Color(0xFF10B981),
+                              accentColor: AppColors.emerald500,
                               spots: totalSpots,
                               isGradientValue: true,
                             ),
@@ -214,7 +221,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             child: _SparklineCard(
                               title: 'TIỀN MẶT',
                               value: formatCurrency(cashRevenue),
-                              accentColor: Color(0xFFF59E0B),
+                              accentColor: AppColors.amber500,
                               spots: cashSpots,
                             ),
                           ),
@@ -223,7 +230,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             child: _SparklineCard(
                               title: 'CHUYỂN KHOẢN',
                               value: formatCurrency(transferRevenue),
-                              accentColor: Color(0xFF6366F1),
+                              accentColor: AppColors.blue500, // Or violet
                               spots: transferSpots,
                             ),
                           ),
@@ -234,7 +241,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       final extraMetrics = Container(
                         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.cardBg,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: AppColors.slate200),
                         ),
@@ -245,8 +252,8 @@ class _DashboardPageState extends State<DashboardPage> {
                               children: [
                                 Container(
                                   padding: EdgeInsets.all(6),
-                                  decoration: BoxDecoration(color: Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(8)),
-                                  child: Icon(Icons.receipt_long_rounded, size: 16, color: Color(0xFF3B82F6)),
+                                  decoration: BoxDecoration(color: AppColors.blue50, borderRadius: BorderRadius.circular(8)),
+                                  child: Icon(Icons.receipt_long_rounded, size: 16, color: AppColors.blue500),
                                 ),
                                 SizedBox(width: 12),
                                 Column(
@@ -258,13 +265,13 @@ class _DashboardPageState extends State<DashboardPage> {
                                 ),
                               ],
                             ),
-                            Container(width: 1, height: 30, color: AppColors.slate100),
+                            Container(width: 1, height: 30, color: AppColors.slate200),
                             Row(
                               children: [
                                 Container(
                                   padding: EdgeInsets.all(6),
-                                  decoration: BoxDecoration(color: Color(0xFFF5F3FF), borderRadius: BorderRadius.circular(8)),
-                                  child: Icon(Icons.analytics_rounded, size: 16, color: Color(0xFF8B5CF6)),
+                                  decoration: BoxDecoration(color: AppColors.violet50, borderRadius: BorderRadius.circular(8)),
+                                  child: Icon(Icons.analytics_rounded, size: 16, color: AppColors.violet500),
                                 ),
                                 SizedBox(width: 12),
                                 Column(
@@ -762,9 +769,9 @@ class _SparklineCard extends StatelessWidget {
       height: 94,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg,
         gradient: LinearGradient(
-          colors: [Colors.white, accentColor.withValues(alpha: 0.15)],
+          colors: [AppColors.cardBg, accentColor.withValues(alpha: AppColors.isDarkMode ? 0.05 : 0.15)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -852,7 +859,9 @@ class _SparklineCard extends StatelessWidget {
                 isGradientValue
                     ? ShaderMask(
                         shaderCallback: (bounds) => LinearGradient(
-                          colors: [Color(0xFF0D9488), Color(0xFF10B981)],
+                          colors: AppColors.isDarkMode 
+                              ? [AppColors.emerald400, AppColors.emerald200]
+                              : [Color(0xFF0D9488), Color(0xFF10B981)],
                         ).createShader(bounds),
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
@@ -904,7 +913,7 @@ class _HourlyRevenueStackedChart extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.slate200),
         boxShadow: [
@@ -1219,7 +1228,7 @@ class _MobileMiniCard extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.slate100.withValues(alpha: 0.8)),
         boxShadow: [
@@ -1311,7 +1320,7 @@ class _TopProductsPanel extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.slate200),
         boxShadow: [BoxShadow(color: AppColors.emerald500.withValues(alpha: 0.03), blurRadius: 15, offset: Offset(0, 4))],
@@ -1323,8 +1332,8 @@ class _TopProductsPanel extends StatelessWidget {
             children: [
               Container(
                 padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Color(0xFFD1FAE5), borderRadius: BorderRadius.circular(10)),
-                child: Icon(Icons.star_rounded, color: Color(0xFF059669), size: 18),
+                decoration: BoxDecoration(color: AppColors.emerald50, borderRadius: BorderRadius.circular(10)),
+                child: Icon(Icons.star_rounded, color: AppColors.emerald600, size: 18),
               ),
               SizedBox(width: 10),
               Text('Sản phẩm nổi bật', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.slate800, letterSpacing: -0.3)),
@@ -1370,17 +1379,19 @@ class _TopProductsPanel extends StatelessWidget {
                 height: 56,
                 width: barWidth,
                 decoration: BoxDecoration(
-                  color: Color(0xFFF8FAFC),
+                  color: AppColors.slate50,
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              // Filled fractional bar directly computed
               Container(
                 height: 56,
                 width: barWidth * factor,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFFD1FAE5), Color(0xFFA7F3D0)],
+                    colors: [
+                      AppColors.emerald500.withValues(alpha: 0.15),
+                      AppColors.emerald500.withValues(alpha: 0.05),
+                    ],
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -1396,7 +1407,7 @@ class _TopProductsPanel extends StatelessWidget {
                       width: 30, height: 30,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: index == 0 ? Color(0xFFF59E0B) : index == 1 ? Color(0xFF94A3B8) : index == 2 ? Color(0xFFD97706) : Colors.white, 
+                        color: index == 0 ? Color(0xFFF59E0B) : index == 1 ? Color(0xFF94A3B8) : index == 2 ? Color(0xFFD97706) : AppColors.cardBg, 
                         shape: BoxShape.circle, 
                         border: index > 2 ? Border.all(color: AppColors.slate200) : null,
                         boxShadow: index < 3 ? [BoxShadow(color: (index == 0 ? Color(0xFFF59E0B) : index == 1 ? Color(0xFF94A3B8) : Color(0xFFD97706)).withValues(alpha: 0.3), blurRadius: 4, offset: Offset(0, 2))] : null
@@ -1442,10 +1453,10 @@ class _TopStaffPanel extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.slate200),
-        boxShadow: [BoxShadow(color: Color(0xFF8B5CF6).withValues(alpha: 0.03), blurRadius: 15, offset: Offset(0, 4))],
+        boxShadow: [BoxShadow(color: AppColors.violet500.withValues(alpha: 0.03), blurRadius: 15, offset: Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1454,8 +1465,8 @@ class _TopStaffPanel extends StatelessWidget {
             children: [
               Container(
                 padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(10)),
-                child: Icon(Icons.people_alt_rounded, color: Color(0xFF7C3AED), size: 18),
+                decoration: BoxDecoration(color: AppColors.violet50, borderRadius: BorderRadius.circular(10)),
+                child: Icon(Icons.people_alt_rounded, color: AppColors.violet600, size: 18),
               ),
               SizedBox(width: 10),
               Text('Xếp hạng nhân viên', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.slate800, letterSpacing: -0.3)),
@@ -1466,7 +1477,7 @@ class _TopStaffPanel extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Text('Xem thêm', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 13, fontWeight: FontWeight.w700)),
+                    child: Text('Xem thêm', style: TextStyle(color: AppColors.violet600, fontSize: 13, fontWeight: FontWeight.w700)),
                   ),
                 ),
             ],
@@ -1492,8 +1503,8 @@ class _TopStaffPanel extends StatelessWidget {
           Container(
             width: 38, height: 38,
             alignment: Alignment.center,
-            decoration: BoxDecoration(color: Color(0xFFF8FAFC), shape: BoxShape.circle, border: Border.all(color: Color(0xFFE2E8F0), width: 1.5)),
-            child: Text(item.name.isNotEmpty ? item.name[0].toUpperCase() : 'N', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF64748B))),
+            decoration: BoxDecoration(color: AppColors.slate50, shape: BoxShape.circle, border: Border.all(color: AppColors.slate200, width: 1.5)),
+            child: Text(item.name.isNotEmpty ? item.name[0].toUpperCase() : 'N', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.slate500)),
           ),
           SizedBox(width: 14),
           Expanded(
@@ -1506,7 +1517,7 @@ class _TopStaffPanel extends StatelessWidget {
                 ],
              )
           ),
-          Text(formatCurrency(item.revenue), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF7C3AED))),
+          Text(formatCurrency(item.revenue), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.violet600)),
         ],
       ),
     );
@@ -1523,7 +1534,7 @@ class _AllProductsDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.cardBg,
       child: Container(
         width: 450,
         height: MediaQuery.of(context).size.height * 0.8,
@@ -1534,8 +1545,8 @@ class _AllProductsDialog extends StatelessWidget {
               children: [
                 Container(
                   padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Color(0xFFD1FAE5), borderRadius: BorderRadius.circular(10)),
-                  child: Icon(Icons.star_rounded, color: Color(0xFF059669), size: 18),
+                  decoration: BoxDecoration(color: AppColors.emerald50, borderRadius: BorderRadius.circular(10)),
+                  child: Icon(Icons.star_rounded, color: AppColors.emerald600, size: 18),
                 ),
                 SizedBox(width: 12),
                 Expanded(
@@ -1574,15 +1585,15 @@ class _AllProductsDialog extends StatelessWidget {
           final barWidth = constraints.maxWidth;
           return Stack(
             children: [
-              Container(height: 56, width: barWidth, decoration: BoxDecoration(color: Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12))),
-              Container(height: 56, width: barWidth * factor, decoration: BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFD1FAE5), Color(0xFFA7F3D0)]), borderRadius: BorderRadius.circular(12))),
+              Container(height: 56, width: barWidth, decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(12))),
+              Container(height: 56, width: barWidth * factor, decoration: BoxDecoration(gradient: LinearGradient(colors: [AppColors.emerald500.withValues(alpha: 0.15), AppColors.emerald500.withValues(alpha: 0.05)]), borderRadius: BorderRadius.circular(12))),
               Container(
                 height: 56, width: barWidth, padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Row(
                   children: [
                     Container(
                       width: 30, height: 30, alignment: Alignment.center,
-                      decoration: BoxDecoration(color: index == 0 ? Color(0xFFF59E0B) : index == 1 ? Color(0xFF94A3B8) : index == 2 ? Color(0xFFD97706) : Colors.white, shape: BoxShape.circle, border: index > 2 ? Border.all(color: AppColors.slate200) : null),
+                      decoration: BoxDecoration(color: index == 0 ? Color(0xFFF59E0B) : index == 1 ? Color(0xFF94A3B8) : index == 2 ? Color(0xFFD97706) : AppColors.cardBg, shape: BoxShape.circle, border: index > 2 ? Border.all(color: AppColors.slate200) : null),
                       child: Text('${index + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: index < 3 ? Colors.white : AppColors.slate500)),
                     ),
                     SizedBox(width: 12),
@@ -1623,7 +1634,7 @@ class _AllStaffDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.cardBg,
       child: Container(
         width: 450,
         height: MediaQuery.of(context).size.height * 0.8,
@@ -1634,8 +1645,8 @@ class _AllStaffDialog extends StatelessWidget {
               children: [
                 Container(
                   padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(10)),
-                  child: Icon(Icons.people_alt_rounded, color: Color(0xFF7C3AED), size: 18),
+                  decoration: BoxDecoration(color: AppColors.violet50, borderRadius: BorderRadius.circular(10)),
+                  child: Icon(Icons.people_alt_rounded, color: AppColors.violet600, size: 18),
                 ),
                 SizedBox(width: 12),
                 Expanded(
@@ -1670,8 +1681,8 @@ class _AllStaffDialog extends StatelessWidget {
           Container(
             width: 38, height: 38,
             alignment: Alignment.center,
-            decoration: BoxDecoration(color: Color(0xFFF8FAFC), shape: BoxShape.circle, border: Border.all(color: Color(0xFFE2E8F0), width: 1.5)),
-            child: Text(item.name.isNotEmpty ? item.name[0].toUpperCase() : 'N', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF64748B))),
+            decoration: BoxDecoration(color: AppColors.slate50, shape: BoxShape.circle, border: Border.all(color: AppColors.slate200, width: 1.5)),
+            child: Text(item.name.isNotEmpty ? item.name[0].toUpperCase() : 'N', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.slate500)),
           ),
           SizedBox(width: 14),
           Expanded(
@@ -1684,7 +1695,7 @@ class _AllStaffDialog extends StatelessWidget {
                 ],
              )
           ),
-          Text(formatCurrency(item.revenue), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF7C3AED))),
+          Text(formatCurrency(item.revenue), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.violet600)),
         ],
       ),
     );

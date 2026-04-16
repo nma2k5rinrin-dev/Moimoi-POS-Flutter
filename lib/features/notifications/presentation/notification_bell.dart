@@ -169,7 +169,7 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
                             Navigator.pop(
                               context,
                             ); // Close notification dialog first
-                            _showBroadcastDialog(context, store);
+                            showBroadcastDialog(context, store);
                           },
                           icon: Icon(
                             Icons.campaign,
@@ -460,7 +460,7 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
 // ═══════════════════════════════════════════════════════════
 // BROADCAST DIALOG
 // ═══════════════════════════════════════════════════════════
-void _showBroadcastDialog(BuildContext context, UIStore store) {
+void showBroadcastDialog(BuildContext context, UIStore store) {
   final titleCtrl = TextEditingController();
   final messageCtrl = TextEditingController();
   String target = 'all_stores';

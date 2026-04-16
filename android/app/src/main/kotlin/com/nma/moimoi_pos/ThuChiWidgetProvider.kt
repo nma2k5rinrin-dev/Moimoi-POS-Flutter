@@ -1,4 +1,4 @@
-package com.moimoi.moimoi_pos
+package com.nma.moimoi_pos
 
 import android.appwidget.AppWidgetManager
 import android.content.Context

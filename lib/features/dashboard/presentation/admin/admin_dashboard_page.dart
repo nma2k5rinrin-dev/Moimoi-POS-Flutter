@@ -9,6 +9,8 @@ import 'package:moimoi_pos/features/settings/models/store_info_model.dart';
 
 import 'package:moimoi_pos/features/premium/models/premium_payment_model.dart';
 import 'package:moimoi_pos/core/utils/constants.dart';
+import 'package:moimoi_pos/core/utils/format.dart';
+import 'package:moimoi_pos/features/notifications/presentation/notification_bell.dart';
 import 'package:moimoi_pos/core/widgets/date_range_picker_dialog.dart';
 import 'package:moimoi_pos/services/api/cloudflare_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -2891,7 +2893,7 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
           Divider(height: 1, color: AppColors.slate100, indent: 56),
           _adminActionItem(Icons.history_outlined, 'Xem nhật ký hoạt động', AppColors.slate800, () => context.read<UIStore>().showToast('Tính năng đang phát triển', 'info')),
           Divider(height: 1, color: AppColors.slate100, indent: 56),
-          _adminActionItem(Icons.notifications_active_outlined, 'Gửi thông báo', AppColors.slate800, () => context.read<UIStore>().showToast('Tính năng đang phát triển', 'info')),
+          _adminActionItem(Icons.notifications_active_outlined, 'Gửi thông báo', AppColors.slate800, () => showBroadcastDialog(context, context.read<UIStore>())),
           Divider(height: 1, color: AppColors.slate100, indent: 56),
           _adminActionItem(Icons.lock_outline, 'Khóa tài khoản', Color(0xFFEF4444), () => _showDeleteConfirm(context)),
         ],
