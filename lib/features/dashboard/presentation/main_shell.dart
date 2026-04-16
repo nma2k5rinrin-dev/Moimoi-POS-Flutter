@@ -370,7 +370,8 @@ class _MobileCartBar extends StatelessWidget {
     return GestureDetector(
       onTap: () => MobileCartSheet.show(context),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        height: 72, // Chiều cao cố định cho panel
+        padding: EdgeInsets.only(left: 20), // Xoá padding trên dưới và phải để nút chiếm trọn
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [AppColors.emerald500, AppColors.emerald600],
@@ -386,77 +387,75 @@ class _MobileCartBar extends StatelessWidget {
           ],
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch, // Stretch để nút view cart full chiều cao
           children: [
             // Cart icon with badge
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 28),
-                Positioned(
-                  top: -6,
-                  right: -8,
-                  child: Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: AppColors.red500,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '${context.watch<CartStore>().cartItemCount}',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
+            Center( // Center contents vertically
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 30),
+                  Positioned(
+                    top: -6,
+                    right: -8,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: AppColors.red500,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.emerald600, width: 2),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '${context.watch<CartStore>().cartItemCount}',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            SizedBox(width: 10),
-            // Price
-            Expanded(
-              child: Text(
-                _formatCurrency(context.read<CartStore>().getCartTotal()),
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            // View cart button
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.cardBg,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
                 ],
               ),
+            ),
+            SizedBox(width: 16),
+            // Price
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _formatCurrency(context.read<CartStore>().getCartTotal()),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22, // Tăng font size từ 16 lên 22
+                    fontWeight: FontWeight.w800,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            // Text 'Xem giỏ hàng' (No button shape)
+            Padding(
+              padding: EdgeInsets.only(right: 16),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Xem giỏ hàng',
                     style: TextStyle(
-                      color: AppColors.emerald600,
-                      fontSize: 15,
+                      color: Colors.white,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  SizedBox(width: 8),
+                  SizedBox(width: 6),
                   Icon(
                     Icons.arrow_forward_rounded,
-                    size: 18,
-                    color: AppColors.emerald600,
+                    size: 20,
+                    color: Colors.white,
                   ),
                 ],
               ),
