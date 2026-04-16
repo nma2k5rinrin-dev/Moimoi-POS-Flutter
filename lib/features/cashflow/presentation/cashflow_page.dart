@@ -1418,16 +1418,20 @@ class _CashflowPageState extends State<CashflowPage> {
                         key: thuKey,
                         asDialog: true,
                         initialTransaction: t.originalTxn,
-                        onSaved: () {
-                          Navigator.pop(ctx);
+                        onSaved: () async {
+                          final store = context.read<CashflowStore>();
+                          await _fetchData(store, _dateFrom, _dateTo, silent: true);
+                          if (ctx.mounted) Navigator.pop(ctx);
                         },
                       )
                     : ExpensePage(
                         key: chiKey,
                         asDialog: true,
                         initialTransaction: t.originalTxn,
-                        onSaved: () {
-                          Navigator.pop(ctx);
+                        onSaved: () async {
+                          final store = context.read<CashflowStore>();
+                          await _fetchData(store, _dateFrom, _dateTo, silent: true);
+                          if (ctx.mounted) Navigator.pop(ctx);
                         },
                       ),
               ),
@@ -1497,10 +1501,7 @@ class _CashflowPageState extends State<CashflowPage> {
           ),
         ),
       ),
-    ).then((_) {
-      if (!mounted) return;
-      _optimisticSync();
-    });
+    );
   }
 
   void _handleDelete(_DisplayTxn t) {
@@ -1780,16 +1781,22 @@ class _CashflowPageState extends State<CashflowPage> {
                                 key: chiKey,
                                 asDialog: true,
                                 initialDate: date,
-                                onSaved: () {
-                                  Navigator.pop(ctx);
+                                onSaved: () async {
+                                  // Offline-first: refresh data from local DB FIRST, then close
+                                  final store = context.read<CashflowStore>();
+                                  await _fetchData(store, _dateFrom, _dateTo, silent: true);
+                                  if (ctx.mounted) Navigator.pop(ctx);
                                 },
                               ),
                               IncomePage(
                                 key: thuKey,
                                 asDialog: true,
                                 initialDate: date,
-                                onSaved: () {
-                                  Navigator.pop(ctx);
+                                onSaved: () async {
+                                  // Offline-first: refresh data from local DB FIRST, then close
+                                  final store = context.read<CashflowStore>();
+                                  await _fetchData(store, _dateFrom, _dateTo, silent: true);
+                                  if (ctx.mounted) Navigator.pop(ctx);
                                 },
                               ),
                             ],
@@ -1874,11 +1881,7 @@ class _CashflowPageState extends State<CashflowPage> {
           ), // closes DefaultTabController
         ), // closes Container
       ), // closes Dialog
-    ).then((_) {
-      // Always refresh data when dialog closes (whether saved or cancelled)
-      if (!mounted) return;
-      _optimisticSync();
-    }); // closes showAnimatedDialog
+    ); // closes showAnimatedDialog
   }
 
   Widget _buildCalendar(List<_DisplayTxn> txns) {

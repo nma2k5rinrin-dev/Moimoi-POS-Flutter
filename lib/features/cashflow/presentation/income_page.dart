@@ -902,7 +902,7 @@ class IncomePageState extends State<IncomePage> {
     }
 
     if (widget.onSaved != null) {
-      widget.onSaved!();
+      await widget.onSaved!();
     } else if (widget.embedded && widget.onBack != null) {
       widget.onBack!();
     } else {
