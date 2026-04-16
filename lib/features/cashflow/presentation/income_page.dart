@@ -100,6 +100,7 @@ class IncomePageState extends State<IncomePage> {
     return Container(
       color: AppColors.slate50,
       child: SafeArea(
+        top: !widget.asDialog,
         child: Column(
           children: [
             // ── Header ──────────────────────────

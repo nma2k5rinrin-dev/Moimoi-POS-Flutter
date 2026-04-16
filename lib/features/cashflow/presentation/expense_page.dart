@@ -100,6 +100,7 @@ class ExpensePageState extends State<ExpensePage> {
     return Container(
       color: AppColors.slate50,
       child: SafeArea(
+        top: !widget.asDialog,
         child: Column(
           children: [
             // ── Header ──────────────────────────
