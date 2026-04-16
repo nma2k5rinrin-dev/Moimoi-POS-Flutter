@@ -15,7 +15,7 @@ import 'package:moimoi_pos/features/cashflow/models/transaction_model.dart';
 class ExpensePage extends StatefulWidget {
   final bool asDialog;
   final DateTime? initialDate;
-  final VoidCallback? onSaved;
+  final Future<void> Function()? onSaved;
   final bool embedded;
   final VoidCallback? onBack;
   final Transaction? initialTransaction;
