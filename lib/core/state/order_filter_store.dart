@@ -4,8 +4,9 @@ import 'package:moimoi_pos/features/auth/logic/auth_store_standalone.dart';
 import 'package:moimoi_pos/features/pos_order/logic/order_store_standalone.dart';
 import 'package:moimoi_pos/features/pos_order/models/order_model.dart';
 import 'package:moimoi_pos/features/auth/models/user_model.dart';
-import 'package:drift/drift.dart' show OrderingTerm, OrderingMode, CustomExpression;
-
+import 'dart:convert';
+import 'package:drift/drift.dart' show OrderingTerm, OrderingMode, CustomExpression, Value;
+import 'package:moimoi_pos/core/database/app_database.dart';
 /// Provides filtered/computed order views that depend on both
 /// OrderStore (orders data) and AuthStore (user/role info).
 ///
@@ -164,6 +165,45 @@ class OrderFilterStore extends ChangeNotifier {
     final toStr = end.toIso8601String();
 
     try {
+      // 1) PULL từ Supabase ngầm (Stale-While-Revalidate)
+      Future(() async {
+        try {
+          final sClient = Supabase.instance.client;
+          final serverData = await sClient
+              .from('orders')
+              .select()
+              .eq('store_id', storeId)
+              .gte('time', fromStr)
+              .lte('time', toStr)
+              .isFilter('deleted_at', null);
+
+          if (serverData.isNotEmpty) {
+            for (final row in serverData) {
+               await db.upsertOrder(
+                LocalOrdersCompanion(
+                  id: Value(row['id']?.toString() ?? ''),
+                  storeId: Value(row['store_id'] ?? ''),
+                  orderTable: Value(row['table_name'] ?? ''),
+                  itemsJson: Value(jsonEncode(row['items'] ?? [])),
+                  status: Value(row['status'] ?? 'pending'),
+                  paymentStatus: Value(row['payment_status'] ?? 'unpaid'),
+                  totalAmount: Value((row['total_amount'] ?? 0).toDouble()),
+                  createdBy: Value(row['created_by'] ?? ''),
+                  time: Value(row['time'] ?? ''),
+                  paymentMethod: Value(row['payment_method'] ?? ''),
+                  isSynced: const Value(true),
+                ),
+              );
+            }
+            // Gọi notifyListeners của SyncEngine để UI lẳng lặng tự refresh lại
+            _order.syncEngine?.notifyListeners();
+          }
+        } catch (e) {
+          // Bỏ qua lỗi ngầm nếu offline
+        }
+      });
+
+      // 2) RETURN nhanh dữ liệu đang có trong Drift ngay lập tức 
       final query = db.select(db.localOrders)
         ..where((o) => CustomExpression<bool>("time >= '$fromStr' AND time <= '$toStr'"))
         ..where((o) => o.deletedAt.isNull())

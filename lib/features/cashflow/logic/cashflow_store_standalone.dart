@@ -488,6 +488,43 @@ class CashflowStore extends ChangeNotifier with BaseMixin {
     ).toIso8601String();
 
     try {
+      // 1) PULL ngầm từ Supabase (Stale-While-Revalidate)
+      Future(() async {
+        try {
+          final sClient = Supabase.instance.client;
+          final serverData = await sClient
+              .from('transactions')
+              .select()
+              .eq('store_id', storeId)
+              .gte('time', fromStr)
+              .lte('time', toStr)
+              .isFilter('deleted_at', null);
+
+          if (serverData.isNotEmpty) {
+            for (final row in serverData) {
+              await db!.upsertTransaction(
+                LocalTransactionsCompanion(
+                  id: Value(row['id']?.toString() ?? ''),
+                  storeId: Value(row['store_id'] ?? ''),
+                  type: Value(row['type'] ?? 'thu'),
+                  amount: Value((row['amount'] ?? 0).toDouble()),
+                  category: Value(row['category'] ?? ''),
+                  note: Value(row['note'] ?? ''),
+                  time: Value(row['time'] ?? ''),
+                  createdBy: Value(row['created_by'] ?? ''),
+                  isSynced: const Value(true),
+                ),
+              );
+            }
+            // Gọi notifyListeners của SyncEngine để UI lẳng lặng tự refresh
+            syncEngine?.notifyListeners();
+          }
+        } catch (e) {
+             // Bỏ qua lỗi ngầm nếu đang offline
+        }
+      });
+
+      // 2) Kéo nhanh Local DB ra hiển thị cho người dùng 
       final query = db!.select(db!.localTransactions)
         ..where((t) => t.storeId.equals(storeId))
         ..where((t) => CustomExpression<bool>("time >= '$fromStr' AND time <= '$toStr'"))
