@@ -1875,9 +1875,9 @@ class _CashflowPageState extends State<CashflowPage> {
                                             innerCtx,
                                           ).index;
                                       if (currentIdx == 0) {
-                                        thuKey.currentState?.submit();
-                                      } else {
                                         chiKey.currentState?.submit();
+                                      } else {
+                                        thuKey.currentState?.submit();
                                       }
                                     },
                                     child: Container(

@@ -410,7 +410,8 @@ class IncomePageState extends State<IncomePage> {
                               SizedBox(height: 14),
 
                               // ── Buttons ─────────────
-                              Row(
+                              if (!widget.asDialog)
+                                Row(
                                   children: [
                                     Expanded(
                                       child: GestureDetector(
