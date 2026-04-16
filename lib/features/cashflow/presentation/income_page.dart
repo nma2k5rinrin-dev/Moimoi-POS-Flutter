@@ -879,7 +879,7 @@ class IncomePageState extends State<IncomePage> {
     }
     final store = context.read<CashflowStore>();
     if (widget.initialTransaction != null) {
-      store.updateTransaction(
+      await store.updateTransaction(
         id: widget.initialTransaction!.id,
         amount: amount,
         category: _getCategories(store)[_selectedCategory].label,
@@ -889,7 +889,7 @@ class IncomePageState extends State<IncomePage> {
       if (!mounted) return;
       store.showToast('Đã lưu thay đổi!');
     } else {
-      store.addTransaction(
+      await store.addTransaction(
         type: 'thu',
         amount: amount,
         category: _getCategories(store)[_selectedCategory].label,

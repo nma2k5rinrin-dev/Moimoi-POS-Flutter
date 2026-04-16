@@ -886,7 +886,7 @@ class ExpensePageState extends State<ExpensePage> {
     final store = context.read<CashflowStore>();
 
     if (widget.initialTransaction != null) {
-      store.updateTransaction(
+      await store.updateTransaction(
         id: widget.initialTransaction!.id,
         amount: amount,
         category: _getCategories(store)[_selectedCategory].label,
@@ -896,7 +896,7 @@ class ExpensePageState extends State<ExpensePage> {
       if (!mounted) return;
       store.showToast('Đã lưu thay đổi!');
     } else {
-      store.addTransaction(
+      await store.addTransaction(
         type: 'chi',
         amount: amount,
         category: _getCategories(store)[_selectedCategory].label,
