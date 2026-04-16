@@ -515,7 +515,13 @@ class _MobileBottomNav extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.cardBg,
-        border: Border(top: BorderSide(color: AppColors.slate200, width: 1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: Offset(0, -4),
+          ),
+        ],
       ),
       child: SafeArea(
         child: SizedBox(
@@ -710,6 +716,7 @@ Widget _buildAvatarWidget(AuthStore authStore, double radius) {
         height: radius * 2,
         fit: BoxFit.cover,
         placeholder: (_, _) => const CircularProgressIndicator(strokeWidth: 2),
+        fadeInDuration: Duration.zero,
         errorWidget: (_, _, _) => fallbackAvatar(),
       ),
     );
@@ -751,6 +758,7 @@ Widget _buildStoreLogoWidget(String logoUrl, double size) {
         height: size,
         fit: BoxFit.cover,
         placeholder: (_, _) => fallbackLogo(),
+        fadeInDuration: Duration.zero,
         errorWidget: (_, _, _) => fallbackLogo(),
       ),
     );

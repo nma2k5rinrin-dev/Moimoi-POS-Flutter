@@ -300,36 +300,33 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          padding: EdgeInsets.symmetric(horizontal: 4, vertical: 20),
-          decoration: BoxDecoration(
-            color: isActive ? AppColors.emerald50 : Colors.transparent,
-            border: Border(
-              left: BorderSide(
-                color: isActive ? AppColors.emerald500 : Colors.transparent,
-                width: 4,
-              ),
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 20),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.emerald50 : Colors.transparent,
+          border: Border(
+            left: BorderSide(
+              color: isActive ? AppColors.emerald500 : Colors.transparent,
+              width: 4,
             ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
-                  color: isActive ? AppColors.emerald700 : AppColors.slate600,
-                ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+                color: isActive ? AppColors.emerald700 : AppColors.slate600,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
