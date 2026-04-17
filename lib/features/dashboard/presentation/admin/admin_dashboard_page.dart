@@ -2843,14 +2843,12 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
     return '$formattedđ';
   }
 
-  String _formatDateString(String? dateStr) {
-    if (dateStr == null || dateStr.isEmpty) return 'N/A';
+  String _formatDateString(DateTime? dt) {
+    if (dt == null) return 'N/A';
     try {
-      final dt = DateTime.parse(dateStr).toLocal();
-      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
-    } catch (_) {
-      return dateStr;
-    }
+      final localDt = dt.toLocal();
+      return '${localDt.day.toString().padLeft(2, '0')}/${localDt.month.toString().padLeft(2, '0')}/${localDt.year}';
+    } catch (_) { return dt.toString(); }
   }
 
   @override
@@ -3155,7 +3153,7 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
                 Icons.account_balance_wallet_outlined,
                 'Doanh thu',
                 _fmtCurrency(_totalRevenue),
-                Colors.emerald,
+                Colors.teal,
               ),
             ],
           ),
