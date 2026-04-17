@@ -307,7 +307,8 @@ class _PricingDialogState extends State<_PricingDialog> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
+                                Wrap(
+                                  crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     Text(
                                       plan.name,
@@ -424,6 +425,7 @@ class _PricingDialogState extends State<_PricingDialog> {
                           )
                         : Text(
                             'Đăng ký ${displayPlans[_selectedPlan].name} - ${displayPlans[_selectedPlan].price}',
+                            textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
@@ -454,12 +456,15 @@ class _PricingDialogState extends State<_PricingDialog> {
                       children: [
                         Icon(Icons.business_center, size: 16, color: AppColors.slate600),
                         SizedBox(width: 8),
-                        Text(
-                          'Chuỗi Cửa hàng / Ưu đãi Doanh nghiệp',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.slate700,
+                        Flexible(
+                          child: Text(
+                            'Chuỗi Cửa hàng / Ưu đãi Doanh nghiệp',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.slate700,
+                            ),
                           ),
                         ),
                       ],
@@ -489,12 +494,14 @@ class _PricingDialogState extends State<_PricingDialog> {
       children: [
         Icon(icon, size: 18, color: AppColors.emerald500),
         SizedBox(width: 10),
-        Text(
-          text,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: AppColors.slate800,
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppColors.slate800,
+            ),
           ),
         ),
       ],
