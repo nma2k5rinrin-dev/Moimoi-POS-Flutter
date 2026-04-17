@@ -141,4 +141,14 @@ class NotificationHelper {
       payload: payload,
     );
   }
+
+  static Future<void> clearAppBadge() async {
+    if (!kIsWeb) {
+      // With flutter_local_notifications ^16.0+, setBadgeNumber is no longer natively available
+      // Instead, cancelling all notifications will implicitly clear internal badges on most OSes.
+      try {
+        await flutterLocalNotificationsPlugin.cancelAll();
+      } catch (_) {}
+    }
+  }
 }

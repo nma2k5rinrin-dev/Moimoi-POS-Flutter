@@ -2867,17 +2867,15 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
         ? widget.info.name
         : widget.storeId;
     final isPremium = widget.info.isPremium;
-    final adminUser = context
+    final isActive = context
         .watch<ManagementStore>()
         .users
-        .where((u) => u.username == widget.storeId)
-        .firstOrNull;
-    final isActive = adminUser?.isOnline ?? false;
+        .any((u) => (u.username == widget.storeId || u.createdBy == widget.storeId) && u.isOnline);
 
     return Scaffold(
       backgroundColor: Color(0xFFF4F7FA),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
@@ -2889,21 +2887,12 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
             color: AppColors.slate800,
           ),
         ),
-        bottom: PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Container(height: 1, color: AppColors.slate100),
-        ),
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildSleekHero(storeName, isActive, isPremium, colors),
-            if (context.watch<ManagementStore>().upgradeRequests.any((r) => r.storeId == widget.storeId && r.status == 'pending'))
-              Padding(
-                padding: EdgeInsets.fromLTRB(16, 24, 16, 0),
-                child: _buildApprovePanel(context),
-              ),
+            _buildSleekHero(context, storeName, isActive, isPremium, colors),
             SizedBox(height: 24),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
@@ -2914,11 +2903,6 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: _buildBusinessInfoCard(),
             ),
-            SizedBox(height: 16),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: _buildModernSubscription(isPremium),
-            ),
             SizedBox(height: 48),
           ],
         ),
@@ -2926,129 +2910,115 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
     );
   }
 
-  Widget _buildApprovePanel(BuildContext context) {
-    final request = context.watch<ManagementStore>().upgradeRequests.firstWhere(
-      (r) => r.storeId == widget.storeId && r.status == 'pending',
-    );
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.orange50,
-        border: Border.all(color: Color(0xFFF59E0B)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Icon(Icons.stars, color: Color(0xFFF59E0B), size: 28),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Yêu cầu nâng cấp gói: ${request.planName}',
-                  style: TextStyle(
-                    color: Color(0xFFB45309),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: () async {
-                context.read<ManagementStore>().showToast('Đang phê duyệt...', 'info');
-                await context.read<ManagementStore>().approveVIPRequest(request.id);
-                if (context.mounted) {
-                  context.read<ManagementStore>().showToast('Đã phê duyệt gói Premium thành công!', 'success');
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFF59E0B),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              child: Text(
-                'Phê duyệt Premium',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSleekHero(
+    BuildContext context,
     String storeName,
     bool isActive,
     bool isPremium,
     List<Color> colors,
   ) {
+    final pendingRequest = context.watch<ManagementStore>().upgradeRequests.where((r) => r.storeId == widget.storeId && r.status == 'pending').firstOrNull;
+
     return Container(
-      color: Colors.white,
+      color: Colors.transparent,
       padding: EdgeInsets.fromLTRB(20, 24, 20, 24),
       child: Column(
         children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: colors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Builder(
+                builder: (context) {
+                  final avatarWidget = Builder(
+                    builder: (_) {
+                      if (widget.info.logoUrl.isNotEmpty) {
+                        if (CloudflareService.isUrl(widget.info.logoUrl))
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: CachedNetworkImage(
+                              imageUrl: widget.info.logoUrl,
+                              fit: BoxFit.cover,
+                            ),
+                          );
+                        try {
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: Image.memory(
+                              base64Decode(widget.info.logoUrl.split(',').last),
+                              fit: BoxFit.cover,
+                            ),
+                          );
+                        } catch (_) {}
+                      }
+                      return Icon(Icons.storefront, color: Colors.white, size: 36);
+                    },
+                  );
+
+                  if (isPremium) {
+                    return Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Color(0xFFFFDF00),
+                            Color(0xFFD4AF37),
+                            Color(0xFFB8860B),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: avatarWidget,
+                    );
+                  } else {
+                    return Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: colors,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: avatarWidget,
+                    );
+                  }
+                },
               ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: colors.first.withValues(alpha: 0.3),
-                  blurRadius: 16,
-                  offset: Offset(0, 8),
+              if (isPremium)
+                Positioned(
+                  bottom: -8,
+                  right: -8,
+                  child: Container(
+                    padding: EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+                    ),
+                    child: Icon(Icons.workspace_premium_rounded, color: Color(0xFFD97706), size: 24),
+                  ),
                 ),
-              ],
-            ),
-            child: Builder(
-              builder: (_) {
-                if (widget.info.logoUrl.isNotEmpty) {
-                  if (CloudflareService.isUrl(widget.info.logoUrl))
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
-                      child: CachedNetworkImage(
-                        imageUrl: widget.info.logoUrl,
-                        fit: BoxFit.cover,
-                      ),
-                    );
-                  try {
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
-                      child: Image.memory(
-                        base64Decode(widget.info.logoUrl.split(',').last),
-                        fit: BoxFit.cover,
-                      ),
-                    );
-                  } catch (_) {}
-                }
-                return Icon(Icons.storefront, color: Colors.white, size: 36);
-              },
-            ),
+            ],
           ),
           SizedBox(height: 16),
-          Text(
-            storeName,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AppColors.slate900,
-            ),
-            textAlign: TextAlign.center,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                storeName,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: isPremium ? Color(0xFFB45309) : AppColors.slate900,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
           SizedBox(height: 12),
           Row(
@@ -3108,6 +3078,7 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
               ),
             ],
           ),
+          _buildHeroPlanStatus(context, isPremium, pendingRequest),
           SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -3135,6 +3106,177 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _showApproveDialog(BuildContext context, dynamic req) {
+    int expectedMonths = 1;
+    final pn = req.planName.toLowerCase();
+    if (pn.contains('3 tháng')) expectedMonths = 3;
+    else if (pn.contains('6 tháng')) expectedMonths = 6;
+    else if (pn.contains('1 năm') || pn.contains('12 tháng')) expectedMonths = 12;
+
+    final requestDate = DateTime.tryParse(req.createdAt) ?? DateTime.now();
+    DateTime baseDate = DateTime.now();
+    final targetUser = context.read<ManagementStore>().users.where((u) => u.username == req.storeId || u.createdBy == req.storeId).firstOrNull;
+    if (targetUser?.expiresAt != null) {
+      final currentExpiry = DateTime.tryParse(targetUser!.expiresAt!) ?? DateTime.now();
+      if (currentExpiry.isAfter(DateTime.now())) {
+        baseDate = currentExpiry;
+      }
+    }
+
+    final expectedExpiryDate = baseDate.add(Duration(days: expectedMonths * 30));
+    final String formattedRequestDate = '${requestDate.day.toString().padLeft(2,'0')}/${requestDate.month.toString().padLeft(2,'0')}/${requestDate.year}';
+    final String formattedExpiryDate = '${expectedExpiryDate.day.toString().padLeft(2,'0')}/${expectedExpiryDate.month.toString().padLeft(2,'0')}/${expectedExpiryDate.year}';
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.all(20),
+        child: Container(
+          width: double.infinity,
+          constraints: BoxConstraints(maxWidth: 400),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(24, 24, 24, 16),
+                child: Row(
+                  children: [
+                    Icon(Icons.workspace_premium_rounded, color: Color(0xFFF59E0B), size: 28),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Xác nhận phê duyệt',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.slate800),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: AppColors.slate200),
+              Padding(
+                padding: EdgeInsets.all(24),
+                child: Container(
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.orange50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Color(0xFFF59E0B).withValues(alpha: 0.5)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.storefront_rounded, color: Color(0xFFF59E0B), size: 20),
+                          SizedBox(width: 8),
+                          Text('Mã cửa hàng:', style: TextStyle(color: AppColors.slate600, fontSize: 13, fontWeight: FontWeight.w600)),
+                          Spacer(),
+                          Text(req.storeId, style: TextStyle(color: AppColors.slate900, fontSize: 14, fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                      Divider(color: Color(0xFFF59E0B).withValues(alpha: 0.2), height: 24),
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_month_rounded, color: Color(0xFFF59E0B), size: 20),
+                          SizedBox(width: 8),
+                          Text('Gói yêu cầu:', style: TextStyle(color: AppColors.slate600, fontSize: 13, fontWeight: FontWeight.w600)),
+                          Spacer(),
+                          Text(req.planName, style: TextStyle(color: AppColors.slate900, fontSize: 14, fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                      Divider(color: Color(0xFFF59E0B).withValues(alpha: 0.2), height: 24),
+                      Row(
+                        children: [
+                          Icon(Icons.add_task_rounded, color: Color(0xFFF59E0B), size: 20),
+                          SizedBox(width: 8),
+                          Text('Ngày đăng ký:', style: TextStyle(color: AppColors.slate600, fontSize: 13, fontWeight: FontWeight.w600)),
+                          Spacer(),
+                          Text(formattedRequestDate, style: TextStyle(color: AppColors.slate900, fontSize: 14, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Icon(Icons.event_busy_rounded, color: Color(0xFFF59E0B), size: 20),
+                          SizedBox(width: 8),
+                          Text('Dự kiến hết hạn:', style: TextStyle(color: AppColors.slate600, fontSize: 13, fontWeight: FontWeight.w600)),
+                          Spacer(),
+                          Text(formattedExpiryDate, style: TextStyle(color: AppColors.slate900, fontSize: 14, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      Divider(color: Color(0xFFF59E0B).withValues(alpha: 0.2), height: 24),
+                      Row(
+                        children: [
+                          Icon(Icons.payments_rounded, color: Color(0xFFF59E0B), size: 20),
+                          SizedBox(width: 8),
+                          Text('Thanh toán:', style: TextStyle(color: AppColors.slate600, fontSize: 13, fontWeight: FontWeight.w600)),
+                          Spacer(),
+                          Text(_formatCurrency(req.amount), style: TextStyle(color: AppColors.emerald600, fontSize: 16, fontWeight: FontWeight.w800)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(24, 0, 24, 24),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(dialogCtx),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.slate100,
+                            foregroundColor: AppColors.slate700,
+                            elevation: 0,
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: Text('Hủy bỏ', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            Navigator.pop(dialogCtx);
+                            context.read<ManagementStore>().showToast('Đang phê duyệt...', 'info');
+                            await context.read<ManagementStore>().approveVIPRequest(req.id);
+                            if (context.mounted) {
+                              context.read<ManagementStore>().showToast('Đã phê duyệt gói Premium thành công!', 'success');
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.blue500,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: Text('Phê duyệt', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -3449,181 +3591,75 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
     );
   }
 
-  Widget _buildModernSubscription(bool isPremium) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 12),
-          child: Text(
-            'GÓI DỊCH VỤ & THANH TOÁN',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              color: AppColors.slate400,
-              letterSpacing: 1.2,
+  Widget _buildHeroPlanStatus(BuildContext context, bool isPremium, dynamic pendingRequest) {
+    return Container(
+      margin: EdgeInsets.only(top: 20),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isPremium ? Color(0xFFFDE68A) : AppColors.slate200),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isPremium ? Color(0xFFFEF3C7) : AppColors.slate50,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isPremium ? Icons.workspace_premium_rounded : Icons.local_activity_rounded,
+              color: isPremium ? Color(0xFFD97706) : AppColors.slate500,
+              size: 20,
             ),
           ),
-        ),
-        Container(
-          padding: EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: isPremium ? null : Colors.white,
-            gradient: isPremium
-                ? LinearGradient(
-                    colors: [Color(0xFFFEF3C7), Color(0xFFFDE68A)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                : null,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isPremium
-                  ? Color(0xFFF59E0B).withValues(alpha: 0.3)
-                  : AppColors.slate100,
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isPremium ? 'MoiMoi Premium' : 'Gói Cơ Bản',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate800),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  isPremium 
+                      ? 'Hết hạn: ${_formatDateString(widget.info.premiumExpiresAt)}' 
+                      : 'Giới hạn tính năng',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate500),
+                ),
+              ],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              ),
-            ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: isPremium ? Color(0xFFF59E0B) : AppColors.slate100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      isPremium
-                          ? Icons.workspace_premium
-                          : Icons.stars_outlined,
-                      color: isPremium ? Colors.white : AppColors.slate400,
-                      size: 20,
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isPremium ? 'MoiMoi Premium' : 'Gói Cơ Bản',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: isPremium
-                              ? Color(0xFF92400E)
-                              : AppColors.slate800,
-                        ),
-                      ),
-                      Text(
-                        isPremium ? 'Đang hoạt động' : 'Giới hạn tính năng',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: isPremium
-                              ? Color(0xFFB45309)
-                              : AppColors.slate500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Spacer(),
-                  if (isPremium &&
-                      widget.info.daysUntilExpiry != null &&
-                      widget.info.daysUntilExpiry! <= 7)
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Color(0xFFEF4444),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Sắp hết hạn',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                ],
+          if (pendingRequest != null)
+            ElevatedButton(
+              onPressed: () => _showApproveDialog(context, pendingRequest),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFFF59E0B),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Ngày hết hạn',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: isPremium
-                                ? Color(0xFFB45309)
-                                : AppColors.slate400,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          isPremium
-                              ? _formatDateString(widget.info.premiumExpiresAt)
-                              : 'Vĩnh viễn',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: isPremium
-                                ? Color(0xFF92400E)
-                                : AppColors.slate800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => context.read<UIStore>().showToast(
-                      'Tính năng nâng cấp đang phát triển',
-                      'info',
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isPremium
-                          ? Colors.white
-                          : AppColors.emerald500,
-                      foregroundColor: isPremium
-                          ? Color(0xFFD97706)
-                          : Colors.white,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      isPremium ? 'Gia hạn' : 'Nâng cấp',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ],
+              child: Text('Duyệt ngay', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+            )
+          else
+            TextButton(
+              onPressed: () => context.read<UIStore>().showToast('Tính năng nâng cấp đang phát triển', 'info'),
+              style: TextButton.styleFrom(
+                foregroundColor: isPremium ? Color(0xFFD97706) : Colors.blue,
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-            ],
-          ),
-        ),
-      ],
+              child: Text(isPremium ? 'Gia hạn' : 'Nâng cấp', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+            ),
+        ],
+      ),
     );
   }
 
@@ -3813,3 +3849,5 @@ class _SparklinePainter extends CustomPainter {
   bool shouldRepaint(covariant _SparklinePainter oldDelegate) =>
       oldDelegate.data != data || oldDelegate.color != color;
 }
+
+

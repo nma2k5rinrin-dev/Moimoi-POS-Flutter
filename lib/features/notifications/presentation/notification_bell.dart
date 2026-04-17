@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:moimoi_pos/core/utils/notification_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:moimoi_pos/features/auth/logic/auth_store_standalone.dart';
@@ -11,6 +12,7 @@ import 'package:moimoi_pos/core/utils/format.dart';
 import 'package:moimoi_pos/core/widgets/confirm_modal.dart';
 import 'package:moimoi_pos/core/models/confirm_dialog_data.dart';
 import 'package:moimoi_pos/features/premium/models/upgrade_request_model.dart';
+import 'package:moimoi_pos/core/utils/notification_helper.dart';
 
 class NotificationBell extends StatelessWidget {
   const NotificationBell({super.key});
@@ -29,7 +31,10 @@ class NotificationBell extends StatelessWidget {
             color: AppColors.slate500,
             size: 28,
           ),
-          onPressed: () => _showNotificationDialog(context, store),
+          onPressed: () {
+            NotificationHelper.clearAppBadge();
+            _showNotificationDialog(context, store);
+          },
         ),
         if (unreadCount > 0)
           Positioned(
@@ -161,8 +166,9 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
                       if (unread.isNotEmpty)
                         TextButton(
                           onPressed: () {
-                            for (final n in unread) {
-                              context.read<ManagementStore>().markNotificationAsRead(n.id);
+                            final userId = context.read<AuthStore>().currentUser?.username ?? '';
+                            if (userId.isNotEmpty) {
+                              context.read<ManagementStore>().markAllNotificationsAsRead(userId);
                             }
                           },
                           child: Text(
@@ -364,6 +370,10 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
             padding: EdgeInsets.only(right: 20),
             child: Icon(Icons.delete_rounded, color: Colors.white, size: 24),
           ),
+          onDismissed: (_) {
+            context.read<ManagementStore>().deleteNotification(noti.id);
+            store.showToast('Đã xóa thông báo', 'info');
+          },
           confirmDismiss: (_) async {
             final completer = Completer<bool>();
             showAnimatedDialog(
@@ -380,12 +390,10 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
                   avatarInitials: '🗑️',
                   avatarColor: AppColors.red500,
                   onConfirm: () {
-                    context.read<ManagementStore>().deleteNotification(noti.id);
-                    store.showToast('Đã xóa thông báo', 'info');
-                    completer.complete(false);
+                    if (!completer.isCompleted) completer.complete(true);
                   },
                   onCancel: () {
-                    completer.complete(false);
+                    if (!completer.isCompleted) completer.complete(false);
                   },
                 ),
                 onCancel: () => Navigator.pop(dialogCtx),
@@ -646,7 +654,7 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
             padding: EdgeInsets.all(20),
             child: (noti.title.contains('VIP') || noti.title.contains('Premium')) && context.read<AuthStore>().currentUser?.role == 'sadmin'
               ? SizedBox(
-                  height: 50,
+                  height: 56,
                   child: Row(
                     children: [
                       Expanded(
@@ -677,9 +685,9 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
                             foregroundColor: AppColors.slate700,
                             elevation: 0,
                             padding: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
-                          child: Text('Từ chối', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                          child: Text('Từ chối', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                         ),
                       ),
                       SizedBox(width: 12),
@@ -711,11 +719,11 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
                             foregroundColor: Colors.white,
                             elevation: 0,
                             padding: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
                           child: context.watch<ManagementStore>().isLoading 
-                              ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : Text('Phê duyệt', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                              ? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                              : Text('Phê duyệt', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                         ),
                       ),
                     ],
@@ -723,7 +731,7 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
                 )
               : SizedBox(
               width: double.infinity,
-              height: 50,
+              height: 56,
               child: ElevatedButton(
                 onPressed: () {
                   if (!noti.read) context.read<ManagementStore>().markNotificationAsRead(noti.id);
@@ -733,11 +741,11 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
                   backgroundColor: AppColors.blue500,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   elevation: 0,
                 ),
-                child: Text('Đóng & Đánh dấu đã đọc', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                child: Text('Đóng & Đánh dấu đã đọc', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               ),
             ),
           ),
@@ -772,13 +780,21 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
     
     int expectedMonths = 1;
     final pn = req.planName.toLowerCase();
-    if (pn.contains('3')) expectedMonths = 3;
-    if (pn.contains('6')) expectedMonths = 6;
-    if (pn.contains('1')) expectedMonths = 12;
-    if (pn.contains('năm')) expectedMonths = 12;
+    if (pn.contains('3 tháng')) expectedMonths = 3;
+    else if (pn.contains('6 tháng')) expectedMonths = 6;
+    else if (pn.contains('1 năm') || pn.contains('12 tháng')) expectedMonths = 12;
     
     final requestDate = DateTime.tryParse(noti.time.toString()) ?? DateTime.now();
-    final expectedExpiryDate = DateTime(requestDate.year, requestDate.month + expectedMonths, requestDate.day);
+    DateTime baseDate = DateTime.now();
+    final targetUser = context.read<ManagementStore>().users.where((u) => u.username == req!.storeId || u.createdBy == req.storeId).firstOrNull;
+    if (targetUser?.expiresAt != null) {
+      final currentExpiry = DateTime.tryParse(targetUser!.expiresAt!) ?? DateTime.now();
+      if (currentExpiry.isAfter(DateTime.now())) {
+        baseDate = currentExpiry;
+      }
+    }
+
+    final expectedExpiryDate = baseDate.add(Duration(days: expectedMonths * 30));
     final String formattedRequestDate = '${requestDate.day.toString().padLeft(2,'0')}/${requestDate.month.toString().padLeft(2,'0')}/${requestDate.year}';
     final String formattedExpiryDate = '${expectedExpiryDate.day.toString().padLeft(2,'0')}/${expectedExpiryDate.month.toString().padLeft(2,'0')}/${expectedExpiryDate.year}';
 

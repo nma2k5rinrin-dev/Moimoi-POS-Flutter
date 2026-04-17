@@ -708,6 +708,23 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
     );
   }
 
+  void markAllNotificationsAsRead(String userId) {
+    final oldNotifications = List<NotificationModel>.from(notifications);
+    optimistic(
+      apply: () {
+        notifications = notifications.map((n) => n.copyWith(read: true)).toList();
+      },
+      remote: () => supabaseClient
+          .from('notifications')
+          .update({'read': true})
+          .eq('user_id', userId)
+          .eq('read', false),
+      rollback: () {
+        notifications = oldNotifications;
+      },
+    );
+  }
+
   void deleteNotification(String id) {
     final oldNotifications = List<NotificationModel>.from(notifications);
     optimistic(
@@ -800,7 +817,17 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
       if (request.planName.contains('6 Tháng')) months = 6;
       if (request.planName.contains('1 Năm')) months = 12;
       final durationDays = months * 30;
-      final expiresAt = now.add(Duration(days: durationDays));
+
+      DateTime baseDate = now;
+      final targetUser = users.where((u) => u.username == request.storeId || u.createdBy == request.storeId).firstOrNull;
+      if (targetUser?.expiresAt != null) {
+        final currentExpiry = DateTime.tryParse(targetUser!.expiresAt!) ?? now;
+        if (currentExpiry.isAfter(now)) {
+          baseDate = currentExpiry;
+        }
+      }
+
+      final expiresAt = baseDate.add(Duration(days: durationDays));
 
       await supabaseClient.from('upgrade_requests').update({'status': 'approved'}).eq('id', requestId);
 
