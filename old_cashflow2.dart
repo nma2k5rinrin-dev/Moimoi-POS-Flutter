@@ -1,0 +1,507 @@
+﻿import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
+import 'package:drift/drift.dart' show Value;
+import 'package:moimoi_pos/core/state/base_mixin.dart';
+import 'package:moimoi_pos/core/database/app_database.dart';
+import 'package:moimoi_pos/features/cashflow/models/transaction_model.dart';
+import 'package:moimoi_pos/features/cashflow/models/transaction_category_model.dart';
+import 'package:moimoi_pos/features/auth/models/user_model.dart';
+import 'package:moimoi_pos/core/utils/quota_helper.dart';
+import 'package:moimoi_pos/features/premium/presentation/widgets/upgrade_dialog.dart';
+
+/// Manages Thu/Chi categories and transactions CRUD.
+class CashflowStore extends ChangeNotifier with BaseMixin {
+  final QuotaDataProvider quotaProvider;
+  final UserModel? Function() getCurrentUser;
+
+  CashflowStore({
+    required this.quotaProvider,
+    required this.getCurrentUser,
+  });
+
+  @override
+  String getStoreId() => quotaProvider.getStoreId();
+  // ΓöÇΓöÇ State ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  Map<String, List<TransactionCategory>> customTransactionCategories = {
+    'sadmin': [],
+  };
+  List<Transaction> transactions = [];
+
+  UserModel? get currentUser => getCurrentUser();
+
+  void clearCashflowState() {
+    customTransactionCategories = {'sadmin': []};
+    transactions = [];
+  }
+
+  Future<void> initCashflowStore(String? storeId, DateTime todayStart) async {
+    if (storeId == null) return;
+    try {
+      final Future<List<dynamic>> getCategories = supabaseClient
+          .from('transaction_categories')
+          .select()
+          .eq('store_id', storeId)
+          .isFilter('deleted_at', null);
+
+      final Future<List<dynamic>> getTxns = supabaseClient
+          .from('transactions')
+          .select()
+          .eq('store_id', storeId)
+          .isFilter('deleted_at', null)
+          .gte('time', todayStart.toIso8601String())
+          .order('time', ascending: false);
+
+      final results = await Future.wait([
+        getCategories.catchError((e) { debugPrint('TxnCategories error: $e'); return <Map<String,dynamic>>[]; }), 
+        getTxns.catchError((e) { debugPrint('Transactions error: $e'); return <Map<String,dynamic>>[]; })
+      ]);
+
+      customTransactionCategories = {};
+      for (final c in results[0]) {
+        final sid = c['store_id']?.toString() ?? '';
+        if (sid.isNotEmpty) {
+          customTransactionCategories.putIfAbsent(sid, () => []);
+          customTransactionCategories[sid]!.add(TransactionCategory.fromMap(c));
+        }
+      }
+
+      transactions = (results[1]).map((r) => Transaction.fromMap(r)).toList();
+
+      if (db != null) {
+        final customCatCompanions = <LocalTransactionCategoriesCompanion>[];
+        for (final entry in customTransactionCategories.entries) {
+          for (final c in entry.value) {
+            customCatCompanions.add(
+              LocalTransactionCategoriesCompanion(
+                id: Value(c.id!),
+                storeId: Value(c.storeId!),
+                type: Value(c.type),
+                emoji: Value(c.emoji),
+                label: Value(c.label),
+                color: Value(c.color.value),
+                isCustom: Value(c.isCustom),
+              ),
+            );
+          }
+        }
+        if (customCatCompanions.isNotEmpty) {
+          await db!.replaceAllTransactionCategories(
+            storeId,
+            customCatCompanions,
+          );
+        }
+
+        for (final t in transactions) {
+          await db!.upsertTransaction(
+            LocalTransactionsCompanion(
+              id: Value(t.id),
+              storeId: Value(t.storeId),
+              type: Value(t.type),
+              amount: Value(t.amount),
+              category: Value(t.category),
+              note: Value(t.note),
+              time: Value(t.time),
+              createdBy: Value(t.createdBy),
+              isSynced: const Value(true),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[initCashflowStore] $e');
+    }
+  }
+
+  List<TransactionCategory> get currentCustomThuChiCategories =>
+      customTransactionCategories[getStoreId()] ?? [];
+
+  // ΓöÇΓöÇ Thu Chi Categories CRUD ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  void addTransactionCategory(TransactionCategory category) {
+    final storeId = getStoreId();
+    final newId = const Uuid().v4();
+
+    final newCat = category.toMap();
+    newCat['id'] = newId;
+    newCat['store_id'] = storeId;
+    newCat.removeWhere((k, v) => v == null);
+
+    final catToDraft = TransactionCategory.fromMap(newCat);
+    final oldList = List<TransactionCategory>.from(
+      customTransactionCategories[storeId] ?? [],
+    );
+
+    offlineFirst(
+      table: 'transaction_categories',
+      operation: 'INSERT',
+      recordId: newId,
+      payload: newCat,
+      applyInMemory: () {
+        customTransactionCategories.putIfAbsent(storeId, () => []);
+        customTransactionCategories[storeId]!.add(catToDraft);
+      },
+      applyDrift: () async {
+        if (db != null) {
+          await db!.upsertTransactionCategory(
+            LocalTransactionCategoriesCompanion(
+              id: Value(newId),
+              storeId: Value(storeId),
+              type: Value(catToDraft.type),
+              emoji: Value(catToDraft.emoji),
+              label: Value(catToDraft.label),
+              color: Value(catToDraft.color.value),
+              isCustom: Value(catToDraft.isCustom),
+            ),
+          );
+        }
+      },
+      rollback: () {
+        customTransactionCategories[storeId] = oldList;
+      },
+      errorMsg: 'Th├¬m danh mß╗Ñc Thu/Chi thß║Ñt bß║íi',
+    );
+  }
+
+  void updateTransactionCategory(TransactionCategory updated) {
+    if (updated.id == null) return;
+    final storeId = getStoreId();
+    final dbData = updated.toMap();
+    dbData.remove('id');
+    dbData.remove('store_id');
+    final oldList = List<TransactionCategory>.from(
+      customTransactionCategories[storeId] ?? [],
+    );
+
+    offlineFirst(
+      table: 'transaction_categories',
+      operation: 'UPDATE',
+      recordId: updated.id!,
+      payload: dbData,
+      applyInMemory: () {
+        customTransactionCategories[storeId] =
+            (customTransactionCategories[storeId] ?? []).map((c) {
+              return c.id == updated.id ? updated : c;
+            }).toList();
+      },
+      applyDrift: () async {
+        if (db != null) {
+          await db!.upsertTransactionCategory(
+            LocalTransactionCategoriesCompanion(
+              id: Value(updated.id!),
+              storeId: Value(storeId),
+              type: Value(updated.type),
+              emoji: Value(updated.emoji),
+              label: Value(updated.label),
+              color: Value(updated.color.value),
+              isCustom: Value(updated.isCustom),
+            ),
+          );
+        }
+      },
+      rollback: () {
+        customTransactionCategories[storeId] = oldList;
+      },
+      errorMsg: 'Cß║¡p nhß║¡t mß╗Ñc Thu/Chi thß║Ñt bß║íi',
+    );
+  }
+
+  void updateThuChiCategoryOrder(List<TransactionCategory> sortedList) {
+    final storeId = getStoreId();
+    final oldList = List<TransactionCategory>.from(
+      customTransactionCategories[storeId] ?? [],
+    );
+
+    customTransactionCategories[storeId] = sortedList;
+    notifyListeners();
+
+    for (int i = 0; i < sortedList.length; i++) {
+      final category = sortedList[i];
+      final updatedData = {'sort_order': i};
+
+      offlineFirst(
+        table: 'transaction_categories',
+        operation: 'UPDATE',
+        recordId: category.id!,
+        payload: updatedData,
+        applyInMemory: () {},
+        applyDrift: () async {
+          if (db != null) {
+            await db!.upsertTransactionCategory(
+              LocalTransactionCategoriesCompanion(
+                id: Value(category.id!),
+                sortOrder: Value(i),
+              ),
+            );
+          }
+        },
+        rollback: () {
+          customTransactionCategories[storeId] = oldList;
+        },
+        errorMsg: 'Cß║¡p nhß║¡t thß╗⌐ tß╗▒ lß╗ùi',
+      );
+    }
+  }
+
+  void deleteTransactionCategory(String categoryId) {
+    final storeId = getStoreId();
+    final oldList = List<TransactionCategory>.from(
+      customTransactionCategories[storeId] ?? [],
+    );
+
+    offlineFirst(
+      table: 'transaction_categories',
+      operation: 'UPDATE',
+      recordId: categoryId,
+      payload: {'deleted_at': DateTime.now().toUtc().toIso8601String()},
+      applyInMemory: () {
+        customTransactionCategories[storeId]?.removeWhere(
+          (c) => c.id == categoryId,
+        );
+      },
+      applyDrift: () async {
+        if (db != null) {
+          await db!.deleteTransactionCategory(categoryId);
+        }
+      },
+      rollback: () {
+        customTransactionCategories[storeId] = oldList;
+      },
+      errorMsg: 'X├│a mß╗Ñc Thu/Chi thß║Ñt bß║íi',
+    );
+  }
+
+  // ΓöÇΓöÇ Transactions CRUD ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  Future<void> loadTransactions(String? storeId) async {
+    try {
+      PostgrestFilterBuilder query = supabaseClient
+          .from('transactions')
+          .select();
+      if (storeId != null) {
+        query = query.eq('store_id', storeId).isFilter('deleted_at', null);
+      }
+      // Giß╗¢i hß║ín 30 ng├áy gß║ºn nhß║Ñt ─æß╗â tiß║┐t kiß╗çm egress
+      final since = DateTime.now().subtract(const Duration(days: 30)).toIso8601String();
+      final data = await query
+          .gte('time', since)
+          .order('time', ascending: false);
+      transactions = (data as List).map((r) => Transaction.fromMap(r)).toList();
+    } catch (e) {
+      debugPrint('[loadTransactions] $e');
+      transactions = [];
+    }
+  }
+
+  Future<void> addTransaction({
+    required String type,
+    required double amount,
+    required String category,
+    String note = '',
+    DateTime? date,
+  }) async {
+    final quota = QuotaHelper(quotaProvider);
+    if (!quota.canUseTransactions) {
+      final ctx = rootContext;
+      if (ctx != null) await showUpgradePrompt(ctx, quota.transactionLimitMsg);
+      return;
+    }
+    final storeId = getStoreId();
+    final txnId = 'tc_${DateTime.now().millisecondsSinceEpoch}';
+    final txnTime = (date ?? DateTime.now()).toIso8601String();
+    final createdBy = currentUser?.fullname.isNotEmpty == true
+        ? (currentUser?.fullname ?? 'unknown')
+        : (currentUser?.username ?? 'unknown');
+
+    final newTxn = {
+      'id': txnId,
+      'store_id': storeId,
+      'type': type,
+      'amount': amount,
+      'category': category,
+      'note': note,
+      'time': txnTime,
+      'created_by': createdBy,
+    };
+    final txnModel = Transaction.fromMap(newTxn);
+    await offlineFirst(
+      table: 'transactions',
+      operation: 'INSERT',
+      recordId: txnId,
+      payload: newTxn,
+      applyInMemory: () {
+        transactions.insert(0, txnModel);
+      },
+      applyDrift: () => db!.upsertTransaction(
+        LocalTransactionsCompanion(
+          id: Value(txnId),
+          storeId: Value(storeId),
+          type: Value(type),
+          amount: Value(amount),
+          category: Value(category),
+          note: Value(note),
+          time: Value(txnTime),
+          createdBy: Value(createdBy),
+          isSynced: const Value(false),
+        ),
+      ),
+      rollback: () {
+        transactions.removeWhere((t) => t.id == txnId);
+      },
+      errorMsg: 'L╞░u giao dß╗ïch thß║Ñt bß║íi, ─æ├ú ho├án t├íc',
+    );
+  }
+
+  Future<void> addThuChiTransaction({
+    required String type,
+    required double amount,
+    required String category,
+    String note = '',
+    DateTime? date,
+  }) => addTransaction(
+    type: type,
+    amount: amount,
+    category: category,
+    note: note,
+    date: date,
+  );
+
+  Future<void> updateTransaction({
+    required String id,
+    required double amount,
+    required String category,
+    String note = '',
+    DateTime? date,
+  }) async {
+    final idx = transactions.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+
+    final oldTxn = transactions[idx];
+    final txnTime = date != null ? date.toIso8601String() : oldTxn.time;
+    final payload = {
+      'amount': amount,
+      'category': category,
+      'note': note,
+      'time': txnTime,
+    };
+
+    final oldTransactions = List<Transaction>.from(transactions);
+
+    await offlineFirst(
+      table: 'transactions',
+      operation: 'UPDATE',
+      recordId: id,
+      payload: payload,
+      applyInMemory: () {
+        transactions[idx] = oldTxn.copyWith(
+          amount: amount,
+          category: category,
+          note: note,
+          time: txnTime,
+        );
+        notifyListeners();
+      },
+      applyDrift: () => db!.upsertTransaction(
+        LocalTransactionsCompanion(
+          id: Value(id),
+          storeId: Value(oldTxn.storeId),
+          type: Value(oldTxn.type),
+          amount: Value(amount),
+          category: Value(category),
+          note: Value(note),
+          time: Value(txnTime),
+          createdBy: Value(oldTxn.createdBy),
+          isSynced: const Value(false),
+        ),
+      ),
+      rollback: () {
+        transactions = oldTransactions;
+        notifyListeners();
+      },
+      errorMsg: 'Cß║¡p nhß║¡t giao dß╗ïch thß║Ñt bß║íi, ─æ├ú ho├án t├íc',
+    );
+  }
+
+  Future<void> deleteTransaction(String id) async {
+    final oldTransactions = List<Transaction>.from(transactions);
+
+    await offlineFirst(
+      table: 'transactions',
+      operation: 'UPDATE',
+      recordId: id,
+      payload: {'deleted_at': DateTime.now().toUtc().toIso8601String()},
+      applyInMemory: () {
+        transactions.removeWhere((t) => t.id == id);
+        notifyListeners();
+      },
+      applyDrift: () async {
+        if (db != null) {
+          await (db!.delete(
+            db!.localTransactions,
+          )..where((tbl) => tbl.id.equals(id))).go();
+        }
+      },
+      rollback: () {
+        transactions = oldTransactions;
+        notifyListeners();
+      },
+      errorMsg: 'X├│a giao dß╗ïch thß║Ñt bß║íi, ─æ├ú ho├án t├íc',
+    );
+  }
+
+  // ΓöÇΓöÇ Date Range Fetch ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  Future<List<Transaction>> fetchTransactionsByDateRange(
+    DateTime from,
+    DateTime to,
+  ) async {
+    final storeId = getStoreId();
+    if (storeId.isEmpty || storeId == 'sadmin') return [];
+
+    final fromStr = DateTime(from.year, from.month, from.day).toIso8601String();
+    final toStr = DateTime(
+      to.year,
+      to.month,
+      to.day,
+      23,
+      59,
+      59,
+    ).toIso8601String();
+
+    try {
+      final response = await supabaseClient
+          .from('transactions')
+          .select()
+          .eq('store_id', storeId)
+          .isFilter('deleted_at', null)
+          .gte('time', fromStr)
+          .lte('time', toStr)
+          .order('time', ascending: false);
+
+      return (response as List).map((t) => Transaction.fromMap(t)).toList();
+    } catch (e) {
+      debugPrint('[fetchTransactionsByDateRange] $e');
+      return [];
+    }
+  }
+
+  Future<Map<String, double>> fetchCashflowSummary(DateTime from, DateTime to) async {
+    final storeId = getStoreId();
+    if (storeId.isEmpty || storeId == 'sadmin') return {'totalIncome': 0.0, 'totalExpense': 0.0};
+    
+    try {
+      final fromStr = DateTime(from.year, from.month, from.day).toIso8601String();
+      final toStr = DateTime(to.year, to.month, to.day, 23, 59, 59).toIso8601String();
+      
+      final response = await supabaseClient.rpc('get_cashflow_summary', params: {
+        'p_store_id': storeId,
+        'p_start_date': fromStr,
+        'p_end_date': toStr,
+      });
+      return {
+        'totalIncome': (response['totalIncome'] ?? 0).toDouble(),
+        'totalExpense': (response['totalExpense'] ?? 0).toDouble(),
+      };
+    } catch (e) {
+      debugPrint('[fetchCashflowSummary] $e');
+      return {'totalIncome': 0.0, 'totalExpense': 0.0};
+    }
+  }
+}

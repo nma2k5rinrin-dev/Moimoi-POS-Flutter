@@ -15,8 +15,16 @@ serve(async (req) => {
     try {
         const payload = await req.json()
         const order = payload.record // Triggered from database insert webhook
+        const oldOrder = payload.old_record
+        const eventType = payload.type
+
         if (!order) {
             throw new Error("Missing order record")
+        }
+
+        if (eventType !== 'INSERT' && eventType !== 'UPDATE') {
+            console.log(`Skipping event type: ${eventType}`);
+            return new Response(JSON.stringify({ message: "Not an insert/update event" }), { headers: corsHeaders })
         }
 
         // Khởi tạo Supabase client bằng quyền Admin (Service Role)
@@ -25,13 +33,14 @@ serve(async (req) => {
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         )
 
-        // Lấy user_id của nhân viên/quản lý thuộc cửa hàng này
+        // Lấy user_id của Admin (username = store_id) hoặc nhân viên (created_by = store_id)
         const { data: users, error: userError } = await supabaseClient
             .from('users')
             .select('id')
-            .eq('store_id', order.store_id)
+            .or(`username.eq.${order.store_id},created_by.eq.${order.store_id}`)
 
         if (userError || !users?.length) {
+            console.error(`Error: No users found for store_id: ${order.store_id}`, userError);
             return new Response(JSON.stringify({ message: "No users found for this store" }), { headers: corsHeaders })
         }
 
@@ -44,6 +53,7 @@ serve(async (req) => {
             .in('user_id', userIds)
 
         if (tokenError || !tokensData?.length) {
+            console.error(`Error: No fcm devices registered for users:`, userIds, tokenError);
             return new Response(JSON.stringify({ message: "No fcm devices registered" }), { headers: corsHeaders })
         }
 
@@ -57,6 +67,8 @@ serve(async (req) => {
 
         const serviceAccount = JSON.parse(serviceAccountJsonStr)
         const projectId = serviceAccount.project_id
+
+        console.log(`Found ${tokens.length} tokens. Sending FCM push...`);
 
         // Lấy OAuth2 Token (Mới nhất theo chuẩn HTTP v1 của Google)
         const jwtClient = new JWT({
@@ -73,12 +85,23 @@ serve(async (req) => {
 
         // Firebase HTTP v1 chỉ cho phép gửi từng thiết bị, ta dùng vòng lặp push
         for (const token of tokens) {
+            const isUpdate = eventType === 'UPDATE';
+            const titleMsg = isUpdate ? "Cập nhật đơn hàng!" : "Đơn hàng mới!";
+            const tableName = order.table_name || 'Mang về';
+
+            // Phục hồi số tiền chuẩn xác
+            const finalAmount = order.total_amount_after_discount ?? order.total_amount ?? 0;
+
+            const bodyMsg = isUpdate
+                ? `${tableName} vừa thêm món mới hoặc cập nhật.`
+                : `Có đơn mới từ ${tableName} trị giá ${finalAmount}đ`;
+
             const fcmPayload = {
                 message: {
                     token: token,
                     notification: {
-                        title: "Đơn hàng mới!",
-                        body: `Có đơn hàng trị giá ${order.total_amount_after_discount}đ vừa được tạo.`
+                        title: titleMsg,
+                        body: bodyMsg
                     },
                     android: {
                         priority: "high", // Quan trọng nhất để đánh thức màn hình (Doze mode)
@@ -103,9 +126,15 @@ serve(async (req) => {
                 body: JSON.stringify(fcmPayload)
             })
 
-            if (res.ok) successCount++;
+            if (res.ok) {
+                successCount++;
+            } else {
+                const errorText = await res.text();
+                console.error(`Firebase API Error for token ${token}:`, errorText);
+            }
         }
 
+        console.log(`Successfully sent ${successCount}/${tokens.length} notifications`);
         return new Response(
             JSON.stringify({ message: `Successfully sent ${successCount}/${tokens.length} notifications` }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }

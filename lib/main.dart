@@ -53,6 +53,18 @@ void main() async {
     try {
       await Firebase.initializeApp();
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+      // Lắng nghe notification khi app đang mở (Foreground)
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        debugPrint('[FCM] Foreground Message: ${message.messageId}');
+        if (message.notification != null) {
+          NotificationHelper.showGenericNotification(
+            message.notification!.title ?? 'Thông báo',
+            message.notification!.body ?? '',
+            payload: message.data['order_id']?.toString(),
+          );
+        }
+      });
     } catch(e) {
       debugPrint('[Firebase] init error: $e');
     }

@@ -110,4 +110,35 @@ class NotificationHelper {
       payload: order.table,
     );
   }
+
+  static Future<void> showGenericNotification(String title, String body, {String? payload}) async {
+    final int id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'new_order_channel_v2',
+        'Đơn Hàng Mới',
+        channelDescription: 'Thông báo khi có đơn hàng mới từ QR code',
+        importance: Importance.max,
+        priority: Priority.high,
+        showWhen: true,
+        enableVibration: true,
+        playSound: true,
+        audioAttributesUsage: AudioAttributesUsage.notificationEvent,
+        icon: '@mipmap/launcher_icon',
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: platformChannelSpecifics,
+      payload: payload,
+    );
+  }
 }
