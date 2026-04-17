@@ -207,44 +207,6 @@ class _AccountDialogContent extends StatelessWidget {
                   ),
                   _divider(),
 
-                  // â”€â”€ Background Service Toggle â”€â”€
-                  if (!kIsWeb)
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.notifications_active_outlined,
-                                size: 20,
-                                color: AppColors.slate500,
-                              ),
-                              SizedBox(width: 12),
-                              Text(
-                                'Bật nhận đơn dưới nền',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.slate800,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Switch(
-                            value: context.watch<UIStore>().isBackgroundServiceEnabled,
-                            onChanged: (val) {
-                              final currentStoreId = context.read<AuthStore>().getStoreId();
-                              context.read<UIStore>().toggleBackgroundService(val, storeId: currentStoreId);
-                            },
-                            activeColor: AppColors.emerald500,
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (!kIsWeb) _divider(),
-
                   // ── Menu Items ──
                   if (store.currentUser?.role != 'sadmin')
                     _buildMenuItem(
