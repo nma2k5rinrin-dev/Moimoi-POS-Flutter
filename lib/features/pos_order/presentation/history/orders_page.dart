@@ -1564,7 +1564,7 @@ class _OrderCardState extends State<_OrderCard> {
                     ),
                 ],
               ),
-              // ── Thêm món button ──
+              // ── Thêm sản phẩm button ──
               if (order.status == 'pending' || order.status == 'processing') ...[
                 SizedBox(height: 10),
                 GestureDetector(
@@ -3482,7 +3482,7 @@ class _OrderCardState extends State<_OrderCard> {
                                   );
                                   Navigator.pop(ctx);
                                   context.read<UIStore>().showToast(
-                                    'Đã thêm $addedCount món vào đơn!',
+                                    'Đã thêm $addedCount sản phẩm vào đơn!',
                                   );
                                 },
                                 child: Container(
@@ -3698,7 +3698,7 @@ class _OrderCardState extends State<_OrderCard> {
                                 child: Icon(Icons.edit_note_rounded, color: AppColors.blue600, size: 32),
                               ),
                               SizedBox(height: 16),
-                              Text('Sửa món', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                              Text('Sửa sản phẩm', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.slate800)),
                               SizedBox(height: 8),
                               Text(item.name, style: TextStyle(fontSize: 16, color: AppColors.slate500), textAlign: TextAlign.center),
                               SizedBox(height: 32),

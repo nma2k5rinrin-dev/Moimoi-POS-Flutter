@@ -197,7 +197,7 @@ class _NotificationsSectionState extends State<NotificationsSection> {
                         SizedBox(height: 6),
                         Text(
                           _selectedTab == 0
-                              ? 'Hệ thống sẽ phát âm báo này ngay khi nhận được đơn đặt món mới.'
+                              ? 'Hệ thống sẽ phát âm báo này ngay khi nhận được đơn đặt hàng mới.'
                               : 'Hệ thống sẽ phát âm báo này khi khách hàng thanh toán thành công.',
                           style: TextStyle(
                             fontSize: 13,

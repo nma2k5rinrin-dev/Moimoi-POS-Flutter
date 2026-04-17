@@ -378,7 +378,7 @@ class _TableQrCard extends StatelessWidget {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'In QR này và dán lên bàn.\nKhách quét để xem menu và đặt món.',
+                        'In QR này và dán lên bàn.\nKhách quét để xem menu và đặt hàng.',
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.slate500,

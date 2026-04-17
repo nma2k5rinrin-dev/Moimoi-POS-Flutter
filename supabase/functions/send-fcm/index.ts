@@ -93,7 +93,7 @@ serve(async (req) => {
             const finalAmount = order.total_amount_after_discount ?? order.total_amount ?? 0;
 
             const bodyMsg = isUpdate
-                ? `${tableName} vừa thêm món mới hoặc cập nhật.`
+                ? `${tableName} vừa thêm sản phảm mới hoặc cập nhật.`
                 : `Có đơn mới từ ${tableName} trị giá ${finalAmount}đ`;
 
             const fcmPayload = {

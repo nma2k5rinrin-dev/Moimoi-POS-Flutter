@@ -165,7 +165,7 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
                                 SizedBox(height: 6),
                                 _buildTextField(
                                   controller: _nameCtrl,
-                                  hint: 'VD: Đồ uống, Món chính...',
+                                  hint: 'VD: Đồ uống, Sản phẩm chính...',
                                   icon: Icons.edit,
                                 ),
                                 SizedBox(height: 18),

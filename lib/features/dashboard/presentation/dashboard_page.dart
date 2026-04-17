@@ -1072,7 +1072,7 @@ class _BestSellersCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Món bán chạy', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate700)),
+              Text('Sản phẩm bán chạy', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate700)),
               if (items.length > 5)
                 InkWell(
                   onTap: () => _showAllBestSellersDialog(context, items),

@@ -1116,7 +1116,7 @@ class _OrderCardState extends State<_OrderCard> {
                     ),
                 ],
               ),
-              // ── Thêm món button ──
+              // ── Thêm sản phẩm button ──
               if (order.status == 'pending' || order.status == 'processing') ...[
                 SizedBox(height: 10),
                 GestureDetector(
@@ -2395,7 +2395,7 @@ class _OrderCardState extends State<_OrderCard> {
                                   );
                                   Navigator.pop(ctx);
                                   store.showToast(
-                                    'Đã thêm $addedCount món vào đơn!',
+                                    'Đã thêm $addedCount sản phẩm vào đơn!',
                                   );
                                 },
                                 child: Container(
