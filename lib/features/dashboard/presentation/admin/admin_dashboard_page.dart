@@ -3049,7 +3049,7 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
                 Icons.notifications_outlined,
                 'Thông báo',
                 Colors.purple,
-                () => showBroadcastDialog(context, context.read<UIStore>(), specificStoreId: storeId, specificStoreName: storeName),
+                () => showBroadcastDialog(context, context.read<UIStore>(), specificStoreId: widget.storeId, specificStoreName: storeName),
               ),
               SizedBox(width: 16),
               _heroActionBtn(
