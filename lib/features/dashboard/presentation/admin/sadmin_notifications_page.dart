@@ -54,7 +54,7 @@ class _SadminNotificationsPageState extends State<SadminNotificationsPage> {
               'user_id': u.username,
               'title': _titleController.text.trim(),
               'message': _messageController.text.trim(),
-              'is_read': false,
+              'read': false,
               'time': now,
             },
           )

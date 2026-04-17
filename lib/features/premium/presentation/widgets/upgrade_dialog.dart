@@ -397,13 +397,45 @@ class _PricingDialogState extends State<_PricingDialog> {
                   child: ElevatedButton(
                     onPressed: store.isLoading
                         ? null
-                        : () {
-                            // Bank transfer flow — contact admin
-                            store.showToast(
-                              'Vui lòng liên hệ Hotline/Zalo kỹ thuật 033.9524.898 để được hỗ trợ kích hoạt gói.',
-                              'info',
-                            );
-                            Navigator.pop(context);
+                        : () async {
+                            final plan = displayPlans[_selectedPlan];
+                            final storeId = store.getStoreId();
+                            if (storeId.isEmpty) return;
+
+                            try {
+                              final now = DateTime.now();
+                              final cleanStr = plan.price.replaceAll(RegExp(r'[^0-9]'), '');
+                              final amt = int.tryParse(cleanStr) ?? 0;
+
+                              await store.supabaseClient.from('upgrade_requests').insert({
+                                'id': 'ur_${DateTime.now().millisecondsSinceEpoch}',
+                                'username': storeId,
+                                'plan_name': plan.name,
+                                'amount': amt,
+                                'status': 'pending',
+                                'transfer_content': '',
+                              });
+                            } catch (e) {
+                              store.showToast('Lỗi gửi Data: $e', 'error');
+                              return; // Stop if core table fails
+                            }
+
+                            try {
+                              final now = DateTime.now();
+                              await store.supabaseClient.from('notifications').insert({
+                                'id': 'noti_${now.millisecondsSinceEpoch}_sadmin',
+                                'user_id': 'sadmin',
+                                'title': 'Yêu cầu nâng cấp Premium',
+                                'message': 'Cửa hàng $storeId yêu cầu đăng ký gói ${plan.name}.',
+                                'time': now.toIso8601String(),
+                                'read': false,
+                              });
+                            } catch (_) {
+                              // Ignore RLS errors for admin sending to sadmin
+                            }
+
+                            store.showToast('Vui lòng liên hệ Hotline/Zalo: 033.9524.898 để hướng dẫn thanh toán', 'info');
+                            if (context.mounted) Navigator.pop(context);
                           },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.emerald500,

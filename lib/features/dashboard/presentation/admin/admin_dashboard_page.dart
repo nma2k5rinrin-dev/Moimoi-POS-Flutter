@@ -9,7 +9,6 @@ import 'package:moimoi_pos/features/settings/models/store_info_model.dart';
 
 import 'package:moimoi_pos/features/premium/models/premium_payment_model.dart';
 import 'package:moimoi_pos/core/utils/constants.dart';
-import 'package:moimoi_pos/core/utils/format.dart';
 import 'package:moimoi_pos/features/notifications/presentation/notification_bell.dart';
 import 'package:moimoi_pos/core/widgets/date_range_picker_dialog.dart';
 import 'package:moimoi_pos/services/api/cloudflare_service.dart';
@@ -105,6 +104,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             )
             .length;
 
+        // ── Pending Premium request count ──
+        final pendingVipCount = storeEntries.where((e) {
+          return context.watch<ManagementStore>().upgradeRequests.any((r) => r.storeId == e.key && r.status == 'pending');
+        }).length;
+
         // ── Attention count (offline + expiring) ──
         final attentionEntries = storeEntries.where((e) {
           final admin = users.where((u) => u.username == e.key).firstOrNull;
@@ -134,6 +138,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             break;
           case 'attention':
             filteredEntries = attentionEntries;
+            break;
+          case 'pending_vip':
+            filteredEntries = storeEntries.where((e) {
+              return context.read<ManagementStore>().upgradeRequests.any((r) => r.storeId == e.key && r.status == 'pending');
+            }).toList();
             break;
           default:
             filteredEntries = storeEntries;
@@ -1555,7 +1564,7 @@ class _StoreCard extends StatelessWidget {
     // Use the model's correct getter for offline days
     final offlineDays = isOnline ? 0 : info.consecutiveOfflineDays;
 
-    final hasPendingUpgrade = false;
+    final hasPendingUpgrade = store.upgradeRequests.any((r) => r.storeId == storeId && r.status == 'pending');
 
     final cardRadius = compact ? 16.0 : 20.0;
     final cardPad = compact ? 12.0 : 16.0;
@@ -1760,7 +1769,7 @@ class _StoreCard extends StatelessWidget {
                       children: [
                         TextSpan(
                           text: info.daysUntilExpiry != null
-                              ? '${_formatDate(DateTime.now().add(Duration(days: info.daysUntilExpiry!)))}'
+                              ? _formatDate(DateTime.now().add(Duration(days: info.daysUntilExpiry!)))
                               : 'Không có',
                           style: TextStyle(
                             fontSize: 12,
@@ -2811,9 +2820,9 @@ class _StoreDetailPage extends StatefulWidget {
 class _StoreDetailPageState extends State<_StoreDetailPage> {
   bool _isLoadingStats = true;
   int _staffCount = 0;
-  int _productCount = 0;
-  int _orderCount = 0;
-  double _totalRevenue = 0.0;
+  final int _productCount = 0;
+  final int _orderCount = 0;
+  final double _totalRevenue = 0.0;
 
   @override
   void initState() {
@@ -2890,6 +2899,11 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildSleekHero(storeName, isActive, isPremium, colors),
+            if (context.watch<ManagementStore>().upgradeRequests.any((r) => r.storeId == widget.storeId && r.status == 'pending'))
+              Padding(
+                padding: EdgeInsets.fromLTRB(16, 24, 16, 0),
+                child: _buildApprovePanel(context),
+              ),
             SizedBox(height: 24),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
@@ -2908,6 +2922,66 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
             SizedBox(height: 48),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildApprovePanel(BuildContext context) {
+    final request = context.watch<ManagementStore>().upgradeRequests.firstWhere(
+      (r) => r.storeId == widget.storeId && r.status == 'pending',
+    );
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.orange50,
+        border: Border.all(color: Color(0xFFF59E0B)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(Icons.stars, color: Color(0xFFF59E0B), size: 28),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Yêu cầu nâng cấp gói: ${request.planName}',
+                  style: TextStyle(
+                    color: Color(0xFFB45309),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: () async {
+                context.read<ManagementStore>().showToast('Đang phê duyệt...', 'info');
+                await context.read<ManagementStore>().approveVIPRequest(request.id);
+                if (context.mounted) {
+                  context.read<ManagementStore>().showToast('Đã phê duyệt gói Premium thành công!', 'success');
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFFF59E0B),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                'Phê duyệt Premium',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

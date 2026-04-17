@@ -5,6 +5,9 @@ import 'package:moimoi_pos/core/state/ui_store.dart';
 import 'package:moimoi_pos/features/settings/logic/management_store_standalone.dart';
 import 'package:moimoi_pos/core/utils/constants.dart';
 import 'package:moimoi_pos/core/widgets/animated_dialogs.dart';
+import 'package:moimoi_pos/features/notifications/models/notification_model.dart';
+import 'package:moimoi_pos/core/utils/format.dart';
+import 'package:moimoi_pos/features/premium/models/upgrade_request_model.dart';
 
 class NotificationBell extends StatelessWidget {
   const NotificationBell({super.key});
@@ -76,6 +79,7 @@ class _NotificationDialogContent extends StatefulWidget {
 class _NotificationDialogContentState extends State<_NotificationDialogContent>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  NotificationModel? _selectedNotification;
 
   @override
   void initState() {
@@ -97,6 +101,10 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
         builder: (context, store, _) {
           final unread = context.watch<ManagementStore>().notifications.where((n) => !n.read).toList();
           final read = context.watch<ManagementStore>().notifications.where((n) => n.read).toList();
+
+          if (_selectedNotification != null) {
+            return _buildDetailView(context, store);
+          }
 
           return Container(
             width: double.infinity,
@@ -352,9 +360,9 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
           child: InkWell(
             borderRadius: BorderRadius.circular(14),
             onTap: () {
-              if (isUnread) {
-                context.read<ManagementStore>().markNotificationAsRead(noti.id);
-              }
+              setState(() {
+                _selectedNotification = noti;
+              });
             },
             child: Padding(
               padding: EdgeInsets.all(14),
@@ -403,12 +411,27 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
                             ),
                           ),
                         SizedBox(height: 4),
-                        Text(
-                          _formatTime(noti.time),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppColors.slate400,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              _formatTime(noti.time),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.slate400,
+                              ),
+                            ),
+                            if (!isUnread) ...[
+                              Spacer(),
+                              Text(
+                                '⏳ Tự xóa sau ${_getDaysLeft(noti.time)} ngày',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: AppColors.slate400,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ]
+                          ],
                         ),
                       ],
                     ),
@@ -454,6 +477,356 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
     if (diff.inHours < 24) return '${diff.inHours} giờ trước';
     if (diff.inDays < 7) return '${diff.inDays} ngày trước';
     return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  int _getDaysLeft(String timeStr) {
+    final dt = DateTime.tryParse(timeStr);
+    if (dt == null) return 30;
+    final diff = DateTime.now().difference(dt);
+    final left = 30 - diff.inDays;
+    return left < 0 ? 0 : left;
+  }
+
+  Widget _buildDetailView(BuildContext context, UIStore store) {
+    final noti = _selectedNotification!;
+    return Container(
+      width: double.infinity,
+      constraints: BoxConstraints(
+        maxWidth: 480,
+        maxHeight: MediaQuery.of(context).size.height * 0.7,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 24,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 12, 16),
+            child: Row(
+              children: [
+                IconButton(
+                  onPressed: () {
+                    if (!noti.read) context.read<ManagementStore>().markNotificationAsRead(noti.id);
+                    setState(() => _selectedNotification = null);
+                  },
+                  icon: Icon(Icons.arrow_back_rounded, color: AppColors.slate600),
+                  splashRadius: 20,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Chi tiết thông báo',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.slate800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: AppColors.slate200),
+          
+          // Body
+          Flexible(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    noti.title,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.slate900,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(Icons.access_time_rounded, size: 14, color: AppColors.slate400),
+                      SizedBox(width: 6),
+                      Text(
+                        _formatTime(noti.time),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.slate500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 24),
+                  if ((noti.title.contains('VIP') || noti.title.contains('Premium')) && context.read<AuthStore>().currentUser?.role == 'sadmin')
+                    _buildVipRequestDetails(context, noti)
+                  else
+                    Container(
+                      padding: EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppColors.slate50,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.slate200),
+                      ),
+                      child: Text(
+                        noti.message,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: AppColors.slate800,
+                          height: 1.6,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          
+          // Footer Action
+          Padding(
+            padding: EdgeInsets.all(20),
+            child: (noti.title.contains('VIP') || noti.title.contains('Premium')) && context.read<AuthStore>().currentUser?.role == 'sadmin'
+              ? SizedBox(
+                  height: 50,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: context.watch<ManagementStore>().isLoading ? null : () async {
+                            final match = RegExp(r'Cửa hàng (.+) yêu cầu').firstMatch(noti.message);
+                            final storeId = match?.group(1);
+                            final mStore = context.read<ManagementStore>();
+                            if (!noti.read) mStore.markNotificationAsRead(noti.id);
+                            
+                            try {
+                              final req = mStore.upgradeRequests.firstWhere(
+                                (r) => r.status == 'pending' && r.storeId == storeId,
+                              );
+                              store.showToast('Đang từ chối...', 'info');
+                              await mStore.rejectVIPRequest(req.id);
+                              if (context.mounted) {
+                                store.showToast('Đã từ chối.', 'info');
+                                setState(() => _selectedNotification = null);
+                              }
+                            } catch (e) {
+                              store.showToast('Yêu cầu không tồn tại hoặc đã được xử lý.', 'error');
+                              setState(() => _selectedNotification = null);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.slate100,
+                            foregroundColor: AppColors.slate700,
+                            elevation: 0,
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: Text('Từ chối', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: context.watch<ManagementStore>().isLoading ? null : () async {
+                            final match = RegExp(r'Cửa hàng (.+) yêu cầu').firstMatch(noti.message);
+                            final storeId = match?.group(1);
+                            final mStore = context.read<ManagementStore>();
+                            if (!noti.read) mStore.markNotificationAsRead(noti.id);
+
+                            try {
+                              final req = mStore.upgradeRequests.firstWhere(
+                                (r) => r.status == 'pending' && r.storeId == storeId,
+                              );
+                              store.showToast('Đang phê duyệt...', 'info');
+                              await mStore.approveVIPRequest(req.id);
+                              if (context.mounted) {
+                                store.showToast('Phê duyệt thành công!', 'success');
+                                setState(() => _selectedNotification = null);
+                              }
+                            } catch (e) {
+                              store.showToast('Yêu cầu không tồn tại hoặc đã được xử lý.', 'error');
+                              setState(() => _selectedNotification = null);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.blue500,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: context.watch<ManagementStore>().isLoading 
+                              ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : Text('Phê duyệt', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (!noti.read) context.read<ManagementStore>().markNotificationAsRead(noti.id);
+                  setState(() => _selectedNotification = null);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.blue500,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text('Đóng & Đánh dấu đã đọc', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVipRequestDetails(BuildContext context, NotificationModel noti) {
+    final mStore = context.read<ManagementStore>();
+    final match = RegExp(r'Cửa hàng (.+) yêu cầu').firstMatch(noti.message);
+    final storeId = match?.group(1) ?? '';
+    
+    UpgradeRequestModel? req;
+    try {
+      req = mStore.upgradeRequests.firstWhere(
+        (r) => r.status == 'pending' && r.storeId == storeId,
+      );
+    } catch (_) {}
+
+    if (req == null) {
+      return Container(
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.slate50,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.slate200),
+        ),
+        child: Text(noti.message, style: TextStyle(fontSize: 15, color: AppColors.slate800, height: 1.6)),
+      );
+    }
+    
+    int expectedMonths = 1;
+    final pn = req.planName.toLowerCase();
+    if (pn.contains('3')) expectedMonths = 3;
+    if (pn.contains('6')) expectedMonths = 6;
+    if (pn.contains('1')) expectedMonths = 12;
+    if (pn.contains('năm')) expectedMonths = 12;
+    
+    final requestDate = DateTime.tryParse(noti.time.toString()) ?? DateTime.now();
+    final expectedExpiryDate = DateTime(requestDate.year, requestDate.month + expectedMonths, requestDate.day);
+    final String formattedRequestDate = '${requestDate.day.toString().padLeft(2,'0')}/${requestDate.month.toString().padLeft(2,'0')}/${requestDate.year}';
+    final String formattedExpiryDate = '${expectedExpiryDate.day.toString().padLeft(2,'0')}/${expectedExpiryDate.month.toString().padLeft(2,'0')}/${expectedExpiryDate.year}';
+
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.orange50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Color(0xFFF59E0B).withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.storefront_rounded, color: Color(0xFFF59E0B), size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Mã cửa hàng:',
+                style: TextStyle(color: AppColors.slate600, fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              Spacer(),
+              Text(
+                req.storeId,
+                style: TextStyle(color: AppColors.slate900, fontSize: 14, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          Divider(color: Color(0xFFF59E0B).withValues(alpha: 0.2), height: 24),
+          Row(
+            children: [
+              Icon(Icons.calendar_month_rounded, color: Color(0xFFF59E0B), size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Gói yêu cầu:',
+                style: TextStyle(color: AppColors.slate600, fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              Spacer(),
+              Text(
+                req.planName,
+                style: TextStyle(color: AppColors.slate900, fontSize: 14, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          Divider(color: Color(0xFFF59E0B).withValues(alpha: 0.2), height: 24),
+          Row(
+            children: [
+              Icon(Icons.add_task_rounded, color: Color(0xFFF59E0B), size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Ngày đăng ký:',
+                style: TextStyle(color: AppColors.slate600, fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              Spacer(),
+              Text(
+                formattedRequestDate,
+                style: TextStyle(color: AppColors.slate900, fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.event_busy_rounded, color: Color(0xFFF59E0B), size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Dự kiến hết hạn:',
+                style: TextStyle(color: AppColors.slate600, fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              Spacer(),
+              Text(
+                formattedExpiryDate,
+                style: TextStyle(color: AppColors.slate900, fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          Divider(color: Color(0xFFF59E0B).withValues(alpha: 0.2), height: 24),
+          Row(
+            children: [
+              Icon(Icons.payments_rounded, color: Color(0xFFF59E0B), size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Số tiền thanh toán:',
+                style: TextStyle(color: AppColors.slate600, fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              Spacer(),
+              Text(
+                formatCurrency(req.amount.toDouble()),
+                style: TextStyle(color: AppColors.emerald600, fontSize: 16, fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 

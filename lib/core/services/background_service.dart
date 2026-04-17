@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 
 /// Legacy background service helper.
 /// All actual background functionality has been migrated to Firebase Cloud Messaging (FCM).

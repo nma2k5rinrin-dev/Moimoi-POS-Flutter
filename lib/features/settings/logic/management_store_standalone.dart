@@ -5,13 +5,14 @@ import 'package:moimoi_pos/features/settings/models/store_info_model.dart';
 import 'package:moimoi_pos/features/settings/models/app_role_model.dart';
 import 'package:moimoi_pos/features/notifications/models/notification_model.dart';
 import 'package:moimoi_pos/features/premium/models/premium_payment_model.dart';
+import 'package:moimoi_pos/features/premium/models/upgrade_request_model.dart';
 import 'package:moimoi_pos/core/state/base_mixin.dart';
 import 'package:moimoi_pos/core/utils/quota_helper.dart';
 import 'package:moimoi_pos/features/premium/presentation/widgets/upgrade_dialog.dart';
 
 import 'package:moimoi_pos/features/auth/logic/auth_store_standalone.dart';
 
-/// Manages Users CRUD, Store Info, Tables, Notifications, and VIP operations.
+/// Manages Users CRUD, Store Info, Tables, Notifications, and Premium operations.
 class ManagementStore extends ChangeNotifier with BaseMixin {
   final AuthStore authStore;
   final QuotaDataProvider quotaProvider;
@@ -39,6 +40,7 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
   List<NotificationModel> notifications = [];
   List<PremiumPaymentModel> premiumPayments = [];
   List<AppRoleModel> appRoles = [];
+  List<UpgradeRequestModel> upgradeRequests = [];
 
   bool hasPermission(String key) {
     if (currentUser?.role == 'admin' || currentUser?.role == 'sadmin') {
@@ -78,6 +80,7 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
     notifications = [];
     premiumPayments = [];
     appRoles = [];
+    upgradeRequests = [];
   }
 
   Future<void> initManagementStore(String? storeId, UserModel user) async {
@@ -114,17 +117,27 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
                 .isFilter('deleted_at', null)
                 .order('sort_order');
 
+      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30)).toIso8601String();
+      supabaseClient
+          .from('notifications')
+          .delete()
+          .eq('user_id', user.username)
+          .lt('time', thirtyDaysAgo)
+          .catchError((_) => null);
+
       final notificationsQuery = supabaseClient
           .from('notifications')
           .select()
           .eq('user_id', user.username)
           .order('time', ascending: false)
-          .limit(5);
+          .limit(50);
 
       var ppQuery = supabaseClient.from('premium_payments').select();
       if (storeId != null && user.role != 'sadmin') {
         ppQuery = ppQuery.eq('store_id', storeId).isFilter('deleted_at', null);
       }
+
+      var urQuery = supabaseClient.from('upgrade_requests').select().eq('status', 'pending');
 
       var rolesQuery = supabaseClient.from('app_roles').select();
       if (storeId != null && user.role != 'sadmin') {
@@ -138,6 +151,7 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
         notificationsQuery.catchError((e) { debugPrint('Notifications error: $e'); return <Map<String,dynamic>>[]; }),
         ppQuery.order('paid_at', ascending: false).catchError((e) { debugPrint('PremiumPayments error: $e'); return <Map<String,dynamic>>[]; }),
         rolesQuery.catchError((e) { debugPrint('AppRoles error: $e'); return <Map<String,dynamic>>[]; }),
+        urQuery.catchError((e) { debugPrint('UpgradeRequests error: $e'); return <Map<String,dynamic>>[]; }),
       ]);
 
       users = results[0].map((u) => UserModel.fromMap(u)).toList();
@@ -196,6 +210,9 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
       appRoles = results[5]
           .map((r) => AppRoleModel.fromMap(r))
           .toList();
+      upgradeRequests = results[6]
+          .map((ur) => UpgradeRequestModel.fromMap(ur))
+          .toList();
       notifyListeners();
     } catch (e) {
       debugPrint('[initManagementStore] $e');
@@ -249,12 +266,11 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
         final assignedStoreId = (u.role == 'admin') ? u.username : (u.createdBy ?? '');
         return {
           'id': '${nId}_${u.username}',
-          'store_id': assignedStoreId.isEmpty ? null : assignedStoreId,
           'user_id': u.username,
           'title': title,
           'message': message,
           'time': DateTime.now().toIso8601String(),
-          'is_read': false,
+          'read': false,
         };
       }).toList();
 
@@ -706,7 +722,7 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
     );
   }
 
-  // ── VIP ─────────────────────────────────────────────────
+  // ── Premium ─────────────────────────────────────────────────
   void clearVipCongrat(String username) {
     final oldUsers = List<UserModel>.from(users);
     final oldCurrentUser = currentUser;
@@ -759,5 +775,71 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
         currentUser = oldCurrentUser;
       },
     );
+  }
+
+  Future<void> approveVIPRequest(String requestId) async {
+    final request = upgradeRequests.firstWhere((r) => r.id == requestId);
+    try {
+      final now = DateTime.now();
+      
+      int months = 1;
+      if (request.planName.contains('3 Tháng')) months = 3;
+      if (request.planName.contains('6 Tháng')) months = 6;
+      if (request.planName.contains('1 Năm')) months = 12;
+      final durationDays = months * 30;
+      final expiresAt = now.add(Duration(days: durationDays));
+
+      await supabaseClient.from('upgrade_requests').update({'status': 'approved'}).eq('id', requestId);
+
+      await supabaseClient.from('users').update({
+        'is_premium': true,
+        'expires_at': expiresAt.toIso8601String(),
+        'show_vip_congrat': true,
+      }).eq('username', request.storeId);
+
+      await supabaseClient.from('store_infos').update({
+        'is_premium': true,
+        'premium_expires_at': expiresAt.toIso8601String(),
+      }).eq('store_id', request.storeId);
+
+      await supabaseClient.from('premium_payments').insert({
+        'id': 'pay_${now.millisecondsSinceEpoch}',
+        'store_id': request.storeId,
+        'amount': request.amount,
+        'plan_name': request.planName,
+        'months': months,
+        'paid_at': now.toIso8601String(),
+      }).catchError((e) { debugPrint('err payment insert: $e'); });
+
+      await broadcastNotification(
+        title: '💎 Nâng cấp Premium thành công',
+        message: 'Cảm ơn quý khách! Dịch vụ phần mềm gói ${request.planName} đã được kích hoạt. Xin cảm ơn và chúc quý khách mua may bán đắt.',
+        target: request.storeId,
+      );
+
+      upgradeRequests.removeWhere((r) => r.id == requestId);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[ManagementStore] Approve Premium error: $e');
+    }
+  }
+
+  Future<void> rejectVIPRequest(String requestId) async {
+    if (currentUser?.role != 'sadmin') return;
+    try {
+      await supabaseClient.from('upgrade_requests').update({'status': 'rejected'}).eq('id', requestId);
+      final req = upgradeRequests.firstWhere((r) => r.id == requestId, orElse: () => throw Exception('Not found'));
+      
+      await broadcastNotification(
+        title: 'Yêu cầu không được phê duyệt',
+        message: 'Đăng ký gói Premium chưa được duyệt (trùng khớp sai thông tin hoặc chưa thấy thanh toán). Vui lòng liên hệ Hotline/Zalo kỹ thuật (033.9524.898).',
+        target: req.storeId,
+      );
+      
+      upgradeRequests.removeWhere((r) => r.id == requestId);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[ManagementStore] Reject Premium error: $e');
+    }
   }
 }

@@ -841,17 +841,17 @@ class _CashflowPageState extends State<CashflowPage> {
                             else
                               ...(() {
                                 final List<Widget> txnWidgets = [];
-                                final Set<String> _renderedKeys = {};
+                                final Set<String> renderedKeys = {};
                                 for (final t in filteredTxns) {
                                   final currentKeyStr =
                                       "${t.date.year}-${t.date.month}-${t.date.day}";
                                   
-                                  if (!_renderedKeys.contains(currentKeyStr)) {
+                                  if (!renderedKeys.contains(currentKeyStr)) {
                                     _dateKeys.putIfAbsent(
                                       currentKeyStr,
                                       () => GlobalKey(),
                                     );
-                                    _renderedKeys.add(currentKeyStr);
+                                    renderedKeys.add(currentKeyStr);
                                     
                                     // Insert an invisible anchor element for the GlobalKey.
                                     // This prevents the element._lifecycleState assertion crash caused

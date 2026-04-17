@@ -22,7 +22,6 @@ import 'package:moimoi_pos/features/auth/models/user_model.dart';
 import 'package:moimoi_pos/core/widgets/confirm_modal.dart';
 import 'package:moimoi_pos/core/database/app_database.dart';
 import 'package:moimoi_pos/core/utils/notification_helper.dart';
-import 'package:moimoi_pos/core/services/background_service.dart';
 import 'package:moimoi_pos/services/connectivity/connectivity_service.dart';
 import 'package:moimoi_pos/core/sync/sync_engine.dart';
 import 'package:moimoi_pos/core/utils/security_utils.dart';
