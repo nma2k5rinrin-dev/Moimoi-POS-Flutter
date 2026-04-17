@@ -1531,52 +1531,80 @@ class _StoreCard extends StatelessWidget {
   }
 
   void _showPremiumPopup(BuildContext context, String storeName) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) {
-        return Container(
+      barrierColor: Colors.black.withValues(alpha: 0.25),
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        insetPadding: EdgeInsets.all(24),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
           padding: EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.slate200, borderRadius: BorderRadius.circular(2))),
-              SizedBox(height: 20),
-              Icon(Icons.workspace_premium, size: 48, color: Color(0xFFF59E0B)),
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: AppColors.amber100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Icon(
+                  Icons.workspace_premium,
+                  size: 32,
+                  color: Color(0xFFD97706),
+                ),
+              ),
               SizedBox(height: 16),
               Text(
                 'Gia hạn Premium',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.slate900),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.slate800,
+                ),
               ),
               SizedBox(height: 8),
               Text(
-                'Bạn đang nâng cấp/gia hạn gói Premium cho "$storeName". Tính năng này sẽ sớm ra mắt.',
+                'Bạn đang gia hạn/nâng cấp gói Premium cho cửa hàng "$storeName". Tính năng này hiện đang được phát triển.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: AppColors.slate500),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.slate500,
+                  height: 1.5,
+                ),
               ),
               SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        context.read<UIStore>().showToast('Tính năng gia hạn đang được phát triển');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 14),
-                        backgroundColor: Color(0xFFF59E0B),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: Text('Đã hiểu', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    context.read<UIStore>().showToast('Tính năng gia hạn đang được phát triển', 'info');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFFF59E0B),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Đã hiểu',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
                     ),
                   ),
-                ],
+                ),
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
