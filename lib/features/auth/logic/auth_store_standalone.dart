@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:async';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -547,6 +549,9 @@ class AuthStore extends ChangeNotifier with BaseMixin {
           });
     }
 
+    // Xóa FCM Token khỏi Database để thiết bị không nhận thông báo của tài khoản cũ
+    _unregisterFcmToken();
+
     // Tắt dịch vụ chạy ngầm khi đăng xuất
     BackgroundServiceHelper.stopService();
     Supabase.instance.client.removeAllChannels();
@@ -555,6 +560,21 @@ class AuthStore extends ChangeNotifier with BaseMixin {
     users = [];
     authNotifier.notify();
     notifyListeners();
+  }
+
+  Future<void> _unregisterFcmToken() async {
+    try {
+      if (kIsWeb) return;
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await _supabase.from('fcm_tokens').delete().eq('token', token);
+        debugPrint('[FCM] Token removed from DB on logout');
+      }
+      await FirebaseMessaging.instance.deleteToken();
+      debugPrint('[FCM] Local token invalidated');
+    } catch (e) {
+      debugPrint('[FCM] Error unregistering token: $e');
+    }
   }
 
   void updateUser(String username, Map<String, dynamic> updatedData) {

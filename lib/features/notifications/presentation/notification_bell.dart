@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:moimoi_pos/features/auth/logic/auth_store_standalone.dart';
@@ -7,6 +8,8 @@ import 'package:moimoi_pos/core/utils/constants.dart';
 import 'package:moimoi_pos/core/widgets/animated_dialogs.dart';
 import 'package:moimoi_pos/features/notifications/models/notification_model.dart';
 import 'package:moimoi_pos/core/utils/format.dart';
+import 'package:moimoi_pos/core/widgets/confirm_modal.dart';
+import 'package:moimoi_pos/core/models/confirm_dialog_data.dart';
 import 'package:moimoi_pos/features/premium/models/upgrade_request_model.dart';
 
 class NotificationBell extends StatelessWidget {
@@ -348,7 +351,49 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
       itemCount: notifications.length,
       itemBuilder: (_, i) {
         final noti = notifications[i];
-        return Container(
+        return Dismissible(
+          key: Key(noti.id),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            margin: EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: AppColors.red500,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            alignment: Alignment.centerRight,
+            padding: EdgeInsets.only(right: 20),
+            child: Icon(Icons.delete_rounded, color: Colors.white, size: 24),
+          ),
+          confirmDismiss: (_) async {
+            final completer = Completer<bool>();
+            showAnimatedDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (dialogCtx) => ConfirmModal(
+                data: ConfirmDialogData(
+                  title: 'Xóa thông báo?',
+                  message: 'Bạn có chắc chắn muốn xóa thông báo này không?',
+                  icon: Icons.delete_forever_rounded,
+                  confirmLabel: 'Xóa',
+                  itemName: noti.title,
+                  itemSubtitle: noti.message.length > 50 ? '${noti.message.substring(0, 50)}...' : noti.message,
+                  avatarInitials: '🗑️',
+                  avatarColor: AppColors.red500,
+                  onConfirm: () {
+                    context.read<ManagementStore>().deleteNotification(noti.id);
+                    store.showToast('Đã xóa thông báo', 'info');
+                    completer.complete(false);
+                  },
+                  onCancel: () {
+                    completer.complete(false);
+                  },
+                ),
+                onCancel: () => Navigator.pop(dialogCtx),
+              ),
+            );
+            return completer.future;
+          },
+          child: Container(
           margin: EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
             color: isUnread ? AppColors.blue50 : AppColors.cardBg,
@@ -446,10 +491,12 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
                         shape: BoxShape.circle,
                       ),
                     ),
+                  Icon(Icons.chevron_left_rounded, size: 18, color: AppColors.slate300),
                 ],
               ),
             ),
           ),
+        ),
         );
       },
     );

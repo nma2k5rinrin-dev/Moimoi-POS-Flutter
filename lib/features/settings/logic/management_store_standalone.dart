@@ -708,6 +708,19 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
     );
   }
 
+  void deleteNotification(String id) {
+    final oldNotifications = List<NotificationModel>.from(notifications);
+    optimistic(
+      apply: () {
+        notifications.removeWhere((n) => n.id == id);
+      },
+      remote: () => supabaseClient.from('notifications').delete().eq('id', id),
+      rollback: () {
+        notifications = oldNotifications;
+      },
+    );
+  }
+
   void clearNotifications(String userId) {
     final oldNotifications = List<NotificationModel>.from(notifications);
     optimistic(
