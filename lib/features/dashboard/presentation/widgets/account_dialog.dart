@@ -146,6 +146,9 @@ class _AccountDialogContent extends StatelessWidget {
             color: Colors.transparent,
             child: Container(
               width: 320,
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width - 32,
+              ),
               decoration: BoxDecoration(
                 color: AppColors.cardBg,
                 borderRadius: BorderRadius.circular(20),
@@ -431,14 +434,17 @@ class _AccountDialogContent extends StatelessWidget {
                   ),
                 ),
                 SizedBox(width: 6),
-                Text(
-                  expiryDate,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.slate800,
+                Flexible(
+                  child: Text(
+                    expiryDate,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.slate800,
+                    ),
                   ),
                 ),
+                SizedBox(width: 8),
                 Spacer(),
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -499,14 +505,17 @@ class _AccountDialogContent extends StatelessWidget {
                   ); // Show payment history dialog
                 },
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Lịch sử thanh toán & Hóa đơn',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.slate500,
+                    Flexible(
+                      child: Text(
+                        'Lịch sử thanh toán & Hóa đơn',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.slate500,
+                        ),
                       ),
                     ),
                     SizedBox(width: 4),
