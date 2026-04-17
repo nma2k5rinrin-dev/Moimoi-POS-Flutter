@@ -231,51 +231,38 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
     required String message,
     String? target,
   }) async {
-    final storeIdToNoti = target ?? 'all';
+    final storeIdToNoti = target ?? 'all_stores';
     final nId = DateTime.now().millisecondsSinceEpoch.toString();
 
     try {
-      if (storeIdToNoti == 'all') {
-        final stEntries = storeInfos.entries.where(
-          (e) => !e.value.isPremium || !e.value.isExpired,
-        );
-        for (final entry in stEntries) {
-          final sId = entry.key;
-          if (sId.isNotEmpty) {
-            final staff = users.where(
-              (u) => u.username == sId || u.createdBy == sId,
-            );
-            for (final u in staff) {
-              await supabaseClient.from('notifications').insert({
-                'id': '${nId}_${u.username}',
-                'store_id': sId,
-                'user_id': u.username,
-                'title': title,
-                'message': message,
-                'time': DateTime.now().toIso8601String(),
-                'is_read': false,
-              });
-            }
-          }
-        }
+      Iterable<UserModel> targetStaff;
+
+      if (storeIdToNoti == 'all_users') {
+        targetStaff = users.where((u) => u.role != 'sadmin');
+      } else if (storeIdToNoti == 'all_stores' || storeIdToNoti == 'all') {
+        targetStaff = users.where((u) => u.role == 'admin');
       } else {
-        final staff = users.where(
-          (u) => u.username == storeIdToNoti || u.createdBy == storeIdToNoti,
-        );
-        for (final u in staff) {
-          await supabaseClient.from('notifications').insert({
-            'id': '${nId}_${u.username}',
-            'store_id': storeIdToNoti,
-            'user_id': u.username,
-            'title': title,
-            'message': message,
-            'time': DateTime.now().toIso8601String(),
-            'is_read': false,
-          });
-        }
+        targetStaff = users.where((u) => u.username == storeIdToNoti || u.createdBy == storeIdToNoti);
+      }
+
+      final payload = targetStaff.map((u) {
+        final assignedStoreId = (u.role == 'admin') ? u.username : (u.createdBy ?? '');
+        return {
+          'id': '${nId}_${u.username}',
+          'store_id': assignedStoreId.isEmpty ? null : assignedStoreId,
+          'user_id': u.username,
+          'title': title,
+          'message': message,
+          'time': DateTime.now().toIso8601String(),
+          'is_read': false,
+        };
+      }).toList();
+
+      if (payload.isNotEmpty) {
+        await supabaseClient.from('notifications').insert(payload);
       }
     } catch (e) {
-      debugPrint('[ManagementStore] Error broadcasting notification: ');
+      debugPrint('[ManagementStore] Error broadcasting notification: $e');
     }
   }
 

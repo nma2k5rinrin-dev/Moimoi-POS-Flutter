@@ -460,10 +460,10 @@ class _NotificationDialogContentState extends State<_NotificationDialogContent>
 // ═══════════════════════════════════════════════════════════
 // BROADCAST DIALOG
 // ═══════════════════════════════════════════════════════════
-void showBroadcastDialog(BuildContext context, UIStore store) {
+void showBroadcastDialog(BuildContext context, UIStore store, {String? specificStoreId, String? specificStoreName}) {
   final titleCtrl = TextEditingController();
   final messageCtrl = TextEditingController();
-  String target = 'all_stores';
+  String target = specificStoreId ?? 'all_stores';
 
   showDialog(
     context: context,
@@ -567,6 +567,25 @@ void showBroadcastDialog(BuildContext context, UIStore store) {
                   ),
                   child: Column(
                     children: [
+                      if (specificStoreId != null) ...[
+                        RadioListTile<String>(
+                          value: specificStoreId,
+                          groupValue: target,
+                          onChanged: (val) => setState(() => target = val!),
+                          title: Text(
+                            'Chỉ cửa hàng ${specificStoreName ?? specificStoreId}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.emerald600,
+                            ),
+                          ),
+                          activeColor: AppColors.emerald500,
+                          contentPadding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        Divider(height: 1, color: AppColors.slate200),
+                      ],
                       RadioListTile<String>(
                         value: 'all_stores',
                         groupValue: target,
