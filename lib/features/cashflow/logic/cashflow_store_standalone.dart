@@ -328,7 +328,7 @@ class CashflowStore extends ChangeNotifier with BaseMixin {
       return;
     }
     final storeId = getStoreId();
-    final txnId = 'tc_${DateTime.now().millisecondsSinceEpoch}';
+    final txnId = const Uuid().v4();
     
     DateTime finalDate = date ?? DateTime.now();
     if (date != null && date.hour == 0 && date.minute == 0 && date.second == 0) {

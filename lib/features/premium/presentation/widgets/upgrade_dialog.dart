@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
 import 'package:moimoi_pos/features/premium/logic/premium_store_standalone.dart';
 import 'package:moimoi_pos/core/utils/constants.dart';
@@ -423,7 +423,7 @@ class _PricingDialogState extends State<_PricingDialog> {
                             try {
                               final now = DateTime.now();
                               await store.supabaseClient.from('notifications').insert({
-                                'id': 'noti_${now.millisecondsSinceEpoch}_sadmin',
+                                'id': const Uuid().v4(),
                                 'user_id': 'sadmin',
                                 'title': 'Yêu cầu nâng cấp Premium',
                                 'message': 'Cửa hàng $storeId yêu cầu đăng ký gói ${plan.name}.',

@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import 'package:moimoi_pos/features/inventory/models/product_model.dart';
 import 'package:moimoi_pos/features/inventory/models/category_model.dart';
 import 'package:moimoi_pos/core/state/base_mixin.dart';
@@ -221,8 +222,9 @@ class InventoryStore extends ChangeNotifier with BaseMixin {
       return false;
     }
     final storeId = getStoreId();
+    final newId = const Uuid().v4();
     final newCat = {
-      'id': 'cat_${DateTime.now().millisecondsSinceEpoch}',
+      'id': newId,
       'store_id': storeId,
       'name': categoryName,
       'emoji': emoji,
@@ -414,8 +416,9 @@ class InventoryStore extends ChangeNotifier with BaseMixin {
       return false;
     }
     final storeId = getStoreId();
+    final newId = const Uuid().v4();
     final newProd = {
-      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'id': newId,
       'store_id': storeId,
       'name': product.name,
       'price': product.price,

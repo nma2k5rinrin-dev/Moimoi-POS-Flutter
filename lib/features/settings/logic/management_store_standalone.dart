@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 import 'package:moimoi_pos/features/auth/models/user_model.dart';
 import 'package:moimoi_pos/features/settings/models/store_info_model.dart';
 import 'package:moimoi_pos/features/settings/models/app_role_model.dart';
@@ -265,7 +267,7 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
       final payload = targetStaff.map((u) {
         final assignedStoreId = (u.role == 'admin') ? u.username : (u.createdBy ?? '');
         return {
-          'id': '${nId}_${u.username}',
+          'id': const Uuid().v4(),
           'user_id': u.username,
           'title': title,
           'message': message,
@@ -843,7 +845,7 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
       }).eq('store_id', request.storeId);
 
       await supabaseClient.from('premium_payments').insert({
-        'id': 'pay_${now.millisecondsSinceEpoch}',
+        'id': const Uuid().v4(),
         'store_id': request.storeId,
         'amount': request.amount,
         'plan_name': request.planName,
