@@ -688,18 +688,19 @@ class _TableSelectorBtn extends StatelessWidget {
       }
     }
 
-    // ── Bottom sheet for mobile ──
-    showModalBottomSheet(
+    // ── Dialog for table selection ──
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      isScrollControlled: true,
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.6,
-      ),
       builder: (_) {
-        return SafeArea(
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.7,
+              maxWidth: 400,
+            ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -837,9 +838,10 @@ class _TableSelectorBtn extends StatelessWidget {
               ),
             ],
           ),
-        );
-      },
-    );
+        ),
+      );
+    },
+  );
   }
 
   static Widget _tableOption(

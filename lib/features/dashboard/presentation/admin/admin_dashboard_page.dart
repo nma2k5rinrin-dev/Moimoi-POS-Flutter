@@ -392,7 +392,7 @@ class _PortraitLayout extends StatelessWidget {
         // ── Header ──
         SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
+            padding: EdgeInsets.fromLTRB(9, 16, 9, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -421,7 +421,7 @@ class _PortraitLayout extends StatelessWidget {
         // ── Overview Section ──
         SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 14, 20, 0),
+            padding: EdgeInsets.fromLTRB(9, 14, 9, 0),
             child: Column(
               children: [
                 // Date picker
@@ -429,7 +429,7 @@ class _PortraitLayout extends StatelessWidget {
                   onTap: onPickDateRange,
                   child: Container(
                     width: double.infinity,
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: EdgeInsets.symmetric(horizontal: 9, vertical: 8),
                     decoration: BoxDecoration(
                       color: AppColors.cardBg,
                       borderRadius: BorderRadius.circular(20),
@@ -2088,28 +2088,19 @@ class _StoreCard extends StatelessWidget {
   }
 
   void _showStoreMenu(BuildContext context) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (ctx) {
         final storeName = info.name.isNotEmpty ? info.name : storeId;
-        return SafeArea(
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Padding(
-            padding: EdgeInsets.fromLTRB(9, 16, 9, 8),
+            padding: EdgeInsets.fromLTRB(9, 24, 9, 8),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.slate200,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                SizedBox(height: 16),
                 Text(
                   storeName,
                   style: TextStyle(
