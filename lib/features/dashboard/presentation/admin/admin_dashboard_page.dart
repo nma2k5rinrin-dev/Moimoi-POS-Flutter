@@ -1581,9 +1581,11 @@ class _StoreCard extends StatelessWidget {
           ),
         ),
       ),
-      child: Container(
-        padding: EdgeInsets.all(cardPad),
-        clipBehavior: Clip.hardEdge,
+      child: Stack(
+        children: [
+          Container(
+            padding: EdgeInsets.all(cardPad),
+            clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
           color: AppColors.cardBg,
           borderRadius: BorderRadius.circular(cardRadius),
@@ -1667,14 +1669,7 @@ class _StoreCard extends StatelessWidget {
                             ),
                           ),
                           SizedBox(width: 8),
-                          if (hasPendingUpgrade)
-                            _badge(
-                              '',
-                              'Chờ duyệt',
-                              Color(0xFFD97706),
-                              AppColors.orange50,
-                            )
-                          else if (isPremium)
+                          if (isPremium)
                             Container(
                               padding: EdgeInsets.symmetric(
                                 horizontal: 10,
@@ -1685,7 +1680,7 @@ class _StoreCard extends StatelessWidget {
                                   colors: [
                                     Color(0xFFFDE68A),
                                     Color(0xFFF59E0B),
-                                  ], // Gold gradient
+                                  ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
@@ -1748,163 +1743,159 @@ class _StoreCard extends StatelessWidget {
               ],
             ),
             SizedBox(height: 16),
-
-            // ── Body: Expiry & Revenue ──
-            Row(
-              children: [
-                Expanded(
-                  child: RichText(
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    text: TextSpan(
-                      text: 'Hết hạn: ',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.slate500,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: info.daysUntilExpiry != null
-                              ? _formatDate(DateTime.now().add(Duration(days: info.daysUntilExpiry!)))
-                              : 'Không có',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.slate800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: RichText(
-                    textAlign: TextAlign.right,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    text: TextSpan(
-                      text: 'DT: ',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.slate500,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: 'N/A', // Assuming no per-store revenue info yet
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.slate800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
             SizedBox(height: 12),
 
-            // ── Footer: Last online & Action Buttons ──
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    info.lastLoginAt != null
-                        ? 'Đăng nhập: \n${_formatDate(info.lastLoginAt!)}'
-                        : 'Chưa đăng nhập',
+            // ── Plan & Expiry Info ──
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: isPremium ? Color(0xFFFFFBEB) : AppColors.slate50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isPremium ? Color(0xFFFDE68A) : AppColors.slate200,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isPremium ? Icons.workspace_premium : Icons.inventory_2_outlined,
+                    size: 16,
+                    color: isPremium ? Color(0xFFD97706) : AppColors.slate400,
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    isPremium ? 'Premium' : 'Cơ bản',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: isPremium ? Color(0xFFD97706) : AppColors.slate500,
+                    ),
+                  ),
+                  Spacer(),
+                  Text(
+                    info.daysUntilExpiry != null
+                        ? 'Hết hạn: ${_formatDate(DateTime.now().add(Duration(days: info.daysUntilExpiry!)))}'
+                        : 'Không hết hạn',
                     style: TextStyle(
                       fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.slate400,
-                      height: 1.3,
+                      fontWeight: FontWeight.w600,
+                      color: (info.daysUntilExpiry != null && info.daysUntilExpiry! <= 7)
+                          ? Color(0xFFEF4444)
+                          : AppColors.slate500,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
+                ],
+              ),
+            ),
+            if (hasPendingUpgrade) ...[
+              SizedBox(height: 8),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.orange50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Color(0xFFFDE68A)),
                 ),
-                SizedBox(width: 8),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+                child: Row(
                   children: [
-                    // Gia hạn button
-                    InkWell(
-                      onTap: () => _showPremiumPopup(context, storeName),
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(color: AppColors.emerald500),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          'Gia hạn ngay',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.emerald600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    // Chi tiết button
-                    InkWell(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => StoreDetailPage(
-                            storeId: storeId,
-                            info: info,
-                            store: store,
-                            colorIndex: colorIndex,
-                          ),
-                        ),
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.emerald500,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.emerald500.withValues(
-                                alpha: 0.3,
-                              ),
-                              blurRadius: 4,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          'Chi tiết',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
+                    Icon(Icons.hourglass_top_rounded, size: 14, color: Color(0xFFD97706)),
+                    SizedBox(width: 6),
+                    Text(
+                      'Yêu cầu nâng cấp đang chờ duyệt',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFD97706),
                       ),
                     ),
                   ],
+                ),
+              ),
+            ],
+            SizedBox(height: 12),
+
+            // ── Action Buttons ──
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _showPremiumPopup(context, storeName),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: AppColors.emerald500),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Gia hạn ngay',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.emerald600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => StoreDetailPage(
+                          storeId: storeId,
+                          info: info,
+                          store: store,
+                          colorIndex: colorIndex,
+                        ),
+                      ),
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.emerald500,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.emerald500.withValues(alpha: 0.3),
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Chi tiết',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
           ],
         ),
+      ),
+          if (isPremium)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _WavePainter(
+                    color: Color(0xFFF59E0B).withValues(alpha: 0.08),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -2266,6 +2257,52 @@ class _StoreCard extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════
 // ADD STORE CARD
 // ═══════════════════════════════════════════════════════════
+class _WavePainter extends CustomPainter {
+  final Color color;
+  _WavePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    path.moveTo(0, size.height * 0.6);
+    path.quadraticBezierTo(
+      size.width * 0.25, size.height * 0.45,
+      size.width * 0.5, size.height * 0.6,
+    );
+    path.quadraticBezierTo(
+      size.width * 0.75, size.height * 0.75,
+      size.width, size.height * 0.55,
+    );
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+    canvas.drawPath(path, paint);
+
+    // Second wave layer
+    final path2 = Path();
+    path2.moveTo(0, size.height * 0.75);
+    path2.quadraticBezierTo(
+      size.width * 0.3, size.height * 0.65,
+      size.width * 0.6, size.height * 0.78,
+    );
+    path2.quadraticBezierTo(
+      size.width * 0.85, size.height * 0.88,
+      size.width, size.height * 0.7,
+    );
+    path2.lineTo(size.width, size.height);
+    path2.lineTo(0, size.height);
+    path2.close();
+    canvas.drawPath(path2, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _WavePainter old) => old.color != color;
+}
+
 class _AddStoreCard extends StatelessWidget {
   final ManagementStore store;
   final bool compact;
