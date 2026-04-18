@@ -828,7 +828,7 @@ class _PortraitLayout extends StatelessWidget {
         // ── Section Title + Search + Filters ──
         SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 18, 20, 0),
+            padding: EdgeInsets.fromLTRB(9, 18, 9, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -922,7 +922,7 @@ class _PortraitLayout extends StatelessWidget {
 
         // ── Store Grid ──
         SliverPadding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
+          padding: EdgeInsets.symmetric(horizontal: 9),
           sliver: SliverToBoxAdapter(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -1165,7 +1165,7 @@ class _LandscapeLayout extends StatelessWidget {
         Container(
           width: 300,
           color: AppColors.cardBg,
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 16),
+          padding: EdgeInsets.fromLTRB(9, 16, 9, 16),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1362,7 +1362,7 @@ class _LandscapeLayout extends StatelessWidget {
         // ── Right Panel ──
         Expanded(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(16, 14, 16, 14),
+            padding: EdgeInsets.fromLTRB(9, 14, 9, 14),
             child: Column(
               children: [
                 // Header + Filter
@@ -2097,7 +2097,7 @@ class _StoreCard extends StatelessWidget {
         final storeName = info.name.isNotEmpty ? info.name : storeId;
         return SafeArea(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+            padding: EdgeInsets.fromLTRB(9, 16, 9, 8),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

@@ -273,22 +273,6 @@ class _AccountDialogContent extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 4),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _roleLabel,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.slate400,
-                  ),
-                ),
-                SizedBox(width: 4),
-                Icon(Icons.chevron_right, size: 14, color: AppColors.slate400),
-              ],
-            ),
           ],
         ),
       ),
@@ -304,11 +288,11 @@ class _AccountDialogContent extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 9),
         child: Row(
           children: [
             Icon(icon, size: 22, color: AppColors.slate500),
-            SizedBox(width: 16),
+            SizedBox(width: 9),
             Expanded(
               child: Text(
                 label,
@@ -434,17 +418,14 @@ class _AccountDialogContent extends StatelessWidget {
                   ),
                 ),
                 SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    expiryDate,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.slate800,
-                    ),
+                Text(
+                  expiryDate,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.slate800,
                   ),
                 ),
-                SizedBox(width: 8),
                 Spacer(),
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
