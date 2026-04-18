@@ -408,12 +408,12 @@ class _PricingDialogState extends State<_PricingDialog> {
                               final amt = int.tryParse(cleanStr) ?? 0;
 
                               await store.supabaseClient.from('upgrade_requests').insert({
-                                'id': 'ur_${DateTime.now().millisecondsSinceEpoch}',
                                 'username': storeId,
                                 'plan_name': plan.name,
                                 'amount': amt,
                                 'status': 'pending',
                                 'transfer_content': '',
+                                'created_at': now.toIso8601String(),
                               });
                             } catch (e) {
                               store.showToast('Lỗi gửi Data: $e', 'error');

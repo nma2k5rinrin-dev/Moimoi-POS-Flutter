@@ -2870,7 +2870,7 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
     final isActive = context
         .watch<ManagementStore>()
         .users
-        .any((u) => (u.username == widget.storeId || u.createdBy == widget.storeId) && u.isOnline);
+        .any((u) => u.username == widget.storeId && u.isOnline);
 
     return Scaffold(
       backgroundColor: Color(0xFFF4F7FA),
@@ -3068,7 +3068,7 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
                   border: Border.all(color: AppColors.slate200),
                 ),
                 child: Text(
-                  'ID: MM-${widget.storeId.hashCode.abs().toString().padLeft(6, '0')}',
+                  widget.storeId,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -3076,6 +3076,31 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
                   ),
                 ),
               ),
+              if (widget.info.createdAt != null) ...[
+                SizedBox(width: 8),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.slate50,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.slate200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_today_outlined, size: 11, color: AppColors.slate400),
+                      SizedBox(width: 4),
+                      Text(
+                        _formatDateString(widget.info.createdAt),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.slate500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
           _buildHeroPlanStatus(context, isPremium, pendingRequest),
@@ -3598,7 +3623,7 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isPremium ? Color(0xFFFDE68A) : AppColors.slate200),
+        border: Border.all(color: isPremium || pendingRequest != null ? Color(0xFFFDE68A) : AppColors.slate200),
         boxShadow: [
           BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: Offset(0, 2)),
         ],
@@ -3606,15 +3631,17 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
       child: Row(
         children: [
           Container(
-            padding: EdgeInsets.all(8),
+            padding: EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isPremium ? Color(0xFFFEF3C7) : AppColors.slate50,
+              color: isPremium || pendingRequest != null ? Color(0xFFFEF3C7) : AppColors.slate50,
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isPremium ? Icons.workspace_premium_rounded : Icons.local_activity_rounded,
-              color: isPremium ? Color(0xFFD97706) : AppColors.slate500,
-              size: 20,
+              pendingRequest != null 
+                  ? Icons.hourglass_top_rounded 
+                  : (isPremium ? Icons.workspace_premium_rounded : Icons.local_activity_rounded),
+              color: isPremium || pendingRequest != null ? Color(0xFFD97706) : AppColors.slate500,
+              size: 22,
             ),
           ),
           SizedBox(width: 12),
@@ -3623,19 +3650,51 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isPremium ? 'MoiMoi Premium' : 'Gói Cơ Bản',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate800),
+                  pendingRequest != null
+                      ? 'Yêu cầu: ${pendingRequest.planName}'
+                      : (isPremium ? 'MoiMoi Premium' : 'Gói Cơ Bản'),
+                  style: TextStyle(
+                    fontSize: 14, 
+                    fontWeight: FontWeight.w800, 
+                    color: pendingRequest != null ? Color(0xFFB45309) : AppColors.slate800
+                  ),
                 ),
-                SizedBox(height: 2),
-                Text(
-                  isPremium 
-                      ? 'Hết hạn: ${_formatDateString(widget.info.premiumExpiresAt)}' 
-                      : 'Giới hạn tính năng',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate500),
-                ),
+                SizedBox(height: 4),
+                if (pendingRequest != null) ...[
+                  Text(
+                    'Đăng ký: ${_formatDateString(DateTime.tryParse(pendingRequest.createdAt.toString()))}',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate600),
+                  ),
+                  Text(
+                    'Thanh toán: ${_fmtCurrency(pendingRequest.amount)}',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.emerald600),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    isPremium
+                        ? 'Gói đang dùng: Hết hạn ${_formatDateString(widget.info.premiumExpiresAt)}'
+                        : 'Gói đang dùng: Cơ Bản',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.slate400),
+                  ),
+                ] else if (isPremium) ...[
+                  Text(
+                    'Kích hoạt: ${_formatDateString(widget.info.createdAt)}',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate500),
+                  ),
+                  Text(
+                    'Hết hạn: ${_formatDateString(widget.info.premiumExpiresAt)}',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFD97706)),
+                  ),
+                ] else ...[
+                  Text(
+                    'Giới hạn tính năng',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate500),
+                  ),
+                ]
               ],
             ),
           ),
+          SizedBox(width: 8),
           if (pendingRequest != null)
             ElevatedButton(
               onPressed: () => _showApproveDialog(context, pendingRequest),
@@ -3643,20 +3702,21 @@ class _StoreDetailPageState extends State<_StoreDetailPage> {
                 backgroundColor: Color(0xFFF59E0B),
                 foregroundColor: Colors.white,
                 elevation: 0,
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text('Duyệt ngay', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              child: Text('Duyệt', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
             )
           else
             TextButton(
               onPressed: () => context.read<UIStore>().showToast('Tính năng nâng cấp đang phát triển', 'info'),
               style: TextButton.styleFrom(
                 foregroundColor: isPremium ? Color(0xFFD97706) : Colors.blue,
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                backgroundColor: isPremium ? Color(0xFFFEF3C7) : AppColors.slate50,
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text(isPremium ? 'Gia hạn' : 'Nâng cấp', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              child: Text(isPremium ? 'Gia hạn' : 'Nâng cấp', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
             ),
         ],
       ),

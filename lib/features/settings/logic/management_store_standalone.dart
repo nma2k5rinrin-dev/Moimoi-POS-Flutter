@@ -88,7 +88,7 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
       var usersQuery = supabaseClient
           .from('users')
           .select(
-            'username, role, fullname, phone, is_premium, expires_at, created_by, show_vip_expired, show_vip_congrat',
+            'username, role, fullname, phone, is_premium, expires_at, created_by, show_vip_expired, show_vip_congrat, is_online',
           );
       if (user.role != 'sadmin') {
         final owner = user.role == 'admin'
