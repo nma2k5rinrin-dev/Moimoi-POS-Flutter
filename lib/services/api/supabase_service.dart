@@ -32,7 +32,7 @@ class SupabaseService {
       await client.from('fcm_tokens').upsert({
         'token': token,
         'user_id': user.id,
-        'sound': sound,
+        'sound': soundName,
         'updated_at': DateTime.now().toIso8601String(),
       });
     } catch(e) {
