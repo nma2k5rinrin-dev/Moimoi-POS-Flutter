@@ -1563,12 +1563,24 @@ class _StoreCard extends StatelessWidget {
 
     final hasPendingUpgrade = store.upgradeRequests.any((r) => r.storeId == storeId && r.status == 'pending');
 
-    final cardRadius = compact ? 16.0 : 20.0;
-    final cardPad = compact ? 12.0 : 16.0;
-    final iconSize = compact ? 36.0 : 48.0;
-    final iconInnerSize = compact ? 18.0 : 24.0;
-    final iconRadius = compact ? 10.0 : 14.0;
-    final nameSize = compact ? 13.0 : 15.0;
+    final iconSize = compact ? 40.0 : 44.0;
+    final iconInnerSize = compact ? 20.0 : 22.0;
+    final iconRadius = compact ? 12.0 : 12.0;
+    final nameSize = compact ? 14.0 : 15.0;
+
+    // ── Expiry text ──
+    String expiryText;
+    Color expiryColor;
+    if (info.daysUntilExpiry != null) {
+      final expDate = DateTime.now().add(Duration(days: info.daysUntilExpiry!));
+      expiryText = '${_formatDate(expDate)}';
+      expiryColor = info.daysUntilExpiry! <= 7
+          ? Color(0xFFEF4444)
+          : AppColors.slate500;
+    } else {
+      expiryText = 'Vĩnh viễn';
+      expiryColor = AppColors.slate400;
+    }
 
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
@@ -1581,321 +1593,257 @@ class _StoreCard extends StatelessWidget {
           ),
         ),
       ),
-      child: Stack(
-        children: [
-          Container(
-            padding: EdgeInsets.all(cardPad),
-            clipBehavior: Clip.hardEdge,
+      child: Container(
+        clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
           color: AppColors.cardBg,
-          borderRadius: BorderRadius.circular(cardRadius),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isOnline ? AppColors.emerald100 : AppColors.slate200,
+            color: isPremium
+                ? Color(0xFF8B5CF6).withValues(alpha: 0.4)
+                : AppColors.slate200,
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 8,
-              offset: Offset(0, 2),
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: Offset(0, 3),
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+        child: Stack(
           children: [
-            // ── Header: Icon + Name + Status ──
-            Row(
-              children: [
-                // Store Logo/Icon
-                Builder(
-                  builder: (_) {
-                    final hasLogo = info.logoUrl.isNotEmpty;
-                    if (hasLogo) {
-                      try {
-                        final base64Part = info.logoUrl.split(',').last;
-                        final bytes = base64Decode(base64Part);
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(iconRadius),
-                          child: Image.memory(
-                            bytes,
-                            width: iconSize,
-                            height: iconSize,
-                            fit: BoxFit.cover,
-                          ),
-                        );
-                      } catch (_) {}
-                    }
-                    return Container(
-                      width: iconSize,
-                      height: iconSize,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: colors,
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(iconRadius),
-                      ),
-                      alignment: Alignment.center,
-                      child: Icon(
-                        Icons.storefront,
-                        size: iconInnerSize,
-                        color: Colors.white,
-                      ),
-                    );
-                  },
+            // Premium wave bg
+            if (isPremium)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _WavePainter(
+                      color: Color(0xFF8B5CF6).withValues(alpha: 0.05),
+                    ),
+                  ),
                 ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+            // Content
+            Padding(
+              padding: EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ── Row 1: Avatar + Name + Badge ──
+                  Row(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      // Store Logo/Icon with online indicator
+                      Stack(
                         children: [
-                          Expanded(
-                            child: Text(
+                          Builder(
+                            builder: (_) {
+                              final hasLogo = info.logoUrl.isNotEmpty;
+                              if (hasLogo) {
+                                try {
+                                  final base64Part = info.logoUrl.split(',').last;
+                                  final bytes = base64Decode(base64Part);
+                                  return ClipRRect(
+                                    borderRadius: BorderRadius.circular(iconRadius),
+                                    child: Image.memory(
+                                      bytes,
+                                      width: iconSize,
+                                      height: iconSize,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  );
+                                } catch (_) {}
+                              }
+                              return Container(
+                                width: iconSize,
+                                height: iconSize,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: colors,
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(iconRadius),
+                                ),
+                                alignment: Alignment.center,
+                                child: Icon(
+                                  Icons.storefront,
+                                  size: iconInnerSize,
+                                  color: Colors.white,
+                                ),
+                              );
+                            },
+                          ),
+                          // Online dot indicator
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              width: 14,
+                              height: 14,
+                              decoration: BoxDecoration(
+                                color: isOnline ? Color(0xFF22C55E) : Color(0xFFD1D5DB),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2.5),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(width: 10),
+                      // Name + online text
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
                               storeName,
                               style: TextStyle(
-                                fontSize: nameSize + 1,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.slate900,
+                                fontSize: nameSize,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.slate800,
                                 height: 1.2,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          SizedBox(width: 8),
-                          if (isPremium)
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
+                            SizedBox(height: 3),
+                            Text(
+                              isOnline ? 'Đang hoạt động' : 'Ngoại tuyến${offlineDays > 0 ? ' • ${offlineDays}d' : ''}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: isOnline ? Color(0xFF16A34A) : AppColors.slate400,
                               ),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Color(0xFFFDE68A),
-                                    Color(0xFFF59E0B),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Color(
-                                      0xFFF59E0B,
-                                    ).withValues(alpha: 0.3),
-                                    blurRadius: 4,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Text(
-                                'Premium',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            )
-                          else
-                            _badge(
-                              '',
-                              'Cơ bản',
-                              Color(0xFF6B7280),
-                              Color(0xFFF3F4F6),
                             ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 6),
+                      // Tier badge
+                      if (isPremium)
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Premium',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              height: 1.2,
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Color(0xFFF3F4F6),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Cơ bản',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF9CA3AF),
+                              height: 1.2,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+
+                  SizedBox(height: 12),
+                  
+                  // ── Pending upgrade notice ──
+                  if (hasPendingUpgrade) ...[
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Color(0xFFFFF7ED),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.hourglass_top_rounded, size: 14, color: Color(0xFFEA580C)),
+                          SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Chờ duyệt nâng cấp',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFEA580C),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
-                      SizedBox(height: 6),
-                      // Online/Offline badge
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isOnline
-                              ? AppColors.emerald50
-                              : Color(0xFFFEF2F2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          isOnline ? 'Online' : 'Ngoại tuyến',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: isOnline
-                                ? AppColors.emerald600
-                                : Color(0xFFEF4444),
+                    ),
+                    SizedBox(height: 10),
+                  ],
+
+                  // ── Row 2: Footer (Expiry + Action) ──
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.schedule_rounded,
+                            size: 14,
+                            color: expiryColor.withValues(alpha: 0.7),
+                          ),
+                          SizedBox(width: 5),
+                          Text(
+                            expiryText,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: expiryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Small Gia Hạn button
+                      InkWell(
+                        onTap: () => _showPremiumPopup(context, storeName),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.emerald400),
+                            borderRadius: BorderRadius.circular(8),
+                            color: AppColors.emerald500.withValues(alpha: 0.05),
+                          ),
+                          child: Text(
+                            'Gia hạn',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.emerald600,
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            SizedBox(height: 12),
-
-            // ── Plan & Expiry Info ──
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: isPremium ? Color(0xFFFFFBEB) : AppColors.slate50,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: isPremium ? Color(0xFFFDE68A) : AppColors.slate200,
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    isPremium ? Icons.workspace_premium : Icons.inventory_2_outlined,
-                    size: 16,
-                    color: isPremium ? Color(0xFFD97706) : AppColors.slate400,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    isPremium ? 'Premium' : 'Cơ bản',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: isPremium ? Color(0xFFD97706) : AppColors.slate500,
-                    ),
-                  ),
-                  Spacer(),
-                  Text(
-                    info.daysUntilExpiry != null
-                        ? 'Hết hạn: ${_formatDate(DateTime.now().add(Duration(days: info.daysUntilExpiry!)))}'
-                        : 'Không hết hạn',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: (info.daysUntilExpiry != null && info.daysUntilExpiry! <= 7)
-                          ? Color(0xFFEF4444)
-                          : AppColors.slate500,
-                    ),
-                  ),
                 ],
               ),
             ),
-            if (hasPendingUpgrade) ...[
-              SizedBox(height: 8),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.orange50,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Color(0xFFFDE68A)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.hourglass_top_rounded, size: 14, color: Color(0xFFD97706)),
-                    SizedBox(width: 6),
-                    Text(
-                      'Yêu cầu nâng cấp đang chờ duyệt',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFFD97706),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            SizedBox(height: 12),
-
-            // ── Action Buttons ──
-            Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () => _showPremiumPopup(context, storeName),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: AppColors.emerald500),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'Gia hạn ngay',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.emerald600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: InkWell(
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => StoreDetailPage(
-                          storeId: storeId,
-                          info: info,
-                          store: store,
-                          colorIndex: colorIndex,
-                        ),
-                      ),
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.emerald500,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.emerald500.withValues(alpha: 0.3),
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'Chi tiết',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
-      ),
-          if (isPremium)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(
-                  painter: _WavePainter(
-                    color: Color(0xFFF59E0B).withValues(alpha: 0.08),
-                  ),
-                ),
-              ),
-            ),
-        ],
       ),
     );
   }
