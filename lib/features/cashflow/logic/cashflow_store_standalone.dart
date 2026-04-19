@@ -479,9 +479,12 @@ class CashflowStore extends ChangeNotifier with BaseMixin {
       },
       applyDrift: () async {
         if (db != null) {
-          await (db!.delete(
-            db!.localTransactions,
-          )..where((tbl) => tbl.id.equals(id))).go();
+          await (db!.update(db!.localTransactions)
+            ..where((tbl) => tbl.id.equals(id))).write(
+              LocalTransactionsCompanion(
+                deletedAt: Value(DateTime.now().toUtc().toIso8601String()),
+              ),
+          );
         }
       },
       rollback: () {

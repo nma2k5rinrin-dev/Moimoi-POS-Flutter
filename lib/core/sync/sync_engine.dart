@@ -217,6 +217,7 @@ class SyncEngine extends ChangeNotifier {
             createdBy: Value(row['created_by'] ?? ''),
             time: Value(row['time'] ?? ''),
             paymentMethod: Value(row['payment_method'] ?? ''),
+            deletedAt: Value(row['deleted_at'] as String?),
             isSynced: const Value(true),
           ),
         );
@@ -267,6 +268,7 @@ class SyncEngine extends ChangeNotifier {
             note: Value(row['note'] ?? ''),
             time: Value(row['time'] ?? ''),
             createdBy: Value(row['created_by'] ?? ''),
+            deletedAt: Value(row['deleted_at'] as String?),
             isSynced: const Value(true),
           ),
         );
