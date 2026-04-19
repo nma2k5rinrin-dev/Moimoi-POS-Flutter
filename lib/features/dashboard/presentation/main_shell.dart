@@ -50,7 +50,7 @@ class _MainShellState extends State<MainShell> {
     _NavItem(
       icon: PhosphorIconsBold.package,
       label: 'Quản lý kho',
-      path: '/inventory',
+      path: '/settings?tab=management',
     ),
     _NavItem(
       icon: Icons.account_balance_wallet_rounded,
@@ -90,7 +90,7 @@ class _MainShellState extends State<MainShell> {
       items.add(const _NavItem(icon: PhosphorIconsBold.clipboardText, label: 'Đơn hàng', path: '/orders'));
     }
     if (context.read<ManagementStore>().hasPermission('tab_inventory')) {
-      items.add(const _NavItem(icon: PhosphorIconsBold.package, label: 'Quản lý kho', path: '/inventory'));
+      items.add(const _NavItem(icon: PhosphorIconsBold.package, label: 'Quản lý kho', path: '/settings?tab=management'));
     }
     if (context.read<ManagementStore>().hasPermission('tab_cashflow')) {
       items.add(_NavItem(icon: Icons.account_balance_wallet_rounded, label: 'Thu chi', path: '/settings?tab=cashflow', isLocked: !canUseCashflow));
@@ -138,8 +138,10 @@ class _MainShellState extends State<MainShell> {
       final tab = uri.queryParameters['tab'];
       if (tab == 'cashflow' || tab == 'thu-chi') {
         idx = items.indexWhere((item) => item.path.contains('tab=cashflow'));
+      } else if (tab == 'management') {
+        idx = items.indexWhere((item) => item.path.contains('tab=management'));
       } else if (role != 'sadmin') {
-        // If they enter settings without a cashflow tab, map to overview for admin
+        // If they enter settings without a specific tab, map to overview for admin
         location = '/admin';
         idx = items.indexWhere((item) => item.path == location);
       } else {
@@ -236,11 +238,10 @@ class _MainShellState extends State<MainShell> {
               bottom: false,
               child: Column(
                 children: [
-                  if (MediaQuery.of(context).size.width < 600)
-                    _MobileHeader(
-                      store: store,
-                      storeInfo: storeInfo,
-                    ),
+                  _MobileHeader(
+                    store: store,
+                    storeInfo: storeInfo,
+                  ),
                   Expanded(
                     child: widget.child,
                   ),

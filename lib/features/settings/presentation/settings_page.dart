@@ -220,7 +220,12 @@ class _SettingsPageState extends State<SettingsPage> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
-    if (isLandscape) {
+    // If navigated via bottom nav tab (cashflow/inventory), show content directly without sidebar
+    final urlTab = GoRouterState.of(context).uri.queryParameters['tab'];
+    final directTabs = {'cashflow', 'management'};
+    final isDirectTab = urlTab != null && directTabs.contains(urlTab) && _selectedSection == urlTab;
+
+    if (isLandscape && !isDirectTab) {
       final activeId = _selectedSection ?? menus.first.id;
       return Row(
         children: [
@@ -242,7 +247,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (_selectedSection != null) {
       return _buildSection(
         _selectedSection!,
-        onBack: () => setState(() {
+        onBack: isDirectTab ? null : () => setState(() {
           _selectedSection = null;
           _hideSectionHeader = false;
         }),

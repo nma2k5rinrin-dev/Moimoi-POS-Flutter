@@ -158,41 +158,17 @@ class _DashboardPageState extends State<DashboardPage> {
                           ),
                         ),
                         SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Text(
-                              'Tổng quan dòng tiền',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.slate500,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(color: AppColors.slate100, borderRadius: BorderRadius.circular(4)),
-                              child: Text('$totalOrders đơn', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.slate600)),
-                            ),
-                            if (totalCancelled > 0) ...[
-                              SizedBox(width: 6),
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(color: AppColors.red50, borderRadius: BorderRadius.circular(4)),
-                                child: Text('$totalCancelled huỷ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.red500)),
-                              ),
-                            ]
-                          ],
+                        Text(
+                          'Tổng quan dòng tiền',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.slate500,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
-                    Row(
-                      children: [
-                        const NotificationBell(),
-                        SizedBox(width: 8),
-                        _buildDatePicker(),
-                      ],
-                    ),
+                    _buildDatePicker(),
                   ],
                 ),
               ),
@@ -208,19 +184,18 @@ class _DashboardPageState extends State<DashboardPage> {
                     builder: (context, outerConstraints) {
                       final isLandscape = outerConstraints.maxWidth > 600;
 
-                      // 1. The 3 Money Cards with Background Charts
-                      final threeCards = Row(
+                      // 1. Tổng Doanh Thu - full width
+                      final totalCard = _SparklineCard(
+                        title: 'TỔNG DOANH THU',
+                        value: formatCurrency(totalRevenue),
+                        accentColor: AppColors.emerald500,
+                        spots: totalSpots,
+                        isGradientValue: true,
+                      );
+
+                      // 1b. Tiền Mặt + Chuyển Khoản row
+                      final subCards = Row(
                         children: [
-                          Expanded(
-                            child: _SparklineCard(
-                              title: 'TỔNG DOANH THU',
-                              value: formatCurrency(totalRevenue),
-                              accentColor: AppColors.emerald500,
-                              spots: totalSpots,
-                              isGradientValue: true,
-                            ),
-                          ),
-                          SizedBox(width: 8),
                           Expanded(
                             child: _SparklineCard(
                               title: 'TIỀN MẶT',
@@ -234,90 +209,173 @@ class _DashboardPageState extends State<DashboardPage> {
                             child: _SparklineCard(
                               title: 'CHUYỂN KHOẢN',
                               value: formatCurrency(transferRevenue),
-                              accentColor: AppColors.blue500, // Or violet
+                              accentColor: AppColors.blue500,
                               spots: transferSpots,
                             ),
                           ),
                         ],
                       );
 
-                      // 2. Extra metrics (Orders, Avg) -> combined in a simple bar below
+                      // 2. Extra metrics (Orders, Avg, Cancelled)
                       final extraMetrics = Container(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         decoration: BoxDecoration(
                           color: AppColors.cardBg,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: AppColors.slate200),
                         ),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.all(6),
-                                  decoration: BoxDecoration(color: AppColors.blue50, borderRadius: BorderRadius.circular(8)),
-                                  child: Icon(Icons.receipt_long_rounded, size: 16, color: AppColors.blue500),
-                                ),
-                                SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Tổng đơn hàng', style: TextStyle(fontSize: 11, color: AppColors.slate500)),
-                                    Text('$totalOrders', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.slate800)),
-                                  ],
-                                ),
-                              ],
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.all(6),
+                                    decoration: BoxDecoration(color: AppColors.blue50, borderRadius: BorderRadius.circular(8)),
+                                    child: Icon(Icons.receipt_long_rounded, size: 16, color: AppColors.blue500),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Tổng đơn', style: TextStyle(fontSize: 10, color: AppColors.slate500)),
+                                      Text('$totalOrders', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                             Container(width: 1, height: 30, color: AppColors.slate200),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.all(6),
-                                  decoration: BoxDecoration(color: AppColors.violet50, borderRadius: BorderRadius.circular(8)),
-                                  child: Icon(Icons.analytics_rounded, size: 16, color: AppColors.violet500),
-                                ),
-                                SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Trung bình cữ/đơn', style: TextStyle(fontSize: 11, color: AppColors.slate500)),
-                                    Text(totalOrders > 0 ? _formatShortCurrency(totalRevenue / totalOrders) : '0', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.slate800)),
-                                  ],
-                                ),
-                              ],
+                            Expanded(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.all(6),
+                                    decoration: BoxDecoration(color: AppColors.violet50, borderRadius: BorderRadius.circular(8)),
+                                    child: Icon(Icons.analytics_rounded, size: 16, color: AppColors.violet500),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('TB/đơn', style: TextStyle(fontSize: 10, color: AppColors.slate500)),
+                                      Text(totalOrders > 0 ? _formatShortCurrency(totalRevenue / totalOrders) : '0', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(width: 1, height: 30, color: AppColors.slate200),
+                            Expanded(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.all(6),
+                                    decoration: BoxDecoration(color: AppColors.red50, borderRadius: BorderRadius.circular(8)),
+                                    child: Icon(Icons.cancel_rounded, size: 16, color: AppColors.red500),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Đơn huỷ', style: TextStyle(fontSize: 10, color: AppColors.slate500)),
+                                      Text('$totalCancelled', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: totalCancelled > 0 ? AppColors.red500 : AppColors.slate800)),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
                       );
 
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          threeCards,
-                          SizedBox(height: 12),
-                          extraMetrics,
-                          SizedBox(height: 16),
-                          
-                          // 3. Hourly Chart (stacked bar with legend)
-                          _HourlyRevenueStackedChart(hourlyData: hourlyData),
-                          SizedBox(height: 16),
+                      if (isLandscape) {
+                        // ── TABLET / PC LAYOUT ──
+                        // Row 1: All 3 revenue cards in one row + metrics
+                        // Row 2: Hourly chart full-width
+                        // Row 3: Products + Staff side by side
+                        final allCardsRow = Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _SparklineCard(
+                                title: 'TỔNG DOANH THU',
+                                value: formatCurrency(totalRevenue),
+                                accentColor: AppColors.emerald500,
+                                spots: totalSpots,
+                                isGradientValue: true,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: _SparklineCard(
+                                title: 'TIỀN MẶT',
+                                value: formatCurrency(cashRevenue),
+                                accentColor: AppColors.amber500,
+                                spots: cashSpots,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: _SparklineCard(
+                                title: 'CHUYỂN KHOẢN',
+                                value: formatCurrency(transferRevenue),
+                                accentColor: AppColors.blue500,
+                                spots: transferSpots,
+                              ),
+                            ),
+                          ],
+                        );
 
-// 4. Compact panels: Top Products and Top Staff
-                          if (isLandscape) ...[
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            allCardsRow,
+                            SizedBox(height: 12),
+                            extraMetrics,
+                            SizedBox(height: 16),
+                            // Chart + panels in 2-column layout
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(child: _TopProductsPanel(items: bestSellers)),
+                                Expanded(
+                                  flex: 3,
+                                  child: _HourlyRevenueStackedChart(hourlyData: hourlyData),
+                                ),
                                 SizedBox(width: 12),
-                                Expanded(child: _TopStaffPanel(staff: topStaff)),
+                                Expanded(
+                                  flex: 2,
+                                  child: Column(
+                                    children: [
+                                      _TopProductsPanel(items: bestSellers),
+                                      SizedBox(height: 12),
+                                      _TopStaffPanel(staff: topStaff),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
-                          ] else ...[
-                            _TopProductsPanel(items: bestSellers),
-                            SizedBox(height: 16),
-                            _TopStaffPanel(staff: topStaff),
                           ],
+                        );
+                      }
+
+                      // ── MOBILE / PORTRAIT LAYOUT ──
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          totalCard,
+                          SizedBox(height: 8),
+                          subCards,
+                          SizedBox(height: 12),
+                          extraMetrics,
+                          SizedBox(height: 16),
+                          _HourlyRevenueStackedChart(hourlyData: hourlyData),
+                          SizedBox(height: 16),
+                          _TopProductsPanel(items: bestSellers),
+                          SizedBox(height: 16),
+                          _TopStaffPanel(staff: topStaff),
                         ],
                       );
                     },
@@ -354,23 +412,23 @@ class _DashboardPageState extends State<DashboardPage> {
         }
       },
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: AppColors.slate50,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.slate200),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.emerald600),
-            SizedBox(width: 6),
+            Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.emerald600),
+            SizedBox(width: 8),
             Text(
               '${_dateFrom.day}/${_dateFrom.month} - ${_dateTo.day}/${_dateTo.month}/${_dateTo.year}',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.slate700),
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.slate700),
             ),
-            SizedBox(width: 6),
-            Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.slate400),
+            SizedBox(width: 8),
+            Icon(Icons.unfold_more_rounded, size: 18, color: AppColors.slate400),
           ],
         ),
       ),
