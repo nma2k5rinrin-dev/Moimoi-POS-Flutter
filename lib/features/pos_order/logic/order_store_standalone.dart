@@ -354,24 +354,29 @@ class OrderStore extends ChangeNotifier with BaseMixin {
                 // Đơn không bị cancelled -> kiểm tra xem có đơn cũ cùng bàn không
                 // Nếu có → trigger không gộp được, app tự gộp!
                 debugPrint('[Realtime] INSERT: Order still active. Checking if existing order on same table...');
-                final existingForTable = await supabaseClient
-                    .from('orders')
-                    .select('id, store_id, table_name, items, status, payment_status, total_amount, time, created_by, payment_method, deleted_at')
-                    .eq('store_id', newOrder.storeId)
-                    .isFilter('deleted_at', null)
-                    .inFilter('status', ['pending', 'processing'])
-                    .eq('payment_status', 'unpaid')
-                    .neq('id', newOrder.id)
-                    .order('time', ascending: false);
-
-                // Tìm đơn cùng bàn bằng cách so sánh tên bàn đã normalize
-                final normalizedNewTable = newOrder.table.toLowerCase().replaceAll('bàn', '').replaceAll('bán', '').trim();
                 Map<String, dynamic>? matchingExisting;
-                for (final row in existingForTable) {
-                  final existingTable = (row['table_name'] ?? '').toString().toLowerCase().replaceAll('bàn', '').replaceAll('bán', '').trim();
-                  if (existingTable == normalizedNewTable) {
-                    matchingExisting = row;
-                    break;
+                
+                // --- Pinned tables bypass ---
+                // "Bàn ghim" bắt đầu bằng \u2605 (★). Không được gộp đơn cho bàn ghim!
+                if (!newOrder.table.startsWith('\u2605')) {
+                  final existingForTable = await supabaseClient
+                      .from('orders')
+                      .select('id, store_id, table_name, items, status, payment_status, total_amount, time, created_by, payment_method, deleted_at')
+                      .eq('store_id', newOrder.storeId)
+                      .isFilter('deleted_at', null)
+                      .inFilter('status', ['pending', 'processing'])
+                      .eq('payment_status', 'unpaid')
+                      .neq('id', newOrder.id)
+                      .order('time', ascending: false);
+
+                  // Tìm đơn cùng bàn bằng cách so sánh tên bàn đã normalize
+                  final normalizedNewTable = newOrder.table.toLowerCase().replaceAll('bàn', '').replaceAll('bán', '').trim();
+                  for (final row in existingForTable) {
+                    final existingTable = (row['table_name'] ?? '').toString().toLowerCase().replaceAll('bàn', '').replaceAll('bán', '').trim();
+                    if (existingTable == normalizedNewTable) {
+                      matchingExisting = row;
+                      break;
+                    }
                   }
                 }
 
@@ -382,20 +387,11 @@ class OrderStore extends ChangeNotifier with BaseMixin {
                   final existingOrder = OrderModel.fromMap(matchingExisting);
                   final newItems = OrderModel.fromMap(freshData).items;
                   
-                  // Merge items: thêm items mới vào cuối, đánh dấu isNewlyAdded
+                  // Merge items: thêm items mới vào cuối, không gộp số lượng
+                  // Mỗi món thêm mới tách riêng 1 dòng để dễ phân biệt
                   final mergedItems = [...existingOrder.items];
                   for (final newItem in newItems) {
-                    final existIdx = mergedItems.indexWhere((i) => 
-                      i.name.trim().toLowerCase() == newItem.name.trim().toLowerCase() &&
-                      i.note.trim().toLowerCase() == newItem.note.trim().toLowerCase());
-                    if (existIdx != -1) {
-                      mergedItems[existIdx] = mergedItems[existIdx].copyWith(
-                        quantity: mergedItems[existIdx].quantity + newItem.quantity,
-                        isNewlyAdded: true,
-                      );
-                    } else {
-                      mergedItems.add(newItem.copyWith(isNewlyAdded: true));
-                    }
+                    mergedItems.add(newItem.copyWith(isNewlyAdded: true));
                   }
                   
                   final newTotal = existingOrder.totalAmount + OrderModel.fromMap(freshData).totalAmount;
@@ -510,26 +506,13 @@ class OrderStore extends ChangeNotifier with BaseMixin {
                       .map((e) => OrderItemModel.fromMap(e as Map<String, dynamic>))
                       .toList();
                   
-                  final groupedItems = <OrderItemModel>[];
-                  for (final item in incomingItems) {
-                    final findIdx = groupedItems.indexWhere((i) {
-                      final isSameProduct = (i.id == item.id && i.id.isNotEmpty) || 
-                                            (i.name.trim().toLowerCase() == item.name.trim().toLowerCase() && i.name.trim().isNotEmpty);
-                      final isSameNote = i.note.trim().toLowerCase() == item.note.trim().toLowerCase();
-                      return isSameProduct && isSameNote;
-                    });
-                    if (findIdx != -1) {
-                      groupedItems[findIdx] = groupedItems[findIdx].copyWith(
-                        quantity: groupedItems[findIdx].quantity + item.quantity,
-                        doneQuantity: groupedItems[findIdx].doneQuantity + item.doneQuantity,
-                        isNewlyAdded: item.isNewlyAdded || groupedItems[findIdx].isNewlyAdded,
-                      );
-                    } else {
-                      // Lấy đúng số liệu doneQuantity từ server (để user có thể bỏ tích)
-                      groupedItems.add(item);
-                    }
-                  }
-                  updatedItems = groupedItems;
+                  // Lấy list items y nguyên từ server đẩy về (DB trigger đã nối mảng jsonb, ko gộp)
+                  updatedItems = incomingItems.map((item) {
+                    // Cờ isNewlyAdded đã được set trong INSERT, DB không lưu cờ này
+                    // Vì jsonb DB chỉ lưu state thô, nếu cần đánh dấu ta có thể dò lại...
+                    // Tuy nhiên việc này đã được cover lúc INSERT nếu đó là merge App-level.
+                    return item;
+                  }).toList();
                 }
 
                 // Chống rollback trạng thái hoàn thành từ server dội lại
@@ -773,17 +756,16 @@ class OrderStore extends ChangeNotifier with BaseMixin {
     );
   }
 
-  void updateOrderItemStatus(OrderModel order, String itemId, bool isDone) {
+  void updateOrderItemStatus(OrderModel order, int itemIndex, bool isDone) {
     if (order.id.isEmpty) return;
 
-    final newItems = order.items
-        .map((i) => i.id == itemId 
-            ? i.copyWith(
-                isDone: isDone,
-                isNewlyAdded: isDone ? false : i.isNewlyAdded,
-              ) 
-            : i)
-        .toList();
+    final newItems = List<OrderItemModel>.from(order.items);
+    if (itemIndex >= 0 && itemIndex < newItems.length) {
+      newItems[itemIndex] = newItems[itemIndex].copyWith(
+        isDone: isDone,
+        isNewlyAdded: isDone ? false : newItems[itemIndex].isNewlyAdded,
+      );
+    }
     offlineFirst(
       table: 'orders',
       operation: 'UPDATE',
@@ -830,40 +812,35 @@ class OrderStore extends ChangeNotifier with BaseMixin {
     final oldOrders = List<OrderModel>.from(orders);
 
     String? targetOrderId;
-    String? targetItemId;
+    int? targetItemIndex;
 
     for (final order in processingOrders) {
-      for (final item in order.items) {
+      for (int i = 0; i < order.items.length; i++) {
+        final item = order.items[i];
         if (item.name == productName) {
           if (isDone && item.doneQuantity < item.quantity) {
             targetOrderId = order.id;
-            targetItemId = item.id;
+            targetItemIndex = i;
             break;
           } else if (!isDone && item.doneQuantity > 0) {
             targetOrderId = order.id;
-            targetItemId = item.id;
+            targetItemIndex = i;
             break;
           }
         }
       }
       if (targetOrderId != null) break;
     }
-    if (targetOrderId == null || targetItemId == null) return;
+    if (targetOrderId == null || targetItemIndex == null) return;
 
     final targetOrder = processingOrders.firstWhere((o) => o.id == targetOrderId);
-    final targetItem = targetOrder.items.firstWhere(
-      (i) => i.id == targetItemId,
-    );
+    final targetItem = targetOrder.items[targetItemIndex];
     final newDoneQty = isDone
         ? targetItem.doneQuantity + 1
         : targetItem.doneQuantity - 1;
 
-    final updatedItems = targetOrder.items
-        .map(
-          (i) =>
-              i.id == targetItemId ? i.copyWith(doneQuantity: newDoneQty) : i,
-        )
-        .toList();
+    final updatedItems = List<OrderItemModel>.from(targetOrder.items);
+    updatedItems[targetItemIndex] = targetItem.copyWith(doneQuantity: newDoneQty);
 
     final capturedTargetOrderId = targetOrderId;
     offlineFirst(
@@ -939,15 +916,17 @@ class OrderStore extends ChangeNotifier with BaseMixin {
     notifyListeners();
   }
 
-  void updateOrderItemNote(String orderId, String itemId, String note) {
+  void updateOrderItemNote(String orderId, int itemIndex, String note) {
     final order = orders.firstWhere(
       (o) => o.id == orderId,
       orElse: () => const OrderModel(id: ''),
     );
     if (order.id.isEmpty) return;
-    final newItems = order.items
-        .map((i) => i.id == itemId ? i.copyWith(note: note) : i)
-        .toList();
+    
+    final newItems = List<OrderItemModel>.from(order.items);
+    if (itemIndex >= 0 && itemIndex < newItems.length) {
+      newItems[itemIndex] = newItems[itemIndex].copyWith(note: note);
+    }
     offlineFirst(
       table: 'orders',
       operation: 'UPDATE',
@@ -998,12 +977,15 @@ class OrderStore extends ChangeNotifier with BaseMixin {
     );
   }
 
-  void removeOrderItem(String orderId, String itemId) {
+  void removeOrderItem(String orderId, int itemIndex) {
     final order = orders.firstWhere(
       (o) => o.id == orderId,
       orElse: () => orders.first,
     );
-    final newItems = order.items.where((i) => i.id != itemId).toList();
+    final newItems = List<OrderItemModel>.from(order.items);
+    if (itemIndex >= 0 && itemIndex < newItems.length) {
+      newItems.removeAt(itemIndex);
+    }
 
     if (newItems.isEmpty) {
       deleteOrder(orderId);
@@ -1092,20 +1074,7 @@ class OrderStore extends ChangeNotifier with BaseMixin {
 
         final combinedItems = List<OrderItemModel>.from(existingOrder.items);
         for (final newItem in newItems) {
-          final findIdx = combinedItems.indexWhere((i) {
-            final isSameProduct = (i.id == newItem.id && i.id.isNotEmpty) || 
-                                  (i.name.trim().toLowerCase() == newItem.name.trim().toLowerCase() && i.name.trim().isNotEmpty);
-            final isSameNote = i.note.trim().toLowerCase() == newItem.note.trim().toLowerCase();
-            return isSameProduct && isSameNote;
-          });
-          if (findIdx != -1) {
-            combinedItems[findIdx] = combinedItems[findIdx].copyWith(
-              quantity: combinedItems[findIdx].quantity + newItem.quantity,
-              doneQuantity: combinedItems[findIdx].doneQuantity + newItem.doneQuantity,
-            );
-          } else {
-            combinedItems.add(newItem);
-          }
+          combinedItems.add(newItem.copyWith(isNewlyAdded: true));
         }
 
         final newTotal = existingOrder.totalAmount + totalAmount;

@@ -13,6 +13,19 @@ serve(async (req) => {
     }
 
     try {
+        // --- Security Check: Webhook Secret Validation ---
+        const authHeader = req.headers.get('Authorization')
+        const webhookSecret = Deno.env.get('WEBHOOK_SECRET')
+
+        if (!webhookSecret || authHeader !== `Bearer ${webhookSecret}`) {
+            console.error("Unauthorized request! Missing or invalid WEBHOOK_SECRET.")
+            return new Response(JSON.stringify({ error: "Unauthorized" }), {
+                status: 401,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+        }
+        // ------------------------------------------------
+
         const payload = await req.json()
         const order = payload.record // Triggered from database insert webhook
         const oldOrder = payload.old_record

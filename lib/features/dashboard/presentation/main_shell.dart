@@ -21,8 +21,8 @@ import 'package:moimoi_pos/services/api/cloudflare_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class MainShell extends StatefulWidget {
-  final Widget child;
-  const MainShell({super.key, required this.child});
+  final StatefulNavigationShell navigationShell;
+  const MainShell({super.key, required this.navigationShell});
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -243,7 +243,7 @@ class _MainShellState extends State<MainShell> {
                     storeInfo: storeInfo,
                   ),
                   Expanded(
-                    child: widget.child,
+                    child: widget.navigationShell,
                   ),
                 ],
               ),

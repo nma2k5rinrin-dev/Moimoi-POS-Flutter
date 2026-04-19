@@ -739,13 +739,30 @@ class _OrderCard extends StatefulWidget {
 class _OrderCardState extends State<_OrderCard> {
   bool get _isExpanded => widget.isExpanded;
   // Track which item is being edited (null = none)
-  String? _editingItemId;
+  int? _editingItemIndex;
   final TextEditingController _noteController = TextEditingController();
 
   @override
   void dispose() {
     _noteController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant _OrderCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final newlyAddedCount = widget.order.items.where((i) => i.isNewlyAdded).length;
+    final oldNewlyAddedCount = oldWidget.order.items.where((i) => i.isNewlyAdded).length;
+
+    if (!widget.isExpanded &&
+        (widget.order.items.length > oldWidget.order.items.length ||
+         newlyAddedCount > oldNewlyAddedCount)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          widget.onToggleExpand?.call();
+        }
+      });
+    }
   }
 
   @override
@@ -1114,12 +1131,14 @@ class _OrderCardState extends State<_OrderCard> {
         Padding(
           padding: EdgeInsets.all(16),
           child: Column(
-            children: order.items.map((item) {
-              final isEditing = _editingItemId == item.id;
+            children: order.items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              final isEditing = _editingItemIndex == index;
               return Padding(
                 padding: EdgeInsets.only(bottom: 8),
                 child: Slidable(
-                  key: ValueKey(item.id),
+                  key: ValueKey('${item.id}_$index'),
                   endActionPane: ActionPane(
                     motion: const DrawerMotion(),
                     extentRatio: 0.5,
@@ -1128,9 +1147,9 @@ class _OrderCardState extends State<_OrderCard> {
                         onPressed: (context) {
                           setState(() {
                             if (isEditing) {
-                              _editingItemId = null;
+                              _editingItemIndex = null;
                             } else {
-                              _editingItemId = item.id;
+                              _editingItemIndex = index;
                               _noteController.text = item.note;
                             }
                           });
@@ -1144,7 +1163,7 @@ class _OrderCardState extends State<_OrderCard> {
                       if (order.status == 'pending' || order.status == 'processing') ...[
                         SlidableAction(
                           onPressed: (_) {
-                            _showEditItemQuantityDialog(context, order, item);
+                            _showEditItemQuantityDialog(context, order, item, index);
                           },
                           backgroundColor: AppColors.orange500,
                           foregroundColor: Colors.white,
@@ -1158,7 +1177,7 @@ class _OrderCardState extends State<_OrderCard> {
                             
                             uiStore.showConfirm(
                               'Bạn có chắc chắn muốn xóa "${item.name}" khỏi đơn hàng không?',
-                              () => orderStore.removeOrderItem(order.id, item.id),
+                              () => orderStore.removeOrderItem(order.id, index),
                               title: 'Xóa sản phẩm',
                               confirmLabel: 'Xóa',
                               icon: Icons.remove_shopping_cart_rounded,
@@ -1187,7 +1206,7 @@ class _OrderCardState extends State<_OrderCard> {
                           behavior: HitTestBehavior.opaque,
                           onTap: () => context.read<OrderStore>().updateOrderItemStatus(
                             order,
-                            item.id,
+                            index,
                             !item.isDone,
                           ),
                           child: Column(
@@ -1382,10 +1401,10 @@ class _OrderCardState extends State<_OrderCard> {
                                     onSubmitted: (val) {
                                       context.read<OrderStore>().updateOrderItemNote(
                                         order.id,
-                                        item.id,
+                                        index,
                                         val.trim(),
                                       );
-                                      setState(() => _editingItemId = null);
+                                      setState(() => _editingItemIndex = null);
                                     },
                                   ),
                                 ),
@@ -1394,10 +1413,10 @@ class _OrderCardState extends State<_OrderCard> {
                                   onTap: () {
                                     context.read<OrderStore>().updateOrderItemNote(
                                       order.id,
-                                      item.id,
+                                      index,
                                       _noteController.text.trim(),
                                     );
-                                    setState(() => _editingItemId = null);
+                                    setState(() => _editingItemIndex = null);
                                   },
                                   child: Container(
                                     padding: EdgeInsets.all(6),
@@ -1415,7 +1434,7 @@ class _OrderCardState extends State<_OrderCard> {
                                 SizedBox(width: 4),
                                 GestureDetector(
                                   onTap: () =>
-                                      setState(() => _editingItemId = null),
+                                      setState(() => _editingItemIndex = null),
                                   child: Container(
                                     padding: EdgeInsets.all(6),
                                     decoration: BoxDecoration(
@@ -3655,6 +3674,7 @@ class _OrderCardState extends State<_OrderCard> {
     BuildContext context,
     OrderModel order,
     OrderItemModel item,
+    int itemIndex,
   ) {
     int currentQuantity = item.quantity;
 
@@ -3760,14 +3780,10 @@ class _OrderCardState extends State<_OrderCard> {
                                       onPressed: () {
                                         Navigator.of(dialogCtx).pop();
                                         if (currentQuantity == 0) {
-                                          context.read<OrderStore>().removeOrderItem(order.id, item.id);
+                                          context.read<OrderStore>().removeOrderItem(order.id, itemIndex);
                                         } else if (currentQuantity != item.quantity) {
-                                          final updatedItems = order.items.map((i) {
-                                            if (i.id == item.id) {
-                                              return i.copyWith(quantity: currentQuantity);
-                                            }
-                                            return i;
-                                          }).toList();
+                                          final updatedItems = List<OrderItemModel>.from(order.items);
+                                          updatedItems[itemIndex] = updatedItems[itemIndex].copyWith(quantity: currentQuantity);
                                           final newTotal = updatedItems.fold(0.0, (sum, i) => sum + (i.price * i.quantity));
                                           context.read<OrderStore>().updateOrderItems(order.id, updatedItems, newTotal);
                                         }

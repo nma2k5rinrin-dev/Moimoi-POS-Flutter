@@ -60,74 +60,107 @@ GoRouter createRouter(AuthStore store) {
           transitionDuration: const Duration(milliseconds: 350),
         ),
       ),
-      ShellRoute(
-        navigatorKey: _shellNavigatorKey,
-        builder: (context, state, child) => MainShell(child: child),
-        routes: [
-          GoRoute(
-            path: '/',
-            pageBuilder: (context, state) => _fadeTransitionPage(
-              key: state.pageKey,
-              child: const OrderPage(),
-            ),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) => MainShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/',
+                pageBuilder: (context, state) => _noTransitionPage(
+                  key: state.pageKey,
+                  child: const OrderPage(),
+                ),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/orders',
-            pageBuilder: (context, state) => _fadeTransitionPage(
-              key: state.pageKey,
-              child: const OrdersPage(),
-            ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/orders',
+                pageBuilder: (context, state) => _noTransitionPage(
+                  key: state.pageKey,
+                  child: const OrdersPage(),
+                ),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/dashboard',
-            pageBuilder: (context, state) => _fadeTransitionPage(
-              key: state.pageKey,
-              child: const DashboardPage(),
-            ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/dashboard',
+                pageBuilder: (context, state) => _noTransitionPage(
+                  key: state.pageKey,
+                  child: const DashboardPage(),
+                ),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/settings',
-            pageBuilder: (context, state) => _fadeTransitionPage(
-              key: state.pageKey,
-              child: const SettingsPage(),
-            ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/settings',
+                pageBuilder: (context, state) => _noTransitionPage(
+                  key: state.pageKey,
+                  child: const SettingsPage(),
+                ),
+              ),
+            ],
           ),
-
-          GoRoute(
-            path: '/admin',
-            pageBuilder: (context, state) => _fadeTransitionPage(
-              key: state.pageKey,
-              child: const AdminDashboardPage(),
-            ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/admin',
+                pageBuilder: (context, state) => _noTransitionPage(
+                  key: state.pageKey,
+                  child: const AdminDashboardPage(),
+                ),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/inventory',
-            pageBuilder: (context, state) => _fadeTransitionPage(
-              key: state.pageKey,
-              child: const MenuManagementSection(),
-            ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/inventory',
+                pageBuilder: (context, state) => _noTransitionPage(
+                  key: state.pageKey,
+                  child: const MenuManagementSection(),
+                ),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/sadmin/notifications',
-            pageBuilder: (context, state) => _fadeTransitionPage(
-              key: state.pageKey,
-              child: const SadminNotificationsPage(),
-            ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/sadmin/notifications',
+                pageBuilder: (context, state) => _noTransitionPage(
+                  key: state.pageKey,
+                  child: const SadminNotificationsPage(),
+                ),
+              ),
+            ],
           ),
-
-          GoRoute(
-            path: '/nhap-thu',
-            pageBuilder: (context, state) => _fadeTransitionPage(
-              key: state.pageKey,
-              child: const IncomePage(),
-            ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/nhap-thu',
+                pageBuilder: (context, state) => _noTransitionPage(
+                  key: state.pageKey,
+                  child: const IncomePage(),
+                ),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/nhap-chi',
-            pageBuilder: (context, state) => _fadeTransitionPage(
-              key: state.pageKey,
-              child: const ExpensePage(),
-            ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/nhap-chi',
+                pageBuilder: (context, state) => _noTransitionPage(
+                  key: state.pageKey,
+                  child: const ExpensePage(),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -135,21 +168,13 @@ GoRouter createRouter(AuthStore store) {
   );
 }
 
-/// Quick fade transition for in-app page switches (200ms).
-CustomTransitionPage _fadeTransitionPage({
+/// No transition for tab routing to feel instantaneous like normal bottom navigation widget
+NoTransitionPage _noTransitionPage({
   required LocalKey key,
   required Widget child,
 }) {
-  return CustomTransitionPage(
+  return NoTransitionPage(
     key: key,
     child: child,
-    transitionDuration: const Duration(milliseconds: 200),
-    reverseTransitionDuration: const Duration(milliseconds: 150),
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      return FadeTransition(
-        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-        child: child,
-      );
-    },
   );
 }

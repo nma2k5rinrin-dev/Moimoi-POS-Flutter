@@ -234,7 +234,10 @@ class _ProcessingPageState extends State<ProcessingPage>
                             padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
                             itemCount: filteredOrders.length,
                             itemBuilder: (ctx, i) {
-                              return _OrderCard(order: filteredOrders[i]);
+                              return _OrderCard(
+                                key: ValueKey(filteredOrders[i].id),
+                                order: filteredOrders[i],
+                              );
                             },
                           );
                         }
@@ -251,8 +254,12 @@ class _ProcessingPageState extends State<ProcessingPage>
                             runSpacing: 0,
                             children: filteredOrders.map((order) {
                               return SizedBox(
+                                key: ValueKey('wrap_${order.id}'),
                                 width: cardWidth,
-                                child: _OrderCard(order: order),
+                                child: _OrderCard(
+                                  key: ValueKey(order.id),
+                                  order: order,
+                                ),
                               );
                             }).toList(),
                           ),
@@ -368,7 +375,7 @@ class _StatusBar extends StatelessWidget {
 // ─── Order Card (collapsible, matching Pencil design 65Kok) ──
 class _OrderCard extends StatefulWidget {
   final OrderModel order;
-  const _OrderCard({required this.order});
+  const _OrderCard({super.key, required this.order});
 
   @override
   State<_OrderCard> createState() => _OrderCardState();
@@ -377,13 +384,30 @@ class _OrderCard extends StatefulWidget {
 class _OrderCardState extends State<_OrderCard> {
   bool _isExpanded = false;
   // Track which item is being edited (null = none)
-  String? _editingItemId;
+  int? _editingItemIndex;
   final TextEditingController _noteController = TextEditingController();
 
   @override
   void dispose() {
     _noteController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant _OrderCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final newlyAddedCount = widget.order.items.where((i) => i.isNewlyAdded).length;
+    final oldNewlyAddedCount = oldWidget.order.items.where((i) => i.isNewlyAdded).length;
+
+    // Auto-expand if new items are added to this order via realtime
+    if (widget.order.items.length > oldWidget.order.items.length || 
+        newlyAddedCount > oldNewlyAddedCount) {
+      if (!_isExpanded) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _isExpanded = true);
+        });
+      }
+    }
   }
 
   @override
@@ -704,8 +728,10 @@ class _OrderCardState extends State<_OrderCard> {
         Padding(
           padding: EdgeInsets.all(16),
           child: Column(
-            children: order.items.map((item) {
-              final isEditing = _editingItemId == item.id;
+            children: order.items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              final isEditing = _editingItemIndex == index;
               return Padding(
                 padding: EdgeInsets.only(bottom: 8),
                 child: Column(
@@ -718,7 +744,7 @@ class _OrderCardState extends State<_OrderCard> {
                           behavior: HitTestBehavior.opaque,
                           onTap: () => store.updateOrderItemStatus(
                             order,
-                            item.id,
+                            index,
                             !item.isDone,
                           ),
                           child: Padding(
@@ -785,9 +811,9 @@ class _OrderCardState extends State<_OrderCard> {
                                 HapticFeedback.lightImpact();
                               setState(() {
                                 if (isEditing) {
-                                  _editingItemId = null;
+                                  _editingItemIndex = null;
                                 } else {
-                                  _editingItemId = item.id;
+                                  _editingItemIndex = index;
                                   _noteController.text = item.note;
                                 }
                               });
@@ -937,10 +963,10 @@ class _OrderCardState extends State<_OrderCard> {
                                 onSubmitted: (val) {
                                   store.updateOrderItemNote(
                                     order.id,
-                                    item.id,
+                                    index,
                                     val.trim(),
                                   );
-                                  setState(() => _editingItemId = null);
+                                  setState(() => _editingItemIndex = null);
                                 },
                               ),
                             ),
@@ -950,10 +976,10 @@ class _OrderCardState extends State<_OrderCard> {
                                 HapticFeedback.lightImpact();
                                 store.updateOrderItemNote(
                                   order.id,
-                                  item.id,
+                                  index,
                                   _noteController.text.trim(),
                                 );
-                                setState(() => _editingItemId = null);
+                                setState(() => _editingItemIndex = null);
                               },
                               child: Container(
                                 padding: EdgeInsets.all(6),
@@ -971,7 +997,7 @@ class _OrderCardState extends State<_OrderCard> {
                             SizedBox(width: 4),
                             GestureDetector(
                               onTap: () =>
-                                  setState(() => _editingItemId = null),
+                                  setState(() => _editingItemIndex = null),
                               child: Container(
                                 padding: EdgeInsets.all(6),
                                 decoration: BoxDecoration(
