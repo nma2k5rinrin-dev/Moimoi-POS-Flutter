@@ -245,12 +245,24 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     if (_selectedSection != null) {
-      return _buildSection(
-        _selectedSection!,
-        onBack: isDirectTab ? null : () => setState(() {
-          _selectedSection = null;
-          _hideSectionHeader = false;
-        }),
+      return PopScope(
+        canPop: isDirectTab,
+        onPopInvokedWithResult: (didPop, dynamic result) {
+          if (didPop) return;
+          if (!isDirectTab) {
+            setState(() {
+              _selectedSection = null;
+              _hideSectionHeader = false;
+            });
+          }
+        },
+        child: _buildSection(
+          _selectedSection!,
+          onBack: isDirectTab ? null : () => setState(() {
+            _selectedSection = null;
+            _hideSectionHeader = false;
+          }),
+        ),
       );
     }
 
