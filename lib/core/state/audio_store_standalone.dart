@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:moimoi_pos/services/api/supabase_service.dart';
 /// Standalone AudioStore — manages notification and payment sounds.
 /// Replaces the old AudioStore mixin on ChangeNotifier.
 class AudioStore extends ChangeNotifier {
@@ -54,6 +55,16 @@ class AudioStore extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('notification_sound', soundPath);
       notifyListeners();
+      
+      // Sync to Supabase so the server knows which Android Channel / iOS Sound to hit
+      try {
+        final fcmToken = await FirebaseMessaging.instance.getToken();
+        if (fcmToken != null) {
+          await SupabaseService.registerFcmToken(fcmToken);
+        }
+      } catch (fcmErr) {
+        debugPrint('[AudioStore] sync sound to FCM error: $fcmErr');
+      }
     } catch (e) {
       debugPrint('[AudioStore] setNotificationSound error: $e');
     }

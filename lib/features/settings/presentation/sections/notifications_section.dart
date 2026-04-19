@@ -24,29 +24,17 @@ class _NotificationsSectionState extends State<NotificationsSection> {
   String? _customPaymentName;
 
   final List<Map<String, String>> _sounds = [
-    {'name': 'Chuông bàn lễ tân', 'path': 'sounds/bell.wav'},
-    {'name': 'Tiếng Ding', 'path': 'sounds/ding-sound-effect_2.mp3'},
-    {'name': 'Tiếng Tiền Giao dịch', 'path': 'sounds/buy_1.mp3'},
-    {
-      'name': 'Tiếng Chọn (Check Mark)',
-      'path': 'sounds/check-mark_oPG7Xo5.mp3',
-    },
-    {'name': 'Tiếng Chuông Quyền Anh', 'path': 'sounds/boxing-bell.mp3'},
-    {'name': 'Tiếng Boom (Vine)', 'path': 'sounds/vine-boom.mp3'},
-    {'name': 'Tiếng Bonk', 'path': 'sounds/bonk_7zPAD7C.mp3'},
-    {'name': 'Tiếng Vịt kêu (Quack)', 'path': 'sounds/mac-quack.mp3'},
-    {'name': 'Tiếng Pop Bong bóng', 'path': 'sounds/pop_7e9Is8L.mp3'},
-    {
-      'name': 'Tiếng Hài (Pop nổ)',
-      'path': 'sounds/comedy_pop_finger_in_mouth_001.mp3',
-    },
-    {'name': 'Tiếng Tát', 'path': 'sounds/slap-ahh.mp3'},
-    {
-      'name': 'Tiếng Đấm (Gaming)',
-      'path': 'sounds/punch-gaming-sound-effect-hd_RzlG1GE.mp3',
-    },
-    {'name': 'Tiếng Đấm', 'path': 'sounds/punch_u4LmMsr.mp3'},
-    {'name': 'Tiếng Uh', 'path': 'sounds/uh_pjRnSML.mp3'},
+    {'name': 'Chuông (Bell)', 'path': 'sounds/bell.wav'},
+    {'name': 'Tiếng Ding', 'path': 'sounds/ding.mp3'},
+    {'name': 'Tiếng Giao dịch (Shopee)', 'path': 'sounds/buy.mp3'},
+    {'name': 'Tiếng Chọn (Check Mark)', 'path': 'sounds/check_mark.mp3'},
+    {'name': 'Tiếng Boom', 'path': 'sounds/boom.mp3'},
+    {'name': 'Tiếng Bonk', 'path': 'sounds/bonk.mp3'},
+    {'name': 'Tiếng Vịt kêu (Quack)', 'path': 'sounds/quack.mp3'},
+    {'name': 'Messenger (Notif)', 'path': 'sounds/messnger_notif.mp3'},
+    {'name': 'Checkout', 'path': 'sounds/checkout.mp3'},
+    {'name': 'Checkpoint', 'path': 'sounds/checkpoint.mp3'},
+
     {'name': 'Im lặng (Không phát âm)', 'path': 'mute'},
   ];
 

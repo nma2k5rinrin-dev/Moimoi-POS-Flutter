@@ -59,18 +59,16 @@ serve(async (req) => {
 
         const userIds = users.map(u => u.id)
 
-        // Lấy các mã FCM Tokens của những user đó
+        // Lấy các mã FCM Tokens của những user đó cùng cấu hình âm thanh
         const { data: tokensData, error: tokenError } = await supabaseClient
             .from('fcm_tokens')
-            .select('token')
+            .select('token, sound')
             .in('user_id', userIds)
 
         if (tokenError || !tokensData?.length) {
             console.error(`Error: No fcm devices registered for users:`, userIds, tokenError);
             return new Response(JSON.stringify({ message: "No fcm devices registered" }), { headers: corsHeaders })
         }
-
-        const tokens = tokensData.map(t => t.token)
 
         // Lấy thông tin tài khoản Service Account của bên Firebase (cấu hình trong Supabase Secrets)
         const serviceAccountJsonStr = Deno.env.get("FIREBASE_SERVICE_ACCOUNT")
@@ -81,7 +79,7 @@ serve(async (req) => {
         const serviceAccount = JSON.parse(serviceAccountJsonStr)
         const projectId = serviceAccount.project_id
 
-        console.log(`Found ${tokens.length} tokens. Sending FCM push...`);
+        console.log(`Found ${tokensData.length} tokens. Sending FCM push...`);
 
         // Lấy OAuth2 Token (Mới nhất theo chuẩn HTTP v1 của Google)
         const jwtClient = new JWT({
@@ -97,7 +95,11 @@ serve(async (req) => {
         let successCount = 0;
 
         // Firebase HTTP v1 chỉ cho phép gửi từng thiết bị, ta dùng vòng lặp push
-        for (const token of tokens) {
+        for (const tokenData of tokensData) {
+            const token = tokenData.token;
+            const customSound = tokenData.sound && tokenData.sound !== 'default' ? tokenData.sound : 'high_importance_channel';
+            const channelId = customSound === 'high_importance_channel' ? customSound : `channel_${customSound}`;
+
             const isUpdate = eventType === 'UPDATE';
             const titleMsg = isUpdate ? "Cập nhật đơn hàng!" : "Đơn hàng mới!";
             const tableName = order.table_name || 'Mang về';
@@ -119,8 +121,15 @@ serve(async (req) => {
                     android: {
                         priority: "high", // Quan trọng nhất để đánh thức màn hình (Doze mode)
                         notification: {
-                            sound: "default",
-                            channel_id: "high_importance_channel"
+                            sound: customSound === 'high_importance_channel' ? "default" : customSound,
+                            channel_id: channelId
+                        }
+                    },
+                    apns: {
+                        payload: {
+                            aps: {
+                                sound: customSound === 'high_importance_channel' ? "default" : (customSound === 'bell' ? "bell.wav" : `${customSound}.mp3`)
+                            }
                         }
                     },
                     data: {
@@ -147,9 +156,9 @@ serve(async (req) => {
             }
         }
 
-        console.log(`Successfully sent ${successCount}/${tokens.length} notifications`);
+        console.log(`Successfully sent ${successCount}/${tokensData.length} notifications`);
         return new Response(
-            JSON.stringify({ message: `Successfully sent ${successCount}/${tokens.length} notifications` }),
+            JSON.stringify({ message: `Successfully sent ${successCount}/${tokensData.length} notifications` }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         )
 

@@ -44,6 +44,47 @@ class NotificationHelper {
           iOS: initializationSettingsDarwin,
         );
 
+    // Pre-create notification channels for all custom sounds
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      final List<String> sounds = [
+        'bell', 'ding', 'buy', 'check_mark', 'boom', 'bonk', 'quack', 
+        'messnger_notif', 'checkout', 'checkpoint'
+      ];
+      
+      for (final sound in sounds) {
+        final rawResourceAndroid = RawResourceAndroidNotificationSound(sound);
+        final channel = AndroidNotificationChannel(
+          'channel_$sound', // ID matches the server payload
+          'Âm thanh $sound',
+          description: 'Kênh thông báo với âm thanh $sound',
+          importance: Importance.max,
+          playSound: true,
+          sound: rawResourceAndroid,
+        );
+        try {
+          await flutterLocalNotificationsPlugin
+              .resolvePlatformSpecificImplementation<
+                  AndroidFlutterLocalNotificationsPlugin>()
+              ?.createNotificationChannel(channel);
+        } catch (_) {}
+      }
+      
+      // Also create the 'channel_mute'
+      final muteChannel = AndroidNotificationChannel(
+          'channel_mute',
+          'Âm thanh Im lặng',
+          description: 'Kênh thông báo không phát tiếng',
+          importance: Importance.max,
+          playSound: false,
+      );
+      try {
+        await flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>()
+            ?.createNotificationChannel(muteChannel);
+      } catch (_) {}
+    }
+
     await flutterLocalNotificationsPlugin.initialize(
       settings: initializationSettings,
       onDidReceiveNotificationResponse:
