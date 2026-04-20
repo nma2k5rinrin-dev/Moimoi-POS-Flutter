@@ -257,6 +257,7 @@ class _MainShellState extends State<MainShell> {
                       _MobileHeader(
                         store: store,
                         storeInfo: storeInfo,
+                        isOnOrderPage: isOnOrderPage,
                       ),
                       Expanded(
                         child: widget.navigationShell,
@@ -302,8 +303,9 @@ class _NavItem {
 class _MobileHeader extends StatelessWidget {
   final UIStore store;
   final dynamic storeInfo;
+  final bool isOnOrderPage;
 
-  const _MobileHeader({required this.store, required this.storeInfo});
+  const _MobileHeader({required this.store, required this.storeInfo, this.isOnOrderPage = false});
 
   @override
   Widget build(BuildContext context) {
@@ -325,10 +327,13 @@ class _MobileHeader extends StatelessWidget {
                   // Logo + Store name (tappable for sadmin to switch stores)
                   Expanded(child: _buildStoreSelectorArea(context)),
 
-                  // Notification Bell
-                  const NotificationBell(),
+                  // Product Search Field
+                  if (isOnOrderPage)
+                    Expanded(
+                      child: const _HeaderSearchField(),
+                    ),
 
-                  SizedBox(width: 16), // Thêm khoảng cách giữa chuông và hình đại diện
+                  SizedBox(width: 16), // Thêm khoảng cách giữa ô tìm kiếm và hình đại diện
                   // User Avatar
                   GestureDetector(
                     onTap: () => showAccountDialog(context),
@@ -808,5 +813,60 @@ Widget _buildStoreLogoWidget(String logoUrl, double size) {
     );
   } catch (_) {
     return fallbackLogo();
+  }
+}
+
+// ─── Header Search Field ──────────────────────────────
+class _HeaderSearchField extends StatefulWidget {
+  const _HeaderSearchField();
+
+  @override
+  State<_HeaderSearchField> createState() => _HeaderSearchFieldState();
+}
+
+class _HeaderSearchFieldState extends State<_HeaderSearchField> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: context.read<UIStore>().searchQuery);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final storeQuery = context.watch<UIStore>().searchQuery;
+    if (storeQuery.isEmpty && _controller.text.isNotEmpty) {
+      _controller.clear();
+    }
+
+    return Container(
+      height: 40,
+      margin: const EdgeInsets.only(right: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.slate200),
+      ),
+      child: TextField(
+        controller: _controller,
+        onChanged: (val) => context.read<UIStore>().setSearchQuery(val),
+        decoration: InputDecoration(
+          hintText: 'Tìm món...',
+          hintStyle: TextStyle(fontSize: 13, color: AppColors.slate400),
+          border: InputBorder.none,
+          prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.slate400),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+          isDense: true,
+        ),
+        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.slate800),
+      ),
+    );
   }
 }

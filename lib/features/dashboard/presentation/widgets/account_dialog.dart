@@ -16,6 +16,8 @@ import 'package:moimoi_pos/features/premium/presentation/widgets/payment_history
 import 'package:moimoi_pos/features/premium/presentation/widgets/upgrade_dialog.dart';
 import 'package:moimoi_pos/core/utils/image_helper.dart';
 import 'package:moimoi_pos/core/widgets/thematic_motif_painter.dart';
+import 'package:moimoi_pos/features/notifications/presentation/notification_bell.dart';
+import 'package:moimoi_pos/core/utils/notification_helper.dart';
 
 /// Shows the Account Dialog as a popup anchored near the avatar.
 /// For admin/sadmin: shows subscription section.
@@ -197,6 +199,94 @@ class _AccountDialogContent extends StatelessWidget {
                       // ── User Header ──
                   _buildUserHeader(context),
 
+                  // ── Group 0: Quick Actions ──
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        // 1. Notification
+                        _buildQuickAction(
+                          context,
+                          icon: Consumer<ManagementStore>(
+                            builder: (ctx, mStore, _) {
+                              final unreadCount = mStore.notifications.where((n) => !n.read).length;
+                              return Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Icon(Icons.notifications_rounded, color: AppColors.slate700, size: 24),
+                                  if (unreadCount > 0)
+                                    Positioned(
+                                      top: -4,
+                                      right: -4,
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.red500,
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: Colors.white, width: 1.5),
+                                        ),
+                                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                        child: Text(
+                                          '${unreadCount > 99 ? '99+' : unreadCount}',
+                                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            }
+                          ),
+                          label: 'Thông báo',
+                          onTap: () {
+                            Navigator.pop(context);
+                            NotificationHelper.clearAppBadge();
+                            moimoiShowNotificationDialog(context, context.read<UIStore>());
+                          },
+                        ),
+                        // 2. Theme
+                        _buildQuickAction(
+                          context,
+                          icon: Icon(Icons.palette_rounded, color: AppColors.slate700, size: 24),
+                          label: 'Chủ đề',
+                          onTap: () {
+                            _showThemeDialog(context);
+                          },
+                        ),
+                        // 3. System Theme / Dark Mode
+                        Builder(
+                          builder: (ctx) {
+                            final isDark = context.watch<UIStore>().isDarkMode;
+                            return _buildQuickAction(
+                              context,
+                              icon: Icon(
+                                isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                                color: AppColors.slate700,
+                                size: 24,
+                              ),
+                              label: isDark ? 'Nền tối' : 'Nền sáng',
+                              onTap: () {
+                                context.read<UIStore>().toggleTheme();
+                              },
+                            );
+                          }
+                        ),
+                        // 4. Premium
+                        if (store.currentUser?.role != 'sadmin' && store.currentUser?.role != 'staff')
+                          _buildQuickAction(
+                            context,
+                            icon: Icon(Icons.workspace_premium_rounded, color: AppColors.slate700, size: 24),
+                            label: 'Gia hạn gói',
+                            onTap: () {
+                              showPricingDialog(context, anchorTopRight: true);
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 12),
+
                   // ── Group 1: General Settings ──
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -208,112 +298,8 @@ class _AccountDialogContent extends StatelessWidget {
                       ),
                       child: Column(
                         children: [
-                          // Dark Mode
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.cardBg,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: AppColors.slate200),
-                                      ),
-                                      child: Icon(
-                                        context.watch<UIStore>().isDarkMode
-                                            ? Icons.dark_mode_rounded
-                                            : Icons.light_mode_rounded,
-                                        size: 18,
-                                        color: AppColors.slate700,
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
-                                    Text(
-                                      'Giao diện tối',
-                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.slate800),
-                                    ),
-                                  ],
-                                ),
-                                Switch(
-                                  value: context.watch<UIStore>().isDarkMode,
-                                  onChanged: (val) {
-                                    context.read<UIStore>().toggleTheme();
-                                  },
-                                  activeColor: AppColors.primary500,
-                                ),
-                              ],
-                            ),
-                          ),
-                          Divider(height: 1, indent: 48, color: AppColors.slate200),
-                          
-                          // Theme Selector
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.cardBg,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: AppColors.slate200),
-                                      ),
-                                      child: Icon(Icons.palette_rounded, size: 18, color: AppColors.slate700),
-                                    ),
-                                    SizedBox(width: 12),
-                                    Text(
-                                      'Chủ đề giao diện',
-                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.slate800),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 16),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                  children: AppTheme.values.map((theme) {
-                                    final uiStore = context.watch<UIStore>();
-                                    final isSelected = uiStore.activeTheme == theme;
-                                    Color themeColor = AppColors.emerald500;
-                                    switch (theme) {
-                                      case AppTheme.blue: themeColor = AppColors.blue500; break;
-                                      case AppTheme.violet: themeColor = AppColors.violet500; break;
-                                      case AppTheme.amber: themeColor = AppColors.amber500; break;
-                                      case AppTheme.rose: themeColor = AppColors.rose500; break;
-                                      case AppTheme.emerald: themeColor = AppColors.emerald500; break;
-                                    }
-                                    return GestureDetector(
-                                      onTap: () => context.read<UIStore>().changeColorTheme(theme),
-                                      child: Container(
-                                        width: 38,
-                                        height: 38,
-                                        decoration: BoxDecoration(
-                                          color: themeColor,
-                                          shape: BoxShape.circle,
-                                          border: isSelected ? Border.all(color: AppColors.slate800, width: 3) : Border.all(color: Colors.transparent, width: 3),
-                                          boxShadow: [
-                                            if (isSelected)
-                                              BoxShadow(color: themeColor.withOpacity(0.4), blurRadius: 8, offset: Offset(0, 4)),
-                                          ],
-                                        ),
-                                        child: isSelected ? Icon(Icons.check_rounded, size: 18, color: Colors.white) : null,
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-                            ),
-                          ),
-                          
-                          if (store.currentUser?.role != 'sadmin' || _isOwnerOrAdmin)
-                            Divider(height: 1, indent: 48, color: AppColors.slate200),
-                          
+                          // Options
+
                           // Xem QR
                           if (store.currentUser?.role != 'sadmin')
                             _buildMenuItem(
@@ -339,6 +325,19 @@ class _AccountDialogContent extends StatelessWidget {
                                 context.push('/settings');
                               },
                             ),
+                           // Lịch sử thanh toán
+                           if (store.currentUser?.role != 'sadmin' && _isOwnerOrAdmin) ...[
+                             Divider(height: 1, indent: 48, color: AppColors.slate200),
+                             _buildMenuItem(
+                                context,
+                                icon: Icons.history_edu_rounded,
+                                label: 'Lịch sử thanh toán & hóa đơn',
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  showPaymentHistoryDialog(context);
+                                }
+                             ),
+                           ],
                         ],
                       ),
                     ),
@@ -437,45 +436,6 @@ class _AccountDialogContent extends StatelessWidget {
             ]
           ),
 
-          if (store.currentUser?.role != 'sadmin') ...[
-             SizedBox(height: 32),
-             SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: FilledButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    showPricingDialog(context);
-                  },
-                  icon: Icon(Icons.workspace_premium_rounded, size: 18),
-                  label: Text('Gia hạn / Nâng cấp gói', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary500,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                ),
-             ),
-             SizedBox(height: 12),
-             Center(
-               child: TextButton(
-                 onPressed: () {
-                   Navigator.pop(context);
-                   showPaymentHistoryDialog(context);
-                 },
-                 style: TextButton.styleFrom(
-                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                   foregroundColor: AppColors.primary700,
-                 ),
-                 child: Text(
-                   'Lịch sử thanh toán & Hóa đơn',
-                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, decoration: TextDecoration.underline, decorationColor: AppColors.primary700),
-                 ),
-               ),
-             ),
-          ]
         ],
       ), // Column
     );
@@ -675,6 +635,114 @@ class _AccountDialogContent extends StatelessWidget {
   Uint8List _decodeBase64(String dataUri) {
     final base64Part = dataUri.split(',').last;
     return base64Decode(base64Part);
+  }
+
+  Widget _buildQuickAction(
+    BuildContext context, {
+    required Widget icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.85),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withOpacity(0.5)),
+              boxShadow: [
+                 BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))
+              ]
+            ),
+            alignment: Alignment.center,
+            child: icon,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.slate800,
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  void _showThemeDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          width: 320,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 24, offset: const Offset(0, 8))],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Chọn Giao Diện', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.slate800)),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: AppTheme.values.map((theme) {
+                  final uiStore = context.watch<UIStore>();
+                  final isSelected = uiStore.activeTheme == theme;
+                  Color themeColor = AppColors.emerald500;
+                  switch (theme) {
+                    case AppTheme.blue: themeColor = AppColors.blue500; break;
+                    case AppTheme.violet: themeColor = AppColors.violet500; break;
+                    case AppTheme.amber: themeColor = AppColors.amber500; break;
+                    case AppTheme.rose: themeColor = AppColors.rose500; break;
+                    case AppTheme.emerald: themeColor = AppColors.emerald500; break;
+                  }
+                  return GestureDetector(
+                    onTap: () => context.read<UIStore>().changeColorTheme(theme),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: themeColor,
+                        shape: BoxShape.circle,
+                        border: isSelected ? Border.all(color: AppColors.slate800, width: 3) : Border.all(color: Colors.transparent, width: 3),
+                        boxShadow: [
+                          if (isSelected) BoxShadow(color: themeColor.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 4)),
+                        ],
+                      ),
+                      child: isSelected ? const Icon(Icons.check_rounded, size: 20, color: Colors.white) : null,
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: TextButton.styleFrom(
+                    backgroundColor: AppColors.slate100,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text('Đóng', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate700)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

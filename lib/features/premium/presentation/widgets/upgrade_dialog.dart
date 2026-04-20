@@ -133,16 +133,18 @@ Future<bool> showUpgradePrompt(BuildContext context, String limitMsg) async {
 }
 
 /// Pricing plans dialog with monthly/yearly options.
-Future<void> showPricingDialog(BuildContext context) {
+Future<void> showPricingDialog(BuildContext context, {bool anchorTopRight = false}) {
   final navCtx = rootNavigatorKey.currentContext;
   return showAnimatedDialog(
     context: navCtx ?? context,
-    builder: (ctx) => const _PricingDialog(),
+    barrierColor: anchorTopRight ? Colors.transparent : Colors.black54,
+    builder: (ctx) => _PricingDialog(anchorTopRight: anchorTopRight),
   );
 }
 
 class _PricingDialog extends StatefulWidget {
-  const _PricingDialog();
+  final bool anchorTopRight;
+  const _PricingDialog({super.key, this.anchorTopRight = false});
 
   @override
   State<_PricingDialog> createState() => _PricingDialogState();
@@ -228,16 +230,25 @@ class _PricingDialogState extends State<_PricingDialog> {
       newExpiry = DateTime(baseDate.year + 10, baseDate.month, baseDate.day);
     }
 
-    return Dialog(
-      insetPadding: EdgeInsets.all(24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 480),
-        padding: EdgeInsets.all(24),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+    Widget dialogBody = Container(
+      width: widget.anchorTopRight ? 360 : null,
+      constraints: BoxConstraints(
+        maxWidth: widget.anchorTopRight ? 360 : 480,
+        maxHeight: MediaQuery.of(context).size.height - (MediaQuery.of(context).padding.top + 56 + 16),
+      ),
+      padding: EdgeInsets.all(widget.anchorTopRight ? 20 : 24),
+      decoration: widget.anchorTopRight ? BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 40, offset: const Offset(0, 12)),
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4)),
+        ]
+      ) : null,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
               Row(
                 children: [
                   Expanded(
@@ -582,8 +593,28 @@ class _PricingDialogState extends State<_PricingDialog> {
             ],
           ),
         ),
-      ),
-    );
+      );
+
+    if (widget.anchorTopRight) {
+      return Stack(
+        children: [
+          Positioned(
+            right: 16,
+            top: MediaQuery.of(context).padding.top + 56,
+            child: Material(
+              color: Colors.transparent,
+              child: dialogBody,
+            ),
+          )
+        ],
+      );
+    } else {
+      return Dialog(
+        insetPadding: const EdgeInsets.all(24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: dialogBody,
+      );
+    }
   }
 
   Widget _featureRow(IconData icon, String text) {

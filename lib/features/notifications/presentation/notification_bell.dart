@@ -32,7 +32,7 @@ class NotificationBell extends StatelessWidget {
           ),
           onPressed: () {
             NotificationHelper.clearAppBadge();
-            _showNotificationDialog(context, store);
+            showNotificationDialog(context, store);
           },
         ),
         if (unreadCount > 0)
@@ -62,8 +62,13 @@ class NotificationBell extends StatelessWidget {
     );
   }
 
-  void _showNotificationDialog(BuildContext context, UIStore store) {
-    showAnimatedDialog(
+  void showNotificationDialog(BuildContext context, UIStore store) {
+    moimoiShowNotificationDialog(context, store);
+  }
+}
+
+void moimoiShowNotificationDialog(BuildContext context, UIStore store) {
+  showAnimatedDialog(
       context: context,
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
@@ -71,7 +76,6 @@ class NotificationBell extends StatelessWidget {
         child: _NotificationDialogContent(store: store),
       ),
     );
-  }
 }
 
 class _NotificationDialogContent extends StatefulWidget {
