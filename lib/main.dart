@@ -333,14 +333,14 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> with WidgetsBindingObserver {
               brightness: isDark ? Brightness.dark : Brightness.light,
               colorScheme: isDark
                   ? ColorScheme.dark(
-                      primary: AppColors.emerald500,
-                      secondary: AppColors.emerald600,
+                      primary: AppColors.primary500,
+                      secondary: AppColors.primary600,
                       surface: AppColors.cardBg,
                       error: AppColors.red500,
                     )
                   : ColorScheme.light(
-                      primary: AppColors.emerald500,
-                      secondary: AppColors.emerald600,
+                      primary: AppColors.primary500,
+                      secondary: AppColors.primary600,
                       surface: AppColors.slate50,
                       error: AppColors.red500,
                     ),

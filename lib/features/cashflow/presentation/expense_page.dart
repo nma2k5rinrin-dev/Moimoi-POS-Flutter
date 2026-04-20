@@ -383,7 +383,7 @@ class ExpensePageState extends State<ExpensePage> with SingleTickerProviderState
                                                 vertical: 8,
                                               ),
                                               decoration: BoxDecoration(
-                                                color: AppColors.emerald100,
+                                                color: AppColors.primary100,
                                                 borderRadius:
                                                     BorderRadius.circular(10),
                                               ),
@@ -395,7 +395,7 @@ class ExpensePageState extends State<ExpensePage> with SingleTickerProviderState
                                                     style: TextStyle(
                                                       fontSize: 14,
                                                       fontWeight: FontWeight.w600,
-                                                      color: AppColors.emerald600,
+                                                      color: AppColors.primary600,
                                                     ),
                                                   ),
                                                 ],
@@ -866,20 +866,20 @@ class ExpensePageState extends State<ExpensePage> with SingleTickerProviderState
                           child: Ink(
                             padding: EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
-                              color: AppColors.emerald50,
+                              color: AppColors.primary50,
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Column(
                               children: [
                                 Icon(
                                   Icons.edit_outlined,
-                                  color: AppColors.emerald600,
+                                  color: AppColors.primary600,
                                 ),
                                 SizedBox(height: 8),
                                 Text(
                                   'Sửa',
                                   style: TextStyle(
-                                    color: AppColors.emerald600,
+                                    color: AppColors.primary600,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),

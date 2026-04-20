@@ -227,7 +227,7 @@ class _AccountSectionState extends State<AccountSection> {
                           trailing: _biometricAvailable
                               ? Switch(
                                   value: _biometricEnabled,
-                                  activeTrackColor: AppColors.emerald500,
+                                  activeTrackColor: AppColors.primary500,
                                   onChanged: _toggleBiometric,
                                 )
                               : Text(
@@ -275,13 +275,13 @@ class _AccountSectionState extends State<AccountSection> {
                   )
                 : CircleAvatar(
                     radius: 44,
-                    backgroundColor: AppColors.emerald100,
+                    backgroundColor: AppColors.primary100,
                     child: Text(
                       (user?.fullname ?? 'U').substring(0, 1).toUpperCase(),
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.emerald600,
+                        color: AppColors.primary600,
                       ),
                     ),
                   ),
@@ -294,7 +294,7 @@ class _AccountSectionState extends State<AccountSection> {
                   width: 26,
                   height: 26,
                   decoration: BoxDecoration(
-                    color: AppColors.emerald500,
+                    color: AppColors.primary500,
                     shape: BoxShape.circle,
                     border: Border.all(color: AppColors.cardBg, width: 2),
                   ),
@@ -321,7 +321,7 @@ class _AccountSectionState extends State<AccountSection> {
             SizedBox(width: 6),
             GestureDetector(
               onTap: () => _showEditFullnameDialog(context, store, user),
-              child: Icon(Icons.edit, size: 16, color: AppColors.emerald500),
+              child: Icon(Icons.edit, size: 16, color: AppColors.primary500),
             ),
           ],
         ),
@@ -334,7 +334,7 @@ class _AccountSectionState extends State<AccountSection> {
         Container(
           padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: AppColors.emerald50,
+            color: AppColors.primary50,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
@@ -343,7 +343,7 @@ class _AccountSectionState extends State<AccountSection> {
               Icon(
                 Icons.verified_rounded,
                 size: 14,
-                color: AppColors.emerald500,
+                color: AppColors.primary500,
               ),
               SizedBox(width: 4),
               Text(
@@ -351,7 +351,7 @@ class _AccountSectionState extends State<AccountSection> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.emerald600,
+                  color: AppColors.primary600,
                 ),
               ),
             ],
@@ -505,7 +505,7 @@ class _AccountSectionState extends State<AccountSection> {
           trailing: _biometricAvailable
               ? Switch(
                   value: _biometricEnabled,
-                  activeTrackColor: AppColors.emerald500,
+                  activeTrackColor: AppColors.primary500,
                   onChanged: _toggleBiometric,
                 )
               : Text(
@@ -519,7 +519,7 @@ class _AccountSectionState extends State<AccountSection> {
           label: 'Hiện số liệu lên Widget',
           trailing: Switch(
             value: _widgetSyncEnabled,
-            activeTrackColor: AppColors.emerald500,
+            activeTrackColor: AppColors.primary500,
             onChanged: _toggleWidgetSync,
           ),
         ),
@@ -698,7 +698,7 @@ class _AccountSectionState extends State<AccountSection> {
                 child: Container(
                   height: 52,
                   decoration: BoxDecoration(
-                    color: AppColors.emerald500,
+                    color: AppColors.primary500,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(
@@ -908,7 +908,7 @@ class _AccountSectionState extends State<AccountSection> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: [
-            Icon(Icons.edit_outlined, size: 22, color: AppColors.emerald500),
+            Icon(Icons.edit_outlined, size: 22, color: AppColors.primary500),
             SizedBox(width: 8),
             Text(
               'Đổi tên hiển thị',
@@ -960,7 +960,7 @@ class _AccountSectionState extends State<AccountSection> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide(
-                      color: AppColors.emerald500,
+                      color: AppColors.primary500,
                       width: 2,
                     ),
                   ),
@@ -1017,7 +1017,7 @@ class _AccountSectionState extends State<AccountSection> {
                       child: Container(
                         height: 52,
                         decoration: BoxDecoration(
-                          color: AppColors.emerald500,
+                          color: AppColors.primary500,
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Row(
@@ -1093,7 +1093,7 @@ class _AccountSectionState extends State<AccountSection> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: AppColors.emerald500, width: 2),
+          borderSide: BorderSide(color: AppColors.primary500, width: 2),
         ),
       );
     }
@@ -1111,7 +1111,7 @@ class _AccountSectionState extends State<AccountSection> {
               Icon(
                 Icons.lock_outline_rounded,
                 size: 22,
-                color: AppColors.emerald500,
+                color: AppColors.primary500,
               ),
               SizedBox(width: 8),
               Text(
@@ -1338,7 +1338,7 @@ class _AccountSectionState extends State<AccountSection> {
                         child: Container(
                           height: 52,
                           decoration: BoxDecoration(
-                            color: AppColors.emerald500,
+                            color: AppColors.primary500,
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Row(

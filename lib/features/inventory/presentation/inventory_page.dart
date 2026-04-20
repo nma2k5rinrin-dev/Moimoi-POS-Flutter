@@ -25,13 +25,13 @@ class _InventoryPageState extends State<InventoryPage> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.emerald50,
+                  color: AppColors.primary50,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.inventory_2_rounded,
                   size: 22,
-                  color: AppColors.emerald600,
+                  color: AppColors.primary600,
                 ),
               ),
               SizedBox(width: 12),

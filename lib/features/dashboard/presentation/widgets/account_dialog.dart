@@ -1,4 +1,5 @@
-import 'dart:convert';
+﻿import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -13,6 +14,7 @@ import 'package:moimoi_pos/services/api/cloudflare_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:moimoi_pos/features/premium/presentation/widgets/payment_history_dialog.dart';
 import 'package:moimoi_pos/core/utils/image_helper.dart';
+import 'package:moimoi_pos/core/widgets/thematic_motif_painter.dart';
 
 /// Shows the Account Dialog as a popup anchored near the avatar.
 /// For admin/sadmin: shows subscription section.
@@ -52,7 +54,7 @@ class _AccountDialogContent extends StatelessWidget {
       case 'sadmin':
         return 'Super Admin';
       case 'admin':
-        return 'Chủ quán';
+        return 'Chủ cửa hàng';
       case 'staff':
         return 'Nhân viên';
       default:
@@ -86,13 +88,13 @@ class _AccountDialogContent extends StatelessWidget {
 
     Widget fallback() => CircleAvatar(
       radius: radius,
-      backgroundColor: AppColors.emerald100,
+      backgroundColor: AppColors.primary100,
       child: Text(
         letter,
         style: TextStyle(
           fontSize: 22,
           fontWeight: FontWeight.w800,
-          color: AppColors.emerald600,
+          color: AppColors.primary600,
         ),
       ),
     );
@@ -145,7 +147,7 @@ class _AccountDialogContent extends StatelessWidget {
           child: Material(
             color: Colors.transparent,
             child: Container(
-              width: 320,
+              width: 360,
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width - 32,
               ),
@@ -170,78 +172,152 @@ class _AccountDialogContent extends StatelessWidget {
                 children: [
                   // ── User Header ──
                   _buildUserHeader(context),
-                  _divider(),
 
-                  // ── Dark Mode Toggle ──
+                  // ── Group 1: General Settings ──
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              context.watch<UIStore>().isDarkMode
-                                  ? Icons.dark_mode
-                                  : Icons.light_mode,
-                              size: 20,
-                              color: AppColors.slate500,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.slate50,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.slate100),
+                      ),
+                      child: Column(
+                        children: [
+                          // Dark Mode
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.cardBg,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: AppColors.slate200),
+                                      ),
+                                      child: Icon(
+                                        context.watch<UIStore>().isDarkMode
+                                            ? Icons.dark_mode_rounded
+                                            : Icons.light_mode_rounded,
+                                        size: 18,
+                                        color: AppColors.slate700,
+                                      ),
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      'Giao diện tối',
+                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.slate800),
+                                    ),
+                                  ],
+                                ),
+                                Switch(
+                                  value: context.watch<UIStore>().isDarkMode,
+                                  onChanged: (val) {
+                                    context.read<UIStore>().toggleTheme();
+                                  },
+                                  activeColor: AppColors.primary500,
+                                ),
+                              ],
                             ),
-                            SizedBox(width: 12),
-                            Text(
-                              'Giao diện tối',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.slate800,
-                              ),
+                          ),
+                          Divider(height: 1, indent: 48, color: AppColors.slate200),
+                          
+                          // Theme Selector
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.cardBg,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.slate200),
+                                  ),
+                                  child: Icon(Icons.palette_rounded, size: 18, color: AppColors.slate700),
+                                ),
+                                SizedBox(width: 12),
+                                Text(
+                                  'Chủ đề',
+                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.slate800),
+                                ),
+                                Spacer(),
+                                ...AppTheme.values.map((theme) {
+                                  final uiStore = context.watch<UIStore>();
+                                  final isSelected = uiStore.activeTheme == theme;
+                                  Color themeColor = AppColors.emerald500;
+                                  switch (theme) {
+                                    case AppTheme.blue: themeColor = AppColors.blue500; break;
+                                    case AppTheme.violet: themeColor = AppColors.violet500; break;
+                                    case AppTheme.amber: themeColor = AppColors.amber500; break;
+                                    case AppTheme.rose: themeColor = AppColors.rose500; break;
+                                    case AppTheme.emerald: themeColor = AppColors.emerald500; break;
+                                  }
+                                  return GestureDetector(
+                                    onTap: () => context.read<UIStore>().changeColorTheme(theme),
+                                    child: Container(
+                                      margin: EdgeInsets.only(left: 8),
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: themeColor,
+                                        shape: BoxShape.circle,
+                                        border: isSelected ? Border.all(color: AppColors.slate800, width: 2) : Border.all(color: Colors.transparent, width: 2),
+                                      ),
+                                      child: isSelected ? Icon(Icons.check_rounded, size: 14, color: Colors.white) : null,
+                                    ),
+                                  );
+                                }),
+                              ],
                             ),
-                          ],
-                        ),
-                        Switch(
-                          value: context.watch<UIStore>().isDarkMode,
-                          onChanged: (val) {
-                            context.read<UIStore>().toggleTheme();
-                          },
-                          activeColor: AppColors.emerald500,
-                        ),
-                      ],
+                          ),
+                          
+                          if (store.currentUser?.role != 'sadmin' || _isOwnerOrAdmin)
+                            Divider(height: 1, indent: 48, color: AppColors.slate200),
+                          
+                          // Xem QR
+                          if (store.currentUser?.role != 'sadmin')
+                            _buildMenuItem(
+                              context,
+                              icon: Icons.qr_code_2_rounded,
+                              label: 'Xem QR thanh toán',
+                              onTap: () {
+                                Navigator.pop(context);
+                                _showQRDialog(context);
+                              },
+                            ),
+                          if (store.currentUser?.role != 'sadmin' && _isOwnerOrAdmin)
+                            Divider(height: 1, indent: 48, color: AppColors.slate200),
+                          
+                          // Settings
+                          if (_isOwnerOrAdmin)
+                            _buildMenuItem(
+                              context,
+                              icon: Icons.settings_rounded,
+                              label: 'Cài đặt hệ thống',
+                              onTap: () {
+                                Navigator.pop(context);
+                                context.push('/settings');
+                              },
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                  _divider(),
 
-                  // ── Menu Items ──
-                  if (store.currentUser?.role != 'sadmin')
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.qr_code_2,
-                      label: 'Xem QR thanh toán',
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showQRDialog(context);
-                      },
-                    ),
-                  if (_isOwnerOrAdmin)
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.settings_outlined,
-                      label: 'Cài đặt hệ thống',
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.push('/settings');
-                      },
-                    ),
+                  // ── Group 2: Subscription Section (Moved into Header) ──
 
-                  // ── Subscription Section (admin only, not sadmin) ──
-                  if (store.currentUser?.role == 'admin') ...[
-                    _divider(),
-                    _buildSubscriptionSection(context),
-                  ],
+                  SizedBox(height: 24),
 
-                  _divider(),
-
-                  // ── Logout ──
-                  _buildLogoutButton(context),
+                  // ── Group 3: Logout ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: _buildLogoutButton(context),
+                  ),
                 ],
               ),
             ),
@@ -252,76 +328,11 @@ class _AccountDialogContent extends StatelessWidget {
   }
 
   Widget _buildUserHeader(BuildContext context) {
-    final avatarBytes = _avatarImage;
-    return GestureDetector(
-      onTap: () {
-        Navigator.pop(context);
-        context.push('/settings');
-      },
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
-        child: Column(
-          children: [
-            _buildDialogAvatar(),
-            SizedBox(height: 8),
-            Text(
-              _displayName,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppColors.slate800,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuItem(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 9),
-        child: Row(
-          children: [
-            Icon(icon, size: 22, color: AppColors.slate500),
-            SizedBox(width: 9),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.slate800,
-                ),
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 20,
-              color: AppColors.slate400,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSubscriptionSection(BuildContext context) {
     final user = store.currentUser!;
     final isPremium = user.isPremium || user.role == 'sadmin';
     final planLabel = isPremium ? 'Premium' : 'Miễn phí';
 
-    // Calculate expiry — prefer store_infos.premiumExpiresAt (same source as sadmin dashboard)
     String expiryDate = '—';
-    int daysLeft = 0;
     bool hasExpiry = false;
     final storeInfo = (context.watch<ManagementStore>().storeInfos[context.watch<ManagementStore>().getStoreId()] ?? const StoreInfoModel());
     DateTime? expiry;
@@ -333,187 +344,217 @@ class _AccountDialogContent extends StatelessWidget {
       } catch (_) {}
     }
     if (expiry != null) {
-      expiryDate =
-          '${expiry.day.toString().padLeft(2, '0')}/${expiry.month.toString().padLeft(2, '0')}/${expiry.year}';
-      daysLeft = expiry.difference(DateTime.now()).inDays;
+      expiryDate = '${expiry.day.toString().padLeft(2, '0')}/${expiry.month.toString().padLeft(2, '0')}/${expiry.year}';
       hasExpiry = true;
     }
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Section title
-          Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: Text(
-              'GÓI ĐĂNG KÝ',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: AppColors.slate400,
-                letterSpacing: 1,
-              ),
+    return Stack(
+      children: [
+        // Bottom Wave layer (deep, longest wave)
+        Positioned.fill(
+          child: ClipPath(
+            clipper: _AccountHeaderWaveClipper(yOffset: 0, phaseOffset: 0.5, frequency: 1.2, amplitude: 24.0, theme: context.watch<UIStore>().activeTheme),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isPremium 
+                      ? [AppColors.primary400.withOpacity(0.6), AppColors.blue200.withOpacity(0.3)]
+                      : [AppColors.slate400.withOpacity(0.5), AppColors.slate200.withOpacity(0.2)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+              )
             ),
           ),
+        ),
+        // Middle Wave layer (dense, shifted wave)
+        Positioned.fill(
+          child: ClipPath(
+            clipper: _AccountHeaderWaveClipper(yOffset: -8, phaseOffset: 2.0, frequency: 1.8, amplitude: 20.0, theme: context.watch<UIStore>().activeTheme),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isPremium 
+                      ? [AppColors.blue200.withOpacity(0.4), AppColors.primary400.withOpacity(0.7)]
+                      : [AppColors.slate200.withOpacity(0.3), AppColors.slate400.withOpacity(0.6)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+              )
+            ),
+          ),
+        ),
+        // Top Wave (Main content, large smooth wave)
+        ClipPath(
+          clipper: _AccountHeaderWaveClipper(yOffset: -16, phaseOffset: 0.0, frequency: 1.0, amplitude: 28.0, theme: context.watch<UIStore>().activeTheme),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: isPremium
+                  ? LinearGradient(
+                      colors: [AppColors.primary100, AppColors.blue50, AppColors.primary50],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : LinearGradient(
+                      colors: [AppColors.slate50, AppColors.blue50, AppColors.slate100],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: ThematicMotifWidget(
+                    theme: context.watch<UIStore>().activeTheme,
+                    overrideColor: isPremium ? AppColors.primary500 : AppColors.slate400,
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(28, 32, 28, 96),
+                  child: Column(
+                    children: [
+                      Row(
+            children: [
+               _buildDialogAvatar(),
+               SizedBox(width: 20),
+               Expanded(
+                 child: Column(
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                     Text(
+                       _displayName,
+                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.slate800, letterSpacing: -0.5),
+                     ),
+                     SizedBox(height: 10),
+                     Wrap(
+                       spacing: 8,
+                       runSpacing: 8,
+                       crossAxisAlignment: WrapCrossAlignment.center,
+                       children: [
+                         Container(
+                           padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                           decoration: BoxDecoration(
+                             color: isPremium ? AppColors.primary500 : AppColors.slate400,
+                             borderRadius: BorderRadius.circular(8),
+                           ),
+                           child: Text(
+                             planLabel.toUpperCase(),
+                             style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.5),
+                           ),
+                         ),
+                         if (hasExpiry && store.currentUser?.role != 'sadmin')
+                           Text('Đến $expiryDate', style: TextStyle(fontSize: 13, color: AppColors.slate600, fontWeight: FontWeight.w600)),
+                       ],
+                     ),
+                   ]
+                 ),
+               ),
+            ]
+          ),
 
-          // Plan row
-          Row(
+          if (store.currentUser?.role != 'sadmin') ...[
+             SizedBox(height: 32),
+             SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: FilledButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    context.go('/settings?tab=premium');
+                  },
+                  icon: Icon(Icons.workspace_premium_rounded, size: 18),
+                  label: Text('Gia hạn / Nâng cấp gói', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary500,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                ),
+             ),
+             SizedBox(height: 12),
+             Center(
+               child: TextButton(
+                 onPressed: () {
+                   Navigator.pop(context);
+                   showPaymentHistoryDialog(context);
+                 },
+                 style: TextButton.styleFrom(
+                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                   foregroundColor: AppColors.primary700,
+                 ),
+                 child: Text(
+                   'Lịch sử thanh toán & Hóa đơn',
+                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, decoration: TextDecoration.underline, decorationColor: AppColors.primary700),
+                 ),
+               ),
+             ),
+          ]
+        ],
+      ), // Column
+      ), // Padding
+              ],
+            ), // Stack
+    ), // Container
+        ), // ClipPath
+      ], // Stack children
+    ); // Stack
+  }
+
+  Widget _buildMenuItem(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
             children: [
               Container(
-                width: 30,
-                height: 30,
+                padding: EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: AppColors.emerald50,
+                  color: AppColors.cardBg,
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.slate200),
                 ),
-                child: Icon(
-                  Icons.workspace_premium,
-                  size: 16,
-                  color: AppColors.emerald500,
-                ),
+                child: Icon(icon, size: 18, color: AppColors.slate700),
               ),
-              SizedBox(width: 10),
-              Text(
-                'Gói',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.slate500,
-                ),
-              ),
-              Spacer(),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: isPremium ? AppColors.emerald500 : AppColors.slate300,
-                  borderRadius: BorderRadius.circular(6),
-                ),
+              SizedBox(width: 12),
+              Expanded(
                 child: Text(
-                  planLabel,
+                  label,
                   style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 10),
-
-          // Expiry row
-          if (hasExpiry)
-            Row(
-              children: [
-                Icon(Icons.event, size: 18, color: AppColors.slate400),
-                SizedBox(width: 10),
-                Text(
-                  'Hết hạn:',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.slate500,
-                  ),
-                ),
-                SizedBox(width: 6),
-                Text(
-                  expiryDate,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.slate800,
                   ),
                 ),
-                Spacer(),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: daysLeft <= 7 ? AppColors.red50 : AppColors.orange50,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    'Còn $daysLeft ngày',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: daysLeft <= 7
-                          ? AppColors.red500
-                          : AppColors.orange500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          SizedBox(height: 12),
-
-          // Renew button (hide for sadmin)
-          if (store.currentUser?.role != 'sadmin') ...[
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: OutlinedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  context.go('/settings?tab=premium');
-                },
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: AppColors.emerald500, width: 1.5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  'Gia hạn / Nâng cấp gói',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.emerald600,
-                  ),
-                ),
               ),
-            ),
-            SizedBox(height: 12),
-
-            // Payment history link
-            Center(
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.pop(context); // Close the account dialog
-                  showPaymentHistoryDialog(
-                    context,
-                  ); // Show payment history dialog
-                },
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        'Lịch sử thanh toán & Hóa đơn',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.slate500,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 4),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 16,
-                      color: AppColors.slate400,
-                    ),
-                  ],
-                ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: AppColors.slate400,
               ),
-            ),
-          ],
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
+
+
 
   Widget _buildLogoutButton(BuildContext context) {
     return Material(
@@ -524,21 +565,16 @@ class _AccountDialogContent extends StatelessWidget {
           store.logout();
           context.go('/login');
         },
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
+        borderRadius: BorderRadius.circular(16),
         splashColor: AppColors.red100,
         highlightColor: AppColors.red50,
         child: Container(
           decoration: BoxDecoration(
             color: AppColors.red50,
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.red100),
           ),
-          padding: EdgeInsets.symmetric(vertical: 18),
+          padding: EdgeInsets.symmetric(vertical: 16),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -582,7 +618,7 @@ class _AccountDialogContent extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.qr_code_2, size: 48, color: AppColors.emerald500),
+              Icon(Icons.qr_code_2, size: 48, color: AppColors.primary500),
               SizedBox(height: 12),
               Text(
                 'QR Thanh toán',
@@ -666,5 +702,100 @@ class _AccountDialogContent extends StatelessWidget {
   Uint8List _decodeBase64(String dataUri) {
     final base64Part = dataUri.split(',').last;
     return base64Decode(base64Part);
+  }
+}
+
+class _AccountHeaderWaveClipper extends CustomClipper<Path> {
+  final double yOffset;
+  final double phaseOffset; // Left/Right phase shift
+  final double frequency; // Wave loop frequency
+  final double amplitude; // Height of hills/valleys
+  final AppTheme theme;
+
+  _AccountHeaderWaveClipper({
+    this.yOffset = 0, 
+    this.phaseOffset = 0, 
+    this.frequency = 1.0,
+    this.amplitude = 20.0,
+    this.theme = AppTheme.emerald,
+  });
+
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    
+    // The base horizon height
+    double baseHeight = size.height - 48 + yOffset;
+    path.lineTo(0.0, baseHeight);
+
+    double f = frequency;
+    double a = amplitude;
+    
+    switch(theme) {
+      case AppTheme.blue:
+        f *= 0.6; // Wide ocean waves
+        a *= 0.9;
+        break;
+      case AppTheme.violet:
+        f *= 1.4; // High interference multi-wave
+        a *= 0.8;
+        break;
+      case AppTheme.amber:
+        f *= 0.8; // Deep, steep cuts
+        a *= 1.6;
+        break;
+      case AppTheme.rose:
+        f *= 1.8; // Bouncy multiple shallow jumps
+        a *= 0.5;
+        break;
+      case AppTheme.emerald:
+      default:
+        break; // Default fluid tech waves
+    }
+
+    // Plot points for continuous true sine wave
+    for (double i = 0.0; i <= size.width; i += 2.0) {
+      double pct = i / size.width;
+      
+      double rad = (pct * 2 * math.pi * f) + phaseOffset;
+      
+      double yOffsetWave = 0.0;
+      switch(theme) {
+        case AppTheme.amber:
+          // Negative absolute sine creates sharp desert "dunes/points"
+          yOffsetWave = -math.sin(rad).abs() * a;
+          break;
+        case AppTheme.violet:
+          // Cosmic chaos: intersecting multiple distinct sine waves
+          yOffsetWave = (math.sin(rad) * a) + (math.cos(rad * 2.3) * a * 0.4);
+          break;
+        case AppTheme.rose:
+          // Smooth pulsating bouncing curves
+          yOffsetWave = math.sin(rad).abs() * a;
+          break;
+        case AppTheme.blue:
+        case AppTheme.emerald:
+        default:
+          yOffsetWave = math.sin(rad) * a;
+          break;
+      }
+      
+      double y = baseHeight + yOffsetWave;
+      path.lineTo(i, y);
+    }
+
+    // Top Right
+    path.lineTo(size.width, 0.0);
+    path.close();
+
+    return path;
+  }
+
+  @override
+  bool shouldReclip(_AccountHeaderWaveClipper oldClipper) {
+    return oldClipper.yOffset != yOffset ||
+           oldClipper.phaseOffset != phaseOffset ||
+           oldClipper.frequency != frequency ||
+           oldClipper.amplitude != amplitude;
   }
 }

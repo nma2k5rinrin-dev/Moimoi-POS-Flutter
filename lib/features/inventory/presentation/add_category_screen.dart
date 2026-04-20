@@ -217,12 +217,12 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [AppColors.emerald50, AppColors.cardBg],
+          colors: [AppColors.primary50, AppColors.cardBg],
         ),
       ),
       child: Row(
         children: [
-          Icon(Icons.category_rounded, color: AppColors.emerald600, size: 22),
+          Icon(Icons.category_rounded, color: AppColors.primary600, size: 22),
           SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -267,9 +267,9 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppColors.emerald50,
+                color: AppColors.primary50,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.emerald200, width: 2),
+                border: Border.all(color: AppColors.primary200, width: 2),
               ),
               child: Center(
                 child: Text(_selectedEmoji, style: TextStyle(fontSize: 36)),
@@ -395,7 +395,7 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.emerald400),
+          borderSide: BorderSide(color: AppColors.primary400),
         ),
       ),
     );
@@ -481,7 +481,7 @@ class _AddCategoryPanelState extends State<AddCategoryPanel>
             child: Container(
               height: 48,
               decoration: BoxDecoration(
-                color: AppColors.emerald500,
+                color: AppColors.primary500,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Row(

@@ -147,7 +147,7 @@ class _ProcessingPageState extends State<ProcessingPage>
                       fontWeight: FontWeight.w500,
                       fontSize: 13,
                     ),
-                    indicatorColor: AppColors.emerald500,
+                    indicatorColor: AppColors.primary500,
                     indicatorWeight: 3,
                     indicatorSize: TabBarIndicatorSize.tab,
                     dividerColor: AppColors.slate200,
@@ -168,7 +168,7 @@ class _ProcessingPageState extends State<ProcessingPage>
                         'Hoàn tất',
                         Icons.check_circle_rounded,
                         completedCount,
-                        AppColors.emerald500,
+                        AppColors.primary500,
                       ),
                       _buildTab(
                         'Đã hủy',
@@ -454,7 +454,7 @@ class _OrderCardState extends State<_OrderCard> {
                     ? AppColors.orange50
                     : order.status == 'cancelled'
                     ? AppColors.slate50
-                    : AppColors.emerald50,
+                    : AppColors.primary50,
                 borderRadius: _isExpanded
                     ? BorderRadius.vertical(top: Radius.circular(20))
                     : BorderRadius.circular(20),
@@ -558,7 +558,7 @@ class _OrderCardState extends State<_OrderCard> {
                                     ? AppColors.red100
                                     : order.status == 'processing'
                                     ? AppColors.amber100
-                                    : AppColors.emerald50,
+                                    : AppColors.primary50,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -631,7 +631,7 @@ class _OrderCardState extends State<_OrderCard> {
                           style: TextStyle(
                             fontWeight: FontWeight.w900,
                             fontSize: 18,
-                            color: AppColors.emerald600,
+                            color: AppColors.primary600,
                           ),
                         ),
                       ),
@@ -648,12 +648,12 @@ class _OrderCardState extends State<_OrderCard> {
                               ),
                               decoration: BoxDecoration(
                                 color: order.paymentStatus == 'paid'
-                                    ? AppColors.emerald50
+                                    ? AppColors.primary50
                                     : AppColors.orange50,
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
                                   color: order.paymentStatus == 'paid'
-                                      ? AppColors.emerald200
+                                      ? AppColors.primary200
                                       : const Color(0xFFFED7AA),
                                 ),
                               ),
@@ -666,7 +666,7 @@ class _OrderCardState extends State<_OrderCard> {
                                         : Icons.schedule_rounded,
                                     size: 10,
                                     color: order.paymentStatus == 'paid'
-                                        ? AppColors.emerald600
+                                        ? AppColors.primary600
                                         : const Color(0xFFEA580C),
                                   ),
                                   SizedBox(width: 3),
@@ -678,7 +678,7 @@ class _OrderCardState extends State<_OrderCard> {
                                       fontSize: 10,
                                       fontWeight: FontWeight.w700,
                                       color: order.paymentStatus == 'paid'
-                                          ? AppColors.emerald600
+                                          ? AppColors.primary600
                                           : const Color(0xFFEA580C),
                                     ),
                                   ),
@@ -760,12 +760,12 @@ class _OrderCardState extends State<_OrderCard> {
                               height: 25,
                               decoration: BoxDecoration(
                                 color: item.isDone
-                                    ? AppColors.emerald500
+                                    ? AppColors.primary500
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(7),
                                 border: Border.all(
                                   color: item.isDone
-                                      ? AppColors.emerald500
+                                      ? AppColors.primary500
                                       : AppColors.slate300,
                                   width: 2,
                                 ),
@@ -789,7 +789,7 @@ class _OrderCardState extends State<_OrderCard> {
                           decoration: BoxDecoration(
                             color: item.isDone
                                 ? AppColors.slate100
-                                : AppColors.emerald50,
+                                : AppColors.primary50,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -799,7 +799,7 @@ class _OrderCardState extends State<_OrderCard> {
                               fontWeight: FontWeight.w700,
                               color: item.isDone
                                   ? AppColors.slate400
-                                  : AppColors.emerald600,
+                                  : AppColors.primary600,
                             ),
                           ),
                         ),
@@ -833,7 +833,7 @@ class _OrderCardState extends State<_OrderCard> {
                                       decoration: isEditing
                                           ? TextDecoration.underline
                                           : null,
-                                      decorationColor: AppColors.emerald500,
+                                      decorationColor: AppColors.primary500,
                                     ),
                                   ),
                                 ),
@@ -847,7 +847,7 @@ class _OrderCardState extends State<_OrderCard> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.emerald600,
+                            color: AppColors.primary600,
                           ),
                         ),
                         SizedBox(width: 6),
@@ -859,12 +859,12 @@ class _OrderCardState extends State<_OrderCard> {
                           ),
                           decoration: BoxDecoration(
                             color: item.isDone
-                                ? AppColors.emerald50
+                                ? AppColors.primary50
                                 : AppColors.red50,
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
                               color: item.isDone
-                                  ? AppColors.emerald200
+                                  ? AppColors.primary200
                                   : Colors.transparent,
                             ),
                           ),
@@ -877,7 +877,7 @@ class _OrderCardState extends State<_OrderCard> {
                                     : Icons.pending_rounded,
                                 size: 11,
                                 color: item.isDone
-                                    ? AppColors.emerald600
+                                    ? AppColors.primary600
                                     : AppColors.red500,
                               ),
                               SizedBox(width: 3),
@@ -889,7 +889,7 @@ class _OrderCardState extends State<_OrderCard> {
                                       ? FontWeight.w700
                                       : FontWeight.w600,
                                   color: item.isDone
-                                      ? AppColors.emerald600
+                                      ? AppColors.primary600
                                       : AppColors.red500,
                                 ),
                               ),
@@ -955,7 +955,7 @@ class _OrderCardState extends State<_OrderCard> {
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
                                     borderSide: BorderSide(
-                                      color: AppColors.emerald500,
+                                      color: AppColors.primary500,
                                       width: 1.5,
                                     ),
                                   ),
@@ -984,7 +984,7 @@ class _OrderCardState extends State<_OrderCard> {
                               child: Container(
                                 padding: EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: AppColors.emerald500,
+                                  color: AppColors.primary500,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
@@ -1115,7 +1115,7 @@ class _OrderCardState extends State<_OrderCard> {
                         child: Container(
                           padding: EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: AppColors.emerald500,
+                            color: AppColors.primary500,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Row(
@@ -1151,9 +1151,9 @@ class _OrderCardState extends State<_OrderCard> {
                     width: double.infinity,
                     padding: EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
-                      color: AppColors.emerald50,
+                      color: AppColors.primary50,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.emerald200),
+                      border: Border.all(color: AppColors.primary200),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1161,13 +1161,13 @@ class _OrderCardState extends State<_OrderCard> {
                         Icon(
                           Icons.add_circle_outline_rounded,
                           size: 16,
-                          color: AppColors.emerald600,
+                          color: AppColors.primary600,
                         ),
                         SizedBox(width: 6),
                         Text(
                           'Thêm sản phẩm',
                           style: TextStyle(
-                            color: AppColors.emerald600,
+                            color: AppColors.primary600,
                             fontWeight: FontWeight.w700,
                             fontSize: 13,
                           ),
@@ -1260,7 +1260,7 @@ class _OrderCardState extends State<_OrderCard> {
                     children: [
                       Icon(
                         Icons.swap_horiz_rounded,
-                        color: AppColors.emerald500,
+                        color: AppColors.primary500,
                       ),
                       SizedBox(width: 8),
                       Text(
@@ -1305,7 +1305,7 @@ class _OrderCardState extends State<_OrderCard> {
                           trailing: selected
                               ? Icon(
                                   Icons.check_circle,
-                                  color: AppColors.emerald500,
+                                  color: AppColors.primary500,
                                 )
                               : null,
                           onTap: () {
@@ -1343,7 +1343,7 @@ class _OrderCardState extends State<_OrderCard> {
                                 leading: Icon(
                                   Icons.table_restaurant_outlined,
                                   color: isCurrent
-                                      ? AppColors.emerald500
+                                      ? AppColors.primary500
                                       : AppColors.slate500,
                                 ),
                                 title: Text(
@@ -1351,14 +1351,14 @@ class _OrderCardState extends State<_OrderCard> {
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     color: isCurrent
-                                        ? AppColors.emerald600
+                                        ? AppColors.primary600
                                         : AppColors.slate800,
                                   ),
                                 ),
                                 trailing: isCurrent
                                     ? Icon(
                                         Icons.check_circle,
-                                        color: AppColors.emerald500,
+                                        color: AppColors.primary500,
                                       )
                                     : null,
                                 onTap: () {
@@ -1754,7 +1754,7 @@ class _OrderCardState extends State<_OrderCard> {
             Icon(
               Icons.account_balance_rounded,
               size: 28,
-              color: AppColors.emerald500,
+              color: AppColors.primary500,
             ),
             SizedBox(height: 8),
             Text(
@@ -1911,7 +1911,7 @@ class _OrderCardState extends State<_OrderCard> {
                               gradient: LinearGradient(
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
-                                colors: [AppColors.emerald50, AppColors.cardBg],
+                                colors: [AppColors.primary50, AppColors.cardBg],
                               ),
                               borderRadius: BorderRadius.vertical(
                                 top: Radius.circular(20),
@@ -1921,7 +1921,7 @@ class _OrderCardState extends State<_OrderCard> {
                               children: [
                                 Icon(
                                   Icons.add_shopping_cart_rounded,
-                                  color: AppColors.emerald600,
+                                  color: AppColors.primary600,
                                   size: 22,
                                 ),
                                 SizedBox(width: 10),
@@ -2011,7 +2011,7 @@ class _OrderCardState extends State<_OrderCard> {
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
-                                    color: AppColors.emerald500,
+                                    color: AppColors.primary500,
                                     width: 1.5,
                                   ),
                                 ),
@@ -2074,7 +2074,7 @@ class _OrderCardState extends State<_OrderCard> {
                                             ),
                                             border: Border.all(
                                               color: qty > 0
-                                                  ? AppColors.emerald500
+                                                  ? AppColors.primary500
                                                   : AppColors.slate100,
                                               width: qty > 0 ? 2 : 1,
                                             ),
@@ -2345,7 +2345,7 @@ class _OrderCardState extends State<_OrderCard> {
                                                         ),
                                                     decoration: BoxDecoration(
                                                       color:
-                                                          AppColors.emerald500,
+                                                          AppColors.primary500,
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                             8,
@@ -2520,7 +2520,7 @@ class _OrderCardState extends State<_OrderCard> {
       case 'processing':
         return AppColors.amber500;
       case 'completed':
-        return AppColors.emerald500;
+        return AppColors.primary500;
       default:
         return AppColors.slate500;
     }

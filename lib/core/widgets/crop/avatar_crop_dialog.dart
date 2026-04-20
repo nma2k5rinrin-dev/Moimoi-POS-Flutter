@@ -209,12 +209,12 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.emerald50,
+                        color: AppColors.primary50,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         Icons.crop_rounded,
-                        color: AppColors.emerald600,
+                        color: AppColors.primary600,
                         size: 22,
                       ),
                     ),
@@ -334,12 +334,12 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: AppColors.emerald200,
+                          color: AppColors.primary200,
                           width: 2,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.emerald500.withValues(alpha: 0.15),
+                            color: AppColors.primary500.withValues(alpha: 0.15),
                             blurRadius: 8,
                           ),
                         ],
@@ -380,7 +380,7 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.emerald50,
+                        color: AppColors.primary50,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -389,7 +389,7 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
                           Icon(
                             Icons.zoom_in_rounded,
                             size: 14,
-                            color: AppColors.emerald600,
+                            color: AppColors.primary600,
                           ),
                           SizedBox(width: 3),
                           Text(
@@ -397,7 +397,7 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.emerald600,
+                              color: AppColors.primary600,
                             ),
                           ),
                         ],
@@ -465,9 +465,9 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
                             _isProcessing ? 'Đang xử lý...' : 'Xác nhận',
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.emerald500,
+                            backgroundColor: AppColors.primary500,
                             foregroundColor: Colors.white,
-                            disabledBackgroundColor: AppColors.emerald500
+                            disabledBackgroundColor: AppColors.primary500
                                 .withValues(alpha: 0.7),
                             disabledForegroundColor: Colors.white.withValues(
                               alpha: 0.8,
@@ -539,7 +539,7 @@ class _CornerGuidePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
     final paint = Paint()
-      ..color = AppColors.emerald400
+      ..color = AppColors.primary400
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;

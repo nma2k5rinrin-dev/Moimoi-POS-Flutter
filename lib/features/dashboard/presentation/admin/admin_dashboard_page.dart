@@ -1,6 +1,7 @@
 ﻿import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import 'package:provider/provider.dart';
 import 'package:moimoi_pos/features/settings/logic/management_store_standalone.dart';
 import 'package:moimoi_pos/core/state/ui_store.dart';
@@ -11,7 +12,7 @@ import 'package:moimoi_pos/core/widgets/date_range_picker_dialog.dart';
 import 'package:moimoi_pos/features/dashboard/presentation/admin/store_detail_page.dart';
 
 
-// ── Color palette for store icons ──
+// -- Color palette for store icons --
 final _storeColors = [
   [Color(0xFF10B981), Color(0xFF059669)], // emerald
   [Color(0xFF6366F1), Color(0xFF4F46E5)], // indigo
@@ -34,7 +35,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   String _filter = 'all'; // 'all' | 'attention' | 'online' | 'expiring'
   String _searchQuery = '';
 
-  // Date range state — default: first of current month to today
+  // Date range state � default: first of current month to today
   late DateTimeRange _dateRange;
 
   @override
@@ -60,7 +61,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     }
   }
 
-  // ── Computed filtered metrics ──
+  // -- Computed filtered metrics --
   List<PremiumPaymentModel> _filteredPayments(ManagementStore store) {
     return context.watch<ManagementStore>().premiumPayments.where((p) {
       return !p.paidAt.isBefore(_dateRange.start) &&
@@ -87,26 +88,26 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             .length;
         final totalProducts = 0;
 
-        // ── Online count ──
+        // -- Online count --
         final users = context.watch<ManagementStore>().users;
         final onlineCount = storeEntries.where((e) {
           final admin = users.where((u) => u.username == e.key).firstOrNull;
           return admin?.isOnline ?? false;
         }).length;
 
-        // ── Expiring soon count (≤7 days) ──
+        // -- Expiring soon count (=7 days) --
         final expiringCount = storeEntries
             .where(
               (e) => e.value.isPremium && (e.value.daysUntilExpiry ?? 999) <= 7,
             )
             .length;
 
-        // ── Pending Premium request count ──
+        // -- Pending Premium request count --
         final pendingVipCount = storeEntries.where((e) {
           return context.watch<ManagementStore>().upgradeRequests.any((r) => r.storeId == e.key && r.status == 'pending');
         }).length;
 
-        // ── Attention count (offline + expiring) ──
+        // -- Attention count (offline + expiring) --
         final attentionEntries = storeEntries.where((e) {
           final admin = users.where((u) => u.username == e.key).firstOrNull;
           final isOffline = !(admin?.isOnline ?? false);
@@ -115,7 +116,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           return isOffline || isExpiring;
         }).toList();
 
-        // ── Apply filters ──
+        // -- Apply filters --
         List<MapEntry<String, StoreInfoModel>> filteredEntries;
         switch (_filter) {
           case 'online':
@@ -145,7 +146,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             filteredEntries = storeEntries;
         }
 
-        // ── Apply search ──
+        // -- Apply search --
         if (_searchQuery.isNotEmpty) {
           final q = _searchQuery.toLowerCase();
           filteredEntries = filteredEntries.where((e) {
@@ -156,7 +157,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           }).toList();
         }
 
-        // ── Date-filtered payment metrics ──
+        // -- Date-filtered payment metrics --
         final payments = _filteredPayments(store);
         final totalRevenue = payments.fold<int>(0, (sum, p) => sum + p.amount);
         final yearlyRevenue = payments
@@ -238,9 +239,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 }
 
-// ═══════════════════════════════════════════════════════════
+// -----------------------------------------------------------
 // FILTER CHIPS ROW
-// ═══════════════════════════════════════════════════════════
+// -----------------------------------------------------------
 class _FilterChipsRow extends StatelessWidget {
   final String filter;
   final int totalCount;
@@ -259,12 +260,12 @@ class _FilterChipsRow extends StatelessWidget {
     return Row(
       children: [
         _FilterChip(
-          label: 'Tất cả',
+          label: 'T?t c?',
           count: totalCount,
           isActive: filter == 'all',
           onTap: () => onFilterChanged('all'),
-          activeColor: AppColors.emerald500,
-          activeBg: AppColors.emerald50,
+          activeColor: AppColors.primary500,
+          activeBg: AppColors.primary50,
         ),
       ],
     );
@@ -339,9 +340,9 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════
-// PORTRAIT LAYOUT — Fintech-style Dashboard
-// ═══════════════════════════════════════════════════════════
+// -----------------------------------------------------------
+// PORTRAIT LAYOUT � Fintech-style Dashboard
+// -----------------------------------------------------------
 class _PortraitLayout extends StatelessWidget {
   final ManagementStore store;
   final List<MapEntry<String, StoreInfoModel>> storeEntries;
@@ -389,7 +390,7 @@ class _PortraitLayout extends StatelessWidget {
 
     return CustomScrollView(
       slivers: [
-        // ── Header ──
+        // -- Header --
         SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.fromLTRB(9, 16, 9, 0),
@@ -397,7 +398,7 @@ class _PortraitLayout extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Quản lý tài khoản hệ thống',
+                  'Qu?n l� t�i kho?n h? th?ng',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
@@ -418,7 +419,7 @@ class _PortraitLayout extends StatelessWidget {
           ),
         ),
 
-        // ── Overview Section ──
+        // -- Overview Section --
         SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.fromLTRB(9, 14, 9, 0),
@@ -464,7 +465,7 @@ class _PortraitLayout extends StatelessWidget {
                 ),
                 SizedBox(height: 12),
 
-                // ── Alert Card ──
+                // -- Alert Card --
                 if (expiringCount > 0) ...[
                   Container(
                     width: double.infinity,
@@ -484,7 +485,7 @@ class _PortraitLayout extends StatelessWidget {
                         SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Cảnh báo: $expiringCount cửa hàng sắp hết hạn trong 7 ngày',
+                            'C?nh b�o: $expiringCount c?a h�ng s?p h?t h?n trong 7 ng�y',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -498,7 +499,7 @@ class _PortraitLayout extends StatelessWidget {
                   SizedBox(height: 12),
                 ],
 
-                // ── Revenue Card ──
+                // -- Revenue Card --
                 Container(
                   width: double.infinity,
                   clipBehavior: Clip.hardEdge,
@@ -514,7 +515,7 @@ class _PortraitLayout extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.emerald500.withValues(alpha: 0.15),
+                        color: AppColors.primary500.withValues(alpha: 0.15),
                         blurRadius: 10,
                         offset: Offset(0, 3),
                       ),
@@ -556,7 +557,7 @@ class _PortraitLayout extends StatelessWidget {
                                   child: Icon(
                                     Icons.account_balance_wallet_outlined,
                                     size: 24,
-                                    color: AppColors.emerald600,
+                                    color: AppColors.primary600,
                                   ),
                                 ),
                                 SizedBox(width: 12),
@@ -597,7 +598,7 @@ class _PortraitLayout extends StatelessWidget {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Gói Năm ($yearlyCount):',
+                                        'G�i Nam ($yearlyCount):',
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w500,
@@ -619,7 +620,7 @@ class _PortraitLayout extends StatelessWidget {
                                 Container(
                                   width: 1,
                                   height: 28,
-                                  color: AppColors.emerald500.withValues(
+                                  color: AppColors.primary500.withValues(
                                     alpha: 0.2,
                                   ),
                                 ),
@@ -630,7 +631,7 @@ class _PortraitLayout extends StatelessWidget {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Gói Tháng ($monthlyCount):',
+                                        'G�i Th�ng ($monthlyCount):',
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w500,
@@ -659,18 +660,18 @@ class _PortraitLayout extends StatelessWidget {
                 ),
                 SizedBox(height: 12),
 
-                // ── 3-column Stat Row ──
+                // -- 3-column Stat Row --
                 IntrinsicHeight(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Cửa hàng (Width ~50%)
+                      // C?a h�ng (Width ~50%)
                       Expanded(
                         flex: 11,
                         child: Container(
                           padding: EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppColors.emerald500,
+                            color: AppColors.primary500,
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Column(
@@ -687,7 +688,7 @@ class _PortraitLayout extends StatelessWidget {
                                   SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      '$totalStores Cửa hàng',
+                                      '$totalStores C?a h�ng',
                                       style: TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.bold,
@@ -699,7 +700,7 @@ class _PortraitLayout extends StatelessWidget {
                               ),
                               SizedBox(height: 4),
                               Text(
-                                '$premiumCount Premium • $basicCount Basic',
+                                '$premiumCount Premium � $basicCount Basic',
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: Colors.white.withValues(alpha: 0.9),
@@ -732,7 +733,7 @@ class _PortraitLayout extends StatelessWidget {
                         ),
                       ),
                       SizedBox(width: 8),
-                      // Nhân viên (Width ~25%)
+                      // Nh�n vi�n (Width ~25%)
                       Expanded(
                         flex: 6,
                         child: Container(
@@ -764,7 +765,7 @@ class _PortraitLayout extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                'Nhân viên',
+                                'Nh�n vi�n',
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: Colors.white.withValues(alpha: 0.9),
@@ -825,7 +826,7 @@ class _PortraitLayout extends StatelessWidget {
           ),
         ),
 
-        // ── Section Title + Search + Filters ──
+        // -- Section Title + Search + Filters --
         SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.fromLTRB(9, 18, 9, 0),
@@ -833,7 +834,7 @@ class _PortraitLayout extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Danh sách cửa hàng',
+                  'Danh s�ch c?a h�ng',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -853,7 +854,7 @@ class _PortraitLayout extends StatelessWidget {
                     onChanged: onSearchChanged,
                     style: TextStyle(fontSize: 13, color: AppColors.slate800),
                     decoration: InputDecoration(
-                      hintText: 'Tìm tên, SĐT chủ shop...',
+                      hintText: 'T�m t�n, S�T ch? shop...',
                       hintStyle: TextStyle(
                         fontSize: 13,
                         color: AppColors.slate400,
@@ -875,21 +876,21 @@ class _PortraitLayout extends StatelessWidget {
                   child: Row(
                     children: [
                       _FilterChip(
-                        label: 'Tất cả',
+                        label: 'T?t c?',
                         count: allEntries.length,
                         isActive: filter == 'all',
                         onTap: () => onFilterChanged('all'),
-                        activeColor: AppColors.emerald500,
-                        activeBg: AppColors.emerald500,
+                        activeColor: AppColors.primary500,
+                        activeBg: AppColors.primary500,
                       ),
                       SizedBox(width: 8),
                       _FilterChip(
-                        label: 'Cần chú ý',
+                        label: 'C?n ch� �',
                         count: attentionCount,
                         isActive: filter == 'attention',
                         onTap: () => onFilterChanged('attention'),
-                        activeColor: AppColors.emerald500,
-                        activeBg: AppColors.emerald500,
+                        activeColor: AppColors.primary500,
+                        activeBg: AppColors.primary500,
                         highlight: attentionCount > 0,
                       ),
                       SizedBox(width: 8),
@@ -898,17 +899,17 @@ class _PortraitLayout extends StatelessWidget {
                         count: onlineCount,
                         isActive: filter == 'online',
                         onTap: () => onFilterChanged('online'),
-                        activeColor: AppColors.emerald500,
-                        activeBg: AppColors.emerald500,
+                        activeColor: AppColors.primary500,
+                        activeBg: AppColors.primary500,
                       ),
                       SizedBox(width: 8),
                       _FilterChip(
-                        label: 'Sắp hết hạn',
+                        label: 'S?p h?t h?n',
                         count: expiringCount,
                         isActive: filter == 'expiring',
                         onTap: () => onFilterChanged('expiring'),
-                        activeColor: AppColors.emerald500,
-                        activeBg: AppColors.emerald500,
+                        activeColor: AppColors.primary500,
+                        activeBg: AppColors.primary500,
                         highlight: expiringCount > 0,
                       ),
                     ],
@@ -920,7 +921,7 @@ class _PortraitLayout extends StatelessWidget {
           ),
         ),
 
-        // ── Store Grid ──
+        // -- Store Grid --
         SliverPadding(
           padding: EdgeInsets.symmetric(horizontal: 9),
           sliver: SliverToBoxAdapter(
@@ -942,15 +943,15 @@ class _PortraitLayout extends StatelessWidget {
                           Icon(
                             Icons.check_circle_outline,
                             size: 48,
-                            color: AppColors.emerald500.withValues(alpha: 0.4),
+                            color: AppColors.primary500.withValues(alpha: 0.4),
                           ),
                           SizedBox(height: 12),
                           Text(
                             filter == 'expiring'
-                                ? 'Không có cửa hàng sắp hết hạn'
+                                ? 'Kh�ng c� c?a h�ng s?p h?t h?n'
                                 : filter == 'online'
-                                ? 'Không có cửa hàng đang online'
-                                : 'Không có cửa hàng cần chú ý',
+                                ? 'Kh�ng c� c?a h�ng dang online'
+                                : 'Kh�ng c� c?a h�ng c?n ch� �',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -1028,7 +1029,7 @@ class _PortraitLayout extends StatelessWidget {
   }
 }
 
-// ── Stat Card Widget ──
+// -- Stat Card Widget --
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color iconBg, iconColor;
@@ -1113,9 +1114,9 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════
+// -----------------------------------------------------------
 // LANDSCAPE LAYOUT
-// ═══════════════════════════════════════════════════════════
+// -----------------------------------------------------------
 class _LandscapeLayout extends StatelessWidget {
   final ManagementStore store;
   final List<MapEntry<String, StoreInfoModel>> storeEntries;
@@ -1161,7 +1162,7 @@ class _LandscapeLayout extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ── Left Panel ──
+        // -- Left Panel --
         Container(
           width: 300,
           color: AppColors.cardBg,
@@ -1178,7 +1179,7 @@ class _LandscapeLayout extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Quản lý hệ thống',
+                          'Qu?n l� h? th?ng',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -1289,7 +1290,7 @@ class _LandscapeLayout extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Gói Năm ($yearlyCount)',
+                                  'G�i Nam ($yearlyCount)',
                                   style: TextStyle(
                                     fontSize: 9,
                                     fontWeight: FontWeight.w500,
@@ -1313,7 +1314,7 @@ class _LandscapeLayout extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Gói Tháng ($monthlyCount)',
+                                  'G�i Th�ng ($monthlyCount)',
                                   style: TextStyle(
                                     fontSize: 9,
                                     fontWeight: FontWeight.w500,
@@ -1343,14 +1344,14 @@ class _LandscapeLayout extends StatelessWidget {
                 _LandscapeStatPill(
                   icon: Icons.storefront,
                   label:
-                      '$totalStores CH ($premiumCount Premium • $basicCount Basic)',
-                  color: AppColors.emerald500,
-                  bg: AppColors.emerald50,
+                      '$totalStores CH ($premiumCount Premium � $basicCount Basic)',
+                  color: AppColors.primary500,
+                  bg: AppColors.primary50,
                 ),
                 SizedBox(height: 8),
                 _LandscapeStatPill(
                   icon: Icons.group,
-                  label: '$allStaffCount Nhân viên',
+                  label: '$allStaffCount Nh�n vi�n',
                   color: Color(0xFF6366F1),
                   bg: Color(0xFFF0F5FF),
                 ),
@@ -1359,7 +1360,7 @@ class _LandscapeLayout extends StatelessWidget {
           ),
         ),
 
-        // ── Right Panel ──
+        // -- Right Panel --
         Expanded(
           child: Padding(
             padding: EdgeInsets.fromLTRB(9, 14, 9, 14),
@@ -1369,7 +1370,7 @@ class _LandscapeLayout extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      'Danh sách cửa hàng',
+                      'Danh s�ch c?a h�ng',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -1383,15 +1384,15 @@ class _LandscapeLayout extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.emerald50,
+                        color: AppColors.primary50,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '$totalStores cửa hàng',
+                        '$totalStores c?a h�ng',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.emerald500,
+                          color: AppColors.primary500,
                         ),
                       ),
                     ),
@@ -1420,11 +1421,11 @@ class _LandscapeLayout extends StatelessWidget {
                           Icon(
                             Icons.check_circle_outline,
                             size: 48,
-                            color: AppColors.emerald500.withValues(alpha: 0.5),
+                            color: AppColors.primary500.withValues(alpha: 0.5),
                           ),
                           SizedBox(height: 12),
                           Text(
-                            'Không có yêu cầu chờ duyệt',
+                            'Kh�ng c� y�u c?u ch? duy?t',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -1522,9 +1523,9 @@ class _LandscapeLayout extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════
-// STORE CARD — Scientific Data-Driven Format
-// ═══════════════════════════════════════════════════════════
+// -----------------------------------------------------------
+// STORE CARD � Scientific Data-Driven Format
+// -----------------------------------------------------------
 class _StoreCard extends StatelessWidget {
   final String storeId;
   final StoreInfoModel info;
@@ -1568,7 +1569,7 @@ class _StoreCard extends StatelessWidget {
     final iconRadius = compact ? 12.0 : 12.0;
     final nameSize = compact ? 14.0 : 15.0;
 
-    // ── Expiry text ──
+    // -- Expiry text --
     String expiryText;
     Color expiryColor;
     if (info.daysUntilExpiry != null) {
@@ -1578,7 +1579,7 @@ class _StoreCard extends StatelessWidget {
           ? Color(0xFFEF4444)
           : AppColors.slate500;
     } else {
-      expiryText = 'Vĩnh viễn';
+      expiryText = 'Vinh vi?n';
       expiryColor = AppColors.slate400;
     }
 
@@ -1621,6 +1622,7 @@ class _StoreCard extends StatelessWidget {
                   child: CustomPaint(
                     painter: _WavePainter(
                       color: Color(0xFF8B5CF6).withValues(alpha: 0.05),
+                      theme: context.watch<UIStore>().activeTheme,
                     ),
                   ),
                 ),
@@ -1632,7 +1634,7 @@ class _StoreCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ── Row 1: Avatar + Name + Badge ──
+                  // -- Row 1: Avatar + Name + Badge --
                   Row(
                     children: [
                       // Store Logo/Icon with online indicator
@@ -1711,7 +1713,7 @@ class _StoreCard extends StatelessWidget {
                             ),
                             SizedBox(height: 3),
                             Text(
-                              isOnline ? 'Đang hoạt động' : 'Ngoại tuyến${offlineDays > 0 ? ' • ${offlineDays}d' : ''}',
+                              isOnline ? '�ang ho?t d?ng' : 'Ngo?i tuy?n${offlineDays > 0 ? ' � ${offlineDays}d' : ''}',
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
@@ -1752,7 +1754,7 @@ class _StoreCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            'Cơ bản',
+                            'Co b?n',
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
@@ -1766,7 +1768,7 @@ class _StoreCard extends StatelessWidget {
 
                   SizedBox(height: 12),
                   
-                  // ── Pending upgrade notice ──
+                  // -- Pending upgrade notice --
                   if (hasPendingUpgrade) ...[
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1780,7 +1782,7 @@ class _StoreCard extends StatelessWidget {
                           SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              'Chờ duyệt nâng cấp',
+                              'Ch? duy?t n�ng c?p',
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -1794,7 +1796,7 @@ class _StoreCard extends StatelessWidget {
                     SizedBox(height: 10),
                   ],
 
-                  // ── Row 2: Footer (Expiry + Action) ──
+                  // -- Row 2: Footer (Expiry + Action) --
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -1816,23 +1818,23 @@ class _StoreCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      // Small Gia Hạn button
+                      // Small Gia H?n button
                       InkWell(
                         onTap: () => _showPremiumPopup(context, storeName),
                         borderRadius: BorderRadius.circular(8),
                         child: Container(
                           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.emerald400),
+                            border: Border.all(color: AppColors.primary400),
                             borderRadius: BorderRadius.circular(8),
-                            color: AppColors.emerald500.withValues(alpha: 0.05),
+                            color: AppColors.primary500.withValues(alpha: 0.05),
                           ),
                           child: Text(
-                            'Gia hạn',
+                            'Gia h?n',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.emerald600,
+                              color: AppColors.primary600,
                             ),
                           ),
                         ),
@@ -1876,7 +1878,7 @@ class _StoreCard extends StatelessWidget {
               ),
               SizedBox(height: 16),
               Text(
-                'Gia hạn Premium',
+                'Gia h?n Premium',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
@@ -1885,7 +1887,7 @@ class _StoreCard extends StatelessWidget {
               ),
               SizedBox(height: 8),
               Text(
-                'Bạn đang gia hạn/nâng cấp gói Premium cho cửa hàng "$storeName". Tính năng này hiện đang được phát triển.',
+                'B?n dang gia h?n/n�ng c?p g�i Premium cho c?a h�ng "$storeName". T�nh nang n�y hi?n dang du?c ph�t tri?n.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
@@ -1901,7 +1903,7 @@ class _StoreCard extends StatelessWidget {
                   onPressed: () {
                     Navigator.pop(ctx);
                     context.read<UIStore>().showToast(
-                      'Tính năng gia hạn đang được phát triển',
+                      'T�nh nang gia h?n dang du?c ph�t tri?n',
                       'info',
                     );
                   },
@@ -1914,7 +1916,7 @@ class _StoreCard extends StatelessWidget {
                     elevation: 0,
                   ),
                   child: Text(
-                    'Đã hiểu',
+                    '�� hi?u',
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                   ),
                 ),
@@ -2054,21 +2056,21 @@ class _StoreCard extends StatelessWidget {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: AppColors.emerald50,
+                      color: AppColors.primary50,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       Icons.edit_outlined,
                       size: 20,
-                      color: AppColors.emerald500,
+                      color: AppColors.primary500,
                     ),
                   ),
                   title: Text(
-                    'Sửa cửa hàng',
+                    'S?a c?a h�ng',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   subtitle: Text(
-                    'Đổi tên cửa hàng',
+                    '�?i t�n c?a h�ng',
                     style: TextStyle(fontSize: 12, color: AppColors.slate400),
                   ),
                   onTap: () {
@@ -2091,14 +2093,14 @@ class _StoreCard extends StatelessWidget {
                     ),
                   ),
                   title: Text(
-                    'Xoá cửa hàng',
+                    'Xo� c?a h�ng',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       color: AppColors.red500,
                     ),
                   ),
                   subtitle: Text(
-                    'Xoá vĩnh viễn cửa hàng và dữ liệu',
+                    'Xo� vinh vi?n c?a h�ng v� d? li?u',
                     style: TextStyle(fontSize: 12, color: AppColors.slate400),
                   ),
                   onTap: () {
@@ -2122,13 +2124,13 @@ class _StoreCard extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          'Sửa cửa hàng',
+          'S?a c?a h�ng',
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
         ),
         content: TextField(
           controller: nameCtrl,
           decoration: InputDecoration(
-            labelText: 'Tên cửa hàng',
+            labelText: 'T�n c?a h�ng',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             prefixIcon: Icon(Icons.store),
           ),
@@ -2136,7 +2138,7 @@ class _StoreCard extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Hủy', style: TextStyle(color: AppColors.slate400)),
+            child: Text('H?y', style: TextStyle(color: AppColors.slate400)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -2145,17 +2147,17 @@ class _StoreCard extends StatelessWidget {
                 storeId,
                 info.copyWith(name: nameCtrl.text.trim()),
               );
-              context.read<UIStore>().showToast('Đã cập nhật cửa hàng!');
+              context.read<UIStore>().showToast('�� c?p nh?t c?a h�ng!');
               Navigator.pop(ctx);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.emerald500,
+              backgroundColor: AppColors.primary500,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: Text('Lưu', style: TextStyle(fontWeight: FontWeight.w700)),
+            child: Text('Luu', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -2169,22 +2171,22 @@ class _StoreCard extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          'Xoá cửa hàng?',
+          'Xo� c?a h�ng?',
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
         ),
         content: Text(
-          'Bạn có chắc muốn xoá "$storeName"?\n\nThao tác này sẽ xoá vĩnh viễn cửa hàng, tài khoản admin và tất cả nhân viên liên quan.',
+          'B?n c� ch?c mu?n xo� "$storeName"?\n\nThao t�c n�y s? xo� vinh vi?n c?a h�ng, t�i kho?n admin v� t?t c? nh�n vi�n li�n quan.',
           style: TextStyle(fontSize: 14, color: AppColors.slate500),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Hủy', style: TextStyle(color: AppColors.slate400)),
+            child: Text('H?y', style: TextStyle(color: AppColors.slate400)),
           ),
           ElevatedButton(
             onPressed: () {
               store.deleteStore(storeId);
-              context.read<UIStore>().showToast('Đã xoá cửa hàng "$storeName"');
+              context.read<UIStore>().showToast('�� xo� c?a h�ng "$storeName"');
               Navigator.pop(ctx);
             },
             style: ElevatedButton.styleFrom(
@@ -2194,7 +2196,7 @@ class _StoreCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: Text('Xoá', style: TextStyle(fontWeight: FontWeight.w700)),
+            child: Text('Xo�', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -2202,53 +2204,58 @@ class _StoreCard extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════
+// -----------------------------------------------------------
 // ADD STORE CARD
-// ═══════════════════════════════════════════════════════════
+// -----------------------------------------------------------
 class _WavePainter extends CustomPainter {
   final Color color;
-  _WavePainter({required this.color});
+  final AppTheme theme;
+  _WavePainter({required this.color, required this.theme});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
+      
+    double f = 1.0;
+    double a = 12.0;
 
+    switch(theme) {
+      case AppTheme.blue: f = 0.6; a = 8.0; break;
+      case AppTheme.violet: f = 1.6; a = 10.0; break;
+      case AppTheme.amber: f = 0.8; a = 18.0; break;
+      case AppTheme.rose: f = 2.0; a = 6.0; break;
+      case AppTheme.emerald: 
+      default: break;
+    }
+
+    _drawWaveLayer(canvas, size, paint, f, a, size.height * 0.65, 0);
+    _drawWaveLayer(canvas, size, paint, f * 1.2, a * 0.8, size.height * 0.75, 2.0);
+  }
+
+  void _drawWaveLayer(Canvas canvas, Size size, Paint paint, double f, double a, double base, double shift) {
     final path = Path();
-    path.moveTo(0, size.height * 0.6);
-    path.quadraticBezierTo(
-      size.width * 0.25, size.height * 0.45,
-      size.width * 0.5, size.height * 0.6,
-    );
-    path.quadraticBezierTo(
-      size.width * 0.75, size.height * 0.75,
-      size.width, size.height * 0.55,
-    );
+    path.lineTo(0.0, base);
+    for (double i = 0.0; i <= size.width; i += 2.0) {
+      double rad = (i / size.width * 2 * math.pi * f) + shift;
+      double yOffset = 0;
+      switch(theme) {
+        case AppTheme.amber: yOffset = -math.sin(rad).abs() * a; break;
+        case AppTheme.violet: yOffset = math.sin(rad) * a + math.cos(rad * 2) * a * 0.5; break;
+        case AppTheme.rose: yOffset = math.sin(rad).abs() * a; break;
+        default: yOffset = math.sin(rad) * a; break;
+      }
+      path.lineTo(i, base + yOffset);
+    }
     path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);
     path.close();
     canvas.drawPath(path, paint);
-
-    // Second wave layer
-    final path2 = Path();
-    path2.moveTo(0, size.height * 0.75);
-    path2.quadraticBezierTo(
-      size.width * 0.3, size.height * 0.65,
-      size.width * 0.6, size.height * 0.78,
-    );
-    path2.quadraticBezierTo(
-      size.width * 0.85, size.height * 0.88,
-      size.width, size.height * 0.7,
-    );
-    path2.lineTo(size.width, size.height);
-    path2.lineTo(0, size.height);
-    path2.close();
-    canvas.drawPath(path2, paint);
   }
 
   @override
-  bool shouldRepaint(covariant _WavePainter old) => old.color != color;
+  bool shouldRepaint(covariant _WavePainter old) => old.color != color || old.theme != theme;
 }
 
 class _AddStoreCard extends StatelessWidget {
@@ -2282,23 +2289,23 @@ class _AddStoreCard extends StatelessWidget {
               width: iconSize,
               height: iconSize,
               decoration: BoxDecoration(
-                color: AppColors.emerald50,
+                color: AppColors.primary50,
                 borderRadius: BorderRadius.circular(iconRadius),
               ),
               alignment: Alignment.center,
               child: Icon(
                 Icons.add,
                 size: iconInnerSize,
-                color: AppColors.emerald500,
+                color: AppColors.primary500,
               ),
             ),
             SizedBox(height: 8),
             Text(
-              'Thêm cửa hàng',
+              'Th�m c?a h�ng',
               style: TextStyle(
                 fontSize: textSize,
                 fontWeight: FontWeight.w600,
-                color: AppColors.emerald500,
+                color: AppColors.primary500,
               ),
             ),
           ],
@@ -2357,7 +2364,7 @@ class _AddStoreCard extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // ── Header ──
+                          // -- Header --
                           Container(
                             padding: EdgeInsets.symmetric(
                               horizontal: 24,
@@ -2378,12 +2385,12 @@ class _AddStoreCard extends StatelessWidget {
                                     color: AppColors.cardBg,
                                     borderRadius: BorderRadius.circular(14),
                                     border: Border.all(
-                                      color: AppColors.emerald100,
+                                      color: AppColors.primary100,
                                     ),
                                   ),
                                   child: Icon(
                                     Icons.storefront,
-                                    color: AppColors.emerald600,
+                                    color: AppColors.primary600,
                                     size: 24,
                                   ),
                                 ),
@@ -2394,7 +2401,7 @@ class _AddStoreCard extends StatelessWidget {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Thêm cửa hàng mới',
+                                        'Th�m c?a h�ng m?i',
                                         style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.w800,
@@ -2402,7 +2409,7 @@ class _AddStoreCard extends StatelessWidget {
                                         ),
                                       ),
                                       Text(
-                                        'Tạo tài khoản admin & thông tin shop',
+                                        'T?o t�i kho?n admin & th�ng tin shop',
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: AppColors.slate500,
@@ -2423,27 +2430,27 @@ class _AddStoreCard extends StatelessWidget {
                             ),
                           ),
 
-                          // ── Body ──
+                          // -- Body --
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: 24),
                             child: Column(
                               children: [
                                 _buildModernField(
-                                  'Tên cửa hàng',
+                                  'T�n c?a h�ng',
                                   Icons.store,
                                   storeNameCtrl,
-                                  'Nhập tên cửa hàng',
+                                  'Nh?p t�n c?a h�ng',
                                 ),
                                 SizedBox(height: 14),
                                 _buildModernField(
-                                  'Họ tên đại diện',
+                                  'H? t�n d?i di?n',
                                   Icons.person_outline,
                                   fullnameCtrl,
-                                  'Tên chủ shop hoặc quản lý',
+                                  'T�n ch? shop ho?c qu?n l�',
                                 ),
                                 SizedBox(height: 14),
                                 _buildModernField(
-                                  'Số điện thoại',
+                                  'S? di?n tho?i',
                                   Icons.phone_outlined,
                                   phoneCtrl,
                                   'VD: 0123456789',
@@ -2451,23 +2458,23 @@ class _AddStoreCard extends StatelessWidget {
                                 ),
                                 SizedBox(height: 14),
                                 _buildModernField(
-                                  'Địa chỉ',
+                                  '�?a ch?',
                                   Icons.location_on_outlined,
                                   addressCtrl,
-                                  'Địa chỉ cửa hàng (tùy chọn)',
+                                  '�?a ch? c?a h�ng (t�y ch?n)',
                                 ),
                                 SizedBox(height: 20),
                                 Container(height: 1, color: AppColors.slate100),
                                 SizedBox(height: 20),
                                 _buildModernField(
-                                  'Tên đăng nhập',
+                                  'T�n dang nh?p',
                                   Icons.alternate_email,
                                   usernameCtrl,
-                                  'Tên đăng nhập admin',
+                                  'T�n dang nh?p admin',
                                 ),
                                 SizedBox(height: 14),
                                 _buildModernPasswordField(
-                                  'Mật khẩu',
+                                  'M?t kh?u',
                                   passwordCtrl,
                                   obscurePassword,
                                   () => setState(
@@ -2479,14 +2486,14 @@ class _AddStoreCard extends StatelessWidget {
                             ),
                           ),
 
-                          // ── Footer ──
+                          // -- Footer --
                           Padding(
                             padding: EdgeInsets.fromLTRB(24, 0, 24, 24),
                             child: Row(
                               children: [
                                 Expanded(
                                   child: _dialogButton(
-                                    'Hủy',
+                                    'H?y',
                                     Colors.white,
                                     AppColors.slate600,
                                     border: AppColors.slate200,
@@ -2496,8 +2503,8 @@ class _AddStoreCard extends StatelessWidget {
                                 SizedBox(width: 12),
                                 Expanded(
                                   child: _dialogButton(
-                                    'Tạo ngay',
-                                    AppColors.emerald500,
+                                    'T?o ngay',
+                                    AppColors.primary500,
                                     Colors.white,
                                     isPrimary: true,
                                     onTap: () async {
@@ -2514,7 +2521,7 @@ class _AddStoreCard extends StatelessWidget {
                                           password.isEmpty ||
                                           storeName.isEmpty) {
                                         stfCtx.read<UIStore>().showToast(
-                                          'Vui lòng nhập đầy đủ thông tin',
+                                          'Vui l�ng nh?p d?y d? th�ng tin',
                                           'error',
                                         );
                                         return;
@@ -2644,7 +2651,7 @@ class _AddStoreCard extends StatelessWidget {
                   controller: ctrl,
                   obscureText: obscure,
                   decoration: InputDecoration(
-                    hintText: 'Nhập mật khẩu',
+                    hintText: 'Nh?p m?t kh?u',
                     hintStyle: TextStyle(
                       fontSize: 14,
                       color: AppColors.slate400,
@@ -2713,17 +2720,17 @@ class _AddStoreCard extends StatelessWidget {
   }
 }
 
-// ── Currency formatter ──
+// -- Currency formatter --
 String _formatCurrency(int amount) {
-  if (amount == 0) return '0đ';
+  if (amount == 0) return '0d';
   final formatted = amount.toString().replaceAllMapped(
     RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
     (m) => '${m[1]},',
   );
-  return '$formattedđ';
+  return '${formatted}đ';
 }
 
-// ── Date formatter (dd/MM/yyyy) ──
+// -- Date formatter (dd/MM/yyyy) --
 String _formatDate(DateTime date) {
   final utc = date.toUtc();
   return '${utc.day.toString().padLeft(2, '0')}/${utc.month.toString().padLeft(2, '0')}/${utc.year}';
@@ -2770,7 +2777,7 @@ class _LandscapeStatPill extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════
-// STORE DETAIL PAGE (Sadmin → Tap on store card)
-// ═══════════════════════════════════════════════════════════
+// -----------------------------------------------------------
+// STORE DETAIL PAGE (Sadmin ? Tap on store card)
+// -----------------------------------------------------------
 

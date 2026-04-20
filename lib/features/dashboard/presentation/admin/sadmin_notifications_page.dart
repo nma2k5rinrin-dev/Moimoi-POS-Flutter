@@ -208,7 +208,7 @@ class _SadminNotificationsPageState extends State<SadminNotificationsPage> {
                         title: Text('Tất cả Chủ Cửa Hàng'),
                         dense: true,
                         contentPadding: EdgeInsets.zero,
-                        activeColor: AppColors.emerald500,
+                        activeColor: AppColors.primary500,
                       ),
                     ),
                     Expanded(
@@ -220,7 +220,7 @@ class _SadminNotificationsPageState extends State<SadminNotificationsPage> {
                         title: Text('Toàn bộ người dùng'),
                         dense: true,
                         contentPadding: EdgeInsets.zero,
-                        activeColor: AppColors.emerald500,
+                        activeColor: AppColors.primary500,
                       ),
                     ),
                   ],
@@ -233,7 +233,7 @@ class _SadminNotificationsPageState extends State<SadminNotificationsPage> {
                   child: ElevatedButton(
                     onPressed: _isSending ? null : _sendNotification,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.emerald500,
+                      backgroundColor: AppColors.primary500,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

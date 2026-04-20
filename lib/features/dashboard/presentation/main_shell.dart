@@ -19,6 +19,7 @@ import 'package:moimoi_pos/features/pos_order/presentation/widgets/mobile_cart_s
 import 'package:moimoi_pos/features/dashboard/presentation/widgets/account_dialog.dart';
 import 'package:moimoi_pos/services/api/cloudflare_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:moimoi_pos/core/widgets/thematic_motif_painter.dart';
 
 class MainShell extends StatefulWidget {
   final StatefulNavigationShell navigationShell;
@@ -290,25 +291,48 @@ class _MobileHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 64,
-      padding: EdgeInsets.symmetric(horizontal: 16),
+      height: 76,
       decoration: BoxDecoration(
         color: AppColors.cardBg,
         border: Border(bottom: BorderSide(color: AppColors.slate200, width: 1)),
       ),
-      child: Row(
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          // Logo + Store name (tappable for sadmin to switch stores)
-          Expanded(child: _buildStoreSelectorArea(context)),
+          Positioned.fill(
+             child: Container(
+                color: AppColors.primary.withValues(alpha: 0.08),
+             ),
+          ),
+          Positioned.fill(
+            child: ClipRect(
+              child: ThematicMotifWidget(
+                theme: store.activeTheme,
+                overrideColor: AppColors.primary,
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Logo + Store name (tappable for sadmin to switch stores)
+                  Expanded(child: _buildStoreSelectorArea(context)),
 
-          // Notification Bell
-          const NotificationBell(),
+                  // Notification Bell
+                  const NotificationBell(),
 
-          SizedBox(width: 16), // Thêm khoảng cách giữa chuông và hình đại diện
-          // User Avatar
-          GestureDetector(
-            onTap: () => showAccountDialog(context),
-            child: _buildAvatarWidget(context.watch<AuthStore>(), 16), // Tăng kích thước avatar
+                  SizedBox(width: 16), // Thêm khoảng cách giữa chuông và hình đại diện
+                  // User Avatar
+                  GestureDetector(
+                    onTap: () => showAccountDialog(context),
+                    child: _buildAvatarWidget(context.watch<AuthStore>(), 20), // Tăng kích thước avatar
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -326,10 +350,11 @@ class _MobileHeader extends StatelessWidget {
 
     final content = Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _buildStoreLogoWidget(
           isSadmin ? '' : (storeInfo?.logoUrl ?? ''),
-          40,
+          44,
         ), // Tăng kích thước logo
         SizedBox(width: 12),
         Flexible(
@@ -375,13 +400,13 @@ class _MobileCartBar extends StatelessWidget {
         padding: EdgeInsets.only(left: 20), // Xoá padding trên dưới và phải để nút chiếm trọn
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppColors.emerald500, AppColors.emerald600],
+            colors: [AppColors.primary500, AppColors.primary600],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.emerald500.withValues(alpha: 0.25),
+              color: AppColors.primary500.withValues(alpha: 0.25),
               blurRadius: 16,
               offset: const Offset(0, -4),
             ),
@@ -405,7 +430,7 @@ class _MobileCartBar extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppColors.red500,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.emerald600, width: 2),
+                        border: Border.all(color: AppColors.primary600, width: 2),
                       ),
                       alignment: Alignment.center,
                       child: Text(
@@ -480,9 +505,9 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
   _StickyHeaderDelegate({required this.child});
   @override
-  double get minExtent => 64.0;
+  double get minExtent => 76.0;
   @override
-  double get maxExtent => 64.0;
+  double get maxExtent => 76.0;
   @override
   Widget build(
     BuildContext context,
@@ -550,14 +575,14 @@ class _MobileBottomNav extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: isActive
-                                  ? AppColors.emerald50
+                                  ? AppColors.primary50
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Icon(
                               item.icon,
                               color: isActive
-                                  ? AppColors.emerald600
+                                  ? AppColors.primary600
                                   : AppColors.slate400,
                               size: isActive ? 22 : 24,
                             ),
@@ -663,7 +688,7 @@ class _MobileBottomNav extends StatelessWidget {
                               ? FontWeight.w700
                               : FontWeight.w500,
                           color: isActive
-                              ? AppColors.emerald600
+                              ? AppColors.primary600
                               : AppColors.slate400,
                         ),
                         child: Text(item.label),
@@ -695,13 +720,13 @@ Widget _buildAvatarWidget(AuthStore authStore, double radius) {
 
   Widget fallbackAvatar() => CircleAvatar(
     radius: radius,
-    backgroundColor: AppColors.emerald100,
+    backgroundColor: AppColors.primary100,
     child: Text(
       letter,
       style: TextStyle(
         fontWeight: FontWeight.bold,
         fontSize: radius * 0.7,
-        color: AppColors.emerald600,
+        color: AppColors.primary600,
       ),
     ),
   );

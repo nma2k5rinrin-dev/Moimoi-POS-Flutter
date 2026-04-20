@@ -269,7 +269,7 @@ class _FbCropDialogState extends State<_FbCropDialog> {
                     Icon(
                       Icons.crop_rounded,
                       size: 20,
-                      color: AppColors.emerald400,
+                      color: AppColors.primary400,
                     ),
                     SizedBox(width: 8),
                     Expanded(
@@ -310,7 +310,7 @@ class _FbCropDialogState extends State<_FbCropDialog> {
                 child: _imgW == 0
                     ? Center(
                         child: CircularProgressIndicator(
-                          color: AppColors.emerald400,
+                          color: AppColors.primary400,
                         ),
                       )
                     : GestureDetector(
@@ -366,10 +366,10 @@ class _FbCropDialogState extends State<_FbCropDialog> {
                       Expanded(
                         child: SliderTheme(
                           data: SliderThemeData(
-                            activeTrackColor: AppColors.emerald500,
+                            activeTrackColor: AppColors.primary500,
                             inactiveTrackColor: Colors.white.withOpacity(0.12),
-                            thumbColor: AppColors.emerald400,
-                            overlayColor: AppColors.emerald500.withOpacity(
+                            thumbColor: AppColors.primary400,
+                            overlayColor: AppColors.primary500.withOpacity(
                               0.15,
                             ),
                             trackHeight: 3,

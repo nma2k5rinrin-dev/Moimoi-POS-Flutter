@@ -176,12 +176,12 @@ class _PremiumPageState extends State<PremiumPage> {
                         width: 30,
                         height: 30,
                         decoration: BoxDecoration(
-                          color: AppColors.emerald50,
+                          color: AppColors.primary50,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
                           Icons.verified,
-                          color: AppColors.emerald500,
+                          color: AppColors.primary500,
                           size: 16,
                         ),
                       ),
@@ -207,13 +207,13 @@ class _PremiumPageState extends State<PremiumPage> {
                             width: 24,
                             height: 24,
                             decoration: BoxDecoration(
-                              color: AppColors.emerald50,
+                              color: AppColors.primary50,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Icon(
                               f.icon,
                               size: 13,
-                              color: AppColors.emerald500,
+                              color: AppColors.primary500,
                             ),
                           ),
                           SizedBox(width: 10),
@@ -230,7 +230,7 @@ class _PremiumPageState extends State<PremiumPage> {
                           Icon(
                             Icons.check_circle,
                             size: 16,
-                            color: AppColors.emerald500,
+                            color: AppColors.primary500,
                           ),
                         ],
                       ),
@@ -294,15 +294,15 @@ class _PremiumPageState extends State<PremiumPage> {
                 width: double.infinity,
                 padding: EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                 decoration: BoxDecoration(
-                  color: AppColors.emerald50,
+                  color: AppColors.primary50,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.emerald200),
+                  border: Border.all(color: AppColors.primary200),
                 ),
                 child: Column(
                   children: [
                     Icon(
                       Icons.workspace_premium_rounded,
-                      color: AppColors.emerald500,
+                      color: AppColors.primary500,
                       size: 48,
                     ),
                     SizedBox(height: 12),
@@ -312,7 +312,7 @@ class _PremiumPageState extends State<PremiumPage> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.emerald700,
+                        color: AppColors.primary700,
                       ),
                     ),
                     SizedBox(height: 6),
@@ -322,7 +322,7 @@ class _PremiumPageState extends State<PremiumPage> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.emerald600,
+                        color: AppColors.primary600,
                       ),
                     ),
                     SizedBox(height: 20),
@@ -334,8 +334,8 @@ class _PremiumPageState extends State<PremiumPage> {
                           child: OutlinedButton(
                             onPressed: () => _handleRegister(),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.emerald700,
-                              side: BorderSide(color: AppColors.emerald400),
+                              foregroundColor: AppColors.primary700,
+                              side: BorderSide(color: AppColors.primary400),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -365,7 +365,7 @@ class _PremiumPageState extends State<PremiumPage> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppColors.emerald600,
+                color: AppColors.primary600,
                 height: 1.5,
               ),
             ),
@@ -405,7 +405,7 @@ class _PremiumPageState extends State<PremiumPage> {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: AppColors.emerald100,
+        color: AppColors.primary100,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Center(
@@ -414,7 +414,7 @@ class _PremiumPageState extends State<PremiumPage> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: AppColors.emerald600,
+            color: AppColors.primary600,
           ),
         ),
       ),

@@ -1,11 +1,52 @@
 import 'package:flutter/material.dart';
 
+enum AppTheme { emerald, blue, violet, amber, rose }
+
 class AppColors {
   static bool isDarkMode = false;
-  // Primary - Emerald
+  static AppTheme currentTheme = AppTheme.emerald;
+
+  // Primary - Dynamic scale
+  static Color primary50 = const Color(0xFFECFDF5);
+  static Color primary100 = const Color(0xFFD1FAE5);
+  static Color primary200 = const Color(0xFFA7F3D0);
+  static Color primary300 = const Color(0xFF34D399); 
+  static Color primary400 = const Color(0xFF34D399);
+  static Color primary500 = const Color(0xFF10B981);
+  static Color primary600 = const Color(0xFF059669);
+  static Color primary700 = const Color(0xFF047857);
+  static Color primary800 = const Color(0xFF065F46);
+
   static Color primary = const Color(0xFF10B981);
   static Color primaryLight = const Color(0xFFD1FAE5);
   static Color primaryDark = const Color(0xFF065F46);
+
+  static void switchColorTheme(AppTheme theme) {
+    currentTheme = theme;
+    switch (theme) {
+      case AppTheme.blue:
+        primary50 = blue50; primary100 = blue100; primary200 = blue200; primary300 = blue400; primary400 = blue400; primary500 = blue500; primary600 = blue600; primary700 = blue600; primary800 = blue600;
+        primary = blue500; primaryLight = blue100; primaryDark = blue600;
+        break;
+      case AppTheme.violet:
+        primary50 = violet50; primary100 = violet100; primary200 = violet200; primary300 = violet500; primary400 = violet500; primary500 = violet500; primary600 = violet600; primary700 = violet700; primary800 = violet700;
+        primary = violet500; primaryLight = violet100; primaryDark = violet700;
+        break;
+      case AppTheme.amber:
+        primary50 = amber50; primary100 = amber100; primary200 = amber200; primary300 = amber400; primary400 = amber400; primary500 = amber500; primary600 = amber600; primary700 = amber600; primary800 = amber600;
+        primary = amber500; primaryLight = amber100; primaryDark = amber600;
+        break;
+      case AppTheme.rose:
+        primary50 = rose50; primary100 = rose100; primary200 = rose200; primary300 = rose400; primary400 = rose400; primary500 = rose500; primary600 = rose600; primary700 = rose700; primary800 = rose800;
+        primary = rose500; primaryLight = rose100; primaryDark = rose700;
+        break;
+      case AppTheme.emerald:
+      default:
+        primary50 = emerald50; primary100 = emerald100; primary200 = emerald200; primary300 = emerald400; primary400 = emerald400; primary500 = emerald500; primary600 = emerald600; primary700 = emerald700; primary800 = emerald800;
+        primary = emerald500; primaryLight = emerald100; primaryDark = emerald800;
+        break;
+    }
+  }
 
   // ── Dynamic surface / background colors ──
   static Color scaffoldBg = const Color(0xFFF8FAFC);
@@ -64,6 +105,16 @@ class AppColors {
   static Color violet500 = const Color(0xFF8B5CF6);
   static Color violet600 = const Color(0xFF7C3AED);
   static Color violet700 = const Color(0xFF6D28D9);
+
+  // Rose/Pink
+  static Color rose50 = const Color(0xFFFFF1F2);
+  static Color rose100 = const Color(0xFFFFE4E6);
+  static Color rose200 = const Color(0xFFFECDD3);
+  static Color rose400 = const Color(0xFFFB7185);
+  static Color rose500 = const Color(0xFFF43F5E);
+  static Color rose600 = const Color(0xFFE11D48);
+  static Color rose700 = const Color(0xFFBE123C);
+  static Color rose800 = const Color(0xFF9F1239);
 
   // Emerald
   static Color emerald50 = const Color(0xFFECFDF5);

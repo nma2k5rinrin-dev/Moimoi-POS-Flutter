@@ -95,7 +95,7 @@ class SettingsTextField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: AppColors.emerald500, width: 2),
+              borderSide: BorderSide(color: AppColors.primary500, width: 2),
             ),
           ),
         ),
@@ -139,7 +139,7 @@ class SettingsDialogField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.emerald400),
+          borderSide: BorderSide(color: AppColors.primary400),
         ),
       ),
     );

@@ -163,12 +163,12 @@ class IncomePageState extends State<IncomePage> with SingleTickerProviderStateMi
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.emerald50,
+                        color: AppColors.primary50,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         Icons.trending_up_rounded,
-                        color: AppColors.emerald500,
+                        color: AppColors.primary500,
                         size: 22,
                       ),
                     ),
@@ -236,8 +236,8 @@ class IncomePageState extends State<IncomePage> with SingleTickerProviderStateMi
                               height: 1.1,
                               fontWeight: FontWeight.w700,
                               color: Theme.of(context).brightness == Brightness.dark
-                                  ? AppColors.emerald400
-                                  : AppColors.emerald500,
+                                  ? AppColors.primary400
+                                  : AppColors.primary500,
                               letterSpacing: -1,
                             ),
                             inputFormatters: [
@@ -322,9 +322,9 @@ class IncomePageState extends State<IncomePage> with SingleTickerProviderStateMi
                                   height: 44,
                                   padding: const EdgeInsets.symmetric(horizontal: 16),
                                   decoration: BoxDecoration(
-                                    color: AppColors.emerald50,
+                                    color: AppColors.primary50,
                                     borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(color: AppColors.emerald200.withOpacity(0.5)),
+                                    border: Border.all(color: AppColors.primary200.withOpacity(0.5)),
                                   ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -332,7 +332,7 @@ class IncomePageState extends State<IncomePage> with SingleTickerProviderStateMi
                                       Icon(
                                         Icons.calendar_month_rounded,
                                         size: 18,
-                                        color: AppColors.emerald600,
+                                        color: AppColors.primary600,
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
@@ -340,7 +340,7 @@ class IncomePageState extends State<IncomePage> with SingleTickerProviderStateMi
                                         style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w600,
-                                          color: AppColors.emerald600,
+                                          color: AppColors.primary600,
                                         ),
                                       ),
                                     ],
@@ -384,7 +384,7 @@ class IncomePageState extends State<IncomePage> with SingleTickerProviderStateMi
                                                 vertical: 8,
                                               ),
                                               decoration: BoxDecoration(
-                                                color: AppColors.emerald100,
+                                                color: AppColors.primary100,
                                                 borderRadius:
                                                     BorderRadius.circular(10),
                                               ),
@@ -396,7 +396,7 @@ class IncomePageState extends State<IncomePage> with SingleTickerProviderStateMi
                                                     style: TextStyle(
                                                       fontSize: 14,
                                                       fontWeight: FontWeight.w600,
-                                                      color: AppColors.emerald600,
+                                                      color: AppColors.primary600,
                                                     ),
                                                   ),
                                                 ],
@@ -477,7 +477,7 @@ class IncomePageState extends State<IncomePage> with SingleTickerProviderStateMi
                                         child: Container(
                                           height: 52,
                                           decoration: BoxDecoration(
-                                            color: AppColors.emerald500,
+                                            color: AppColors.primary500,
                                             borderRadius: BorderRadius.circular(
                                               14,
                                             ),
@@ -860,20 +860,20 @@ class IncomePageState extends State<IncomePage> with SingleTickerProviderStateMi
                           child: Ink(
                             padding: EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
-                              color: AppColors.emerald50,
+                              color: AppColors.primary50,
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Column(
                               children: [
                                 Icon(
                                   Icons.edit_outlined,
-                                  color: AppColors.emerald600,
+                                  color: AppColors.primary600,
                                 ),
                                 SizedBox(height: 8),
                                 Text(
                                   'Sửa',
                                   style: TextStyle(
-                                    color: AppColors.emerald600,
+                                    color: AppColors.primary600,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -1025,7 +1025,7 @@ class _AddCategoryDialogContentState extends State<_AddCategoryDialogContent> {
     AppColors.red500,
     AppColors.orange500,
     AppColors.amber500,
-    AppColors.emerald500,
+    AppColors.primary500,
     AppColors.blue500,
     AppColors.violet500,
     Color(0xFF9333EA),
@@ -1225,7 +1225,7 @@ class _AddCategoryDialogContentState extends State<_AddCategoryDialogContent> {
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: widget.typeLabel == 'thu'
-                      ? AppColors.emerald500
+                      ? AppColors.primary500
                       : AppColors.red500,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(

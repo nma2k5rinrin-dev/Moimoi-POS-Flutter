@@ -148,7 +148,7 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
                       labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                       unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                       indicator: BoxDecoration(
-                        color: AppColors.emerald500,
+                        color: AppColors.primary500,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       indicatorSize: TabBarIndicatorSize.tab,
@@ -278,13 +278,13 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
         height: 48,
         padding: EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: AppColors.emerald50,
+          color: AppColors.primary50,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.emerald200),
+          border: Border.all(color: AppColors.primary200),
         ),
         child: Row(
           children: [
-            Icon(Icons.storefront, size: 20, color: AppColors.emerald600),
+            Icon(Icons.storefront, size: 20, color: AppColors.primary600),
             SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -292,14 +292,14 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.emerald700,
+                  color: AppColors.primary700,
                 ),
               ),
             ),
             Icon(
               Icons.keyboard_arrow_down,
               size: 20,
-              color: AppColors.emerald600,
+              color: AppColors.primary600,
             ),
           ],
         ),
@@ -365,7 +365,7 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
               ),
               child: Row(
                 children: [
-                  Icon(Icons.storefront, size: 16, color: AppColors.emerald600),
+                  Icon(Icons.storefront, size: 16, color: AppColors.primary600),
                   SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -380,7 +380,7 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.emerald50,
+                      color: AppColors.primary50,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -388,7 +388,7 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.emerald600,
+                        color: AppColors.primary600,
                       ),
                     ),
                   ),
@@ -440,11 +440,11 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
         roleFg = AppColors.violet600;
         break;
       case 'admin':
-        avatarBg = AppColors.emerald100;
-        avatarFg = AppColors.emerald600;
+        avatarBg = AppColors.primary100;
+        avatarFg = AppColors.primary600;
         roleLabel = 'Admin';
-        roleBg = AppColors.emerald50;
-        roleFg = AppColors.emerald600;
+        roleBg = AppColors.primary50;
+        roleFg = AppColors.primary600;
         break;
       default:
         avatarBg = AppColors.blue50;
@@ -499,7 +499,7 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
             children: [
               SlidableAction(
                 onPressed: (_) => _openEditPanel(store, user),
-                backgroundColor: AppColors.emerald500,
+                backgroundColor: AppColors.primary500,
                 foregroundColor: Colors.white,
                 icon: Icons.edit_rounded,
                 label: 'Sửa',
@@ -639,12 +639,12 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
         width: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppColors.emerald500, AppColors.emerald600],
+            colors: [AppColors.primary500, AppColors.primary600],
           ),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: AppColors.emerald500.withValues(alpha: 0.25),
+              color: AppColors.primary500.withValues(alpha: 0.25),
               blurRadius: 16,
               offset: Offset(0, 4),
             ),
@@ -845,7 +845,7 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
                         ElevatedButton(
                           onPressed: () => _saveEmployee(store),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.emerald500,
+                            backgroundColor: AppColors.primary500,
                             foregroundColor: Colors.white,
                             minimumSize: Size(double.infinity, 52),
                             shape: RoundedRectangleBorder(

@@ -483,7 +483,7 @@ class _AuthPageState extends State<AuthPage>
             end: Alignment.bottomCenter,
             colors: [
               AppColors.scaffoldBg,
-              AppColors.emerald50,
+              AppColors.primary50,
               AppColors.scaffoldBg,
             ],
           ),
@@ -563,9 +563,9 @@ class _AuthPageState extends State<AuthPage>
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: AppColors.emerald500,
+                                    color: AppColors.primary500,
                                     decoration: TextDecoration.underline,
-                                    decorationColor: AppColors.emerald500,
+                                    decorationColor: AppColors.primary500,
                                   ),
                                 ),
                               ),
@@ -1115,7 +1115,7 @@ class _AuthPageState extends State<AuthPage>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: AppColors.emerald500, width: 1.5),
+              borderSide: BorderSide(color: AppColors.primary500, width: 1.5),
             ),
           ),
           onSubmitted: (_) {

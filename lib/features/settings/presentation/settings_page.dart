@@ -9,10 +9,12 @@ import 'package:moimoi_pos/features/auth/logic/auth_store_standalone.dart';
 import 'package:moimoi_pos/core/utils/constants.dart';
 import 'package:moimoi_pos/features/settings/presentation/menu_management.dart';
 import 'package:moimoi_pos/features/cashflow/presentation/cashflow_page.dart';
+import 'package:moimoi_pos/features/settings/presentation/printer_section.dart';
 import 'package:moimoi_pos/features/premium/presentation/premium_page.dart';
 import 'package:moimoi_pos/features/settings/presentation/qr_menu_page.dart';
-import 'package:moimoi_pos/features/settings/presentation/printer_section.dart';
+import 'package:moimoi_pos/core/state/ui_store.dart';
 import 'package:moimoi_pos/core/utils/quota_helper.dart';
+import 'package:moimoi_pos/core/widgets/thematic_motif_painter.dart';
 import 'package:moimoi_pos/features/premium/presentation/widgets/upgrade_dialog.dart';
 
 // Modular Sections
@@ -331,13 +333,13 @@ class _SettingsPageState extends State<SettingsPage> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: AppColors.emerald50,
+                      color: AppColors.primary50,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       menu.icon,
                       size: 22,
-                      color: AppColors.emerald600,
+                      color: AppColors.primary600,
                     ),
                   ),
                   SizedBox(width: 12),
@@ -384,7 +386,7 @@ class _SettingsPageState extends State<SettingsPage> {
       case 'tables':
         return const TablesSection();
       case 'qr-menu':
-        return const QrMenuPage();
+        return QrMenuPage();
       case 'users':
         return const UsersSection();
       case 'printer':
@@ -401,7 +403,7 @@ class _SettingsPageState extends State<SettingsPage> {
           },
         );
       case 'premium':
-        return const PremiumPage();
+        return PremiumPage();
       // ── Sadmin sections ──
       case 'sa-security':
         return _ComingSoonSection(
@@ -557,10 +559,10 @@ class _SettingsMenuList extends StatelessWidget {
                 duration: const Duration(milliseconds: 200),
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isActive ? AppColors.emerald50 : AppColors.cardBg,
+                  color: isActive ? AppColors.primary50 : AppColors.cardBg,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: isActive ? AppColors.emerald200 : AppColors.slate200,
+                    color: isActive ? AppColors.primary200 : AppColors.slate200,
                   ),
                 ),
                 child: Row(
@@ -570,7 +572,7 @@ class _SettingsMenuList extends StatelessWidget {
                       height: 44,
                       decoration: BoxDecoration(
                         color: isActive
-                            ? AppColors.emerald100
+                            ? AppColors.primary100
                             : AppColors.inputBg,
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -581,7 +583,7 @@ class _SettingsMenuList extends StatelessWidget {
                           Icon(
                             menu.icon,
                             color: isActive
-                                ? AppColors.emerald600
+                                ? AppColors.primary600
                                 : AppColors.slate500,
                           ),
                           if ((menu.id == 'cashflow' && !quota.canUseTransactions) ||
@@ -596,7 +598,7 @@ class _SettingsMenuList extends StatelessWidget {
                                   shape: BoxShape.circle,
                                   border: Border.all(
                                     color: isActive
-                                        ? AppColors.emerald100
+                                        ? AppColors.primary100
                                         : AppColors.inputBg,
                                     width: 1.5,
                                   ),
@@ -621,7 +623,7 @@ class _SettingsMenuList extends StatelessWidget {
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
                               color: isActive
-                                  ? AppColors.emerald700
+                                  ? AppColors.primary700
                                   : AppColors.slate800,
                             ),
                           ),
@@ -742,15 +744,41 @@ class _SettingsMenuList extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
-            child: Text(
-              'Cài Đặt',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: AppColors.slate800,
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.fromLTRB(20, 48, 20, 24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.primary600, AppColors.primary400],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              borderRadius: BorderRadius.only(bottomRight: Radius.circular(40), bottomLeft: Radius.circular(16)),
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.only(bottomRight: Radius.circular(40), bottomLeft: Radius.circular(16)),
+                    child: ThematicMotifWidget(
+                      theme: context.watch<UIStore>().activeTheme,
+                      overrideColor: Colors.white,
+                    ),
+                  ),
+                ),
+                Text(
+                  'Cài Đặt',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: Offset(0, 2))
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -799,7 +827,7 @@ class _ComingSoonSection extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: Icon(icon, size: 36, color: AppColors.emerald600),
+              child: Icon(icon, size: 36, color: AppColors.primary600),
             ),
             SizedBox(height: 20),
             Text(
@@ -869,13 +897,13 @@ class _ComingSoonSection extends StatelessWidget {
                             width: 24,
                             height: 24,
                             decoration: BoxDecoration(
-                              color: AppColors.emerald50,
+                              color: AppColors.primary50,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
                               Icons.check_rounded,
                               size: 14,
-                              color: AppColors.emerald500,
+                              color: AppColors.primary500,
                             ),
                           ),
                           SizedBox(width: 10),

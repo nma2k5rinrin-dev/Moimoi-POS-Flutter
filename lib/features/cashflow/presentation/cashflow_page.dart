@@ -601,7 +601,7 @@ class _CashflowPageState extends State<CashflowPage> {
                                                     alignment: Alignment.center,
                                                     decoration: BoxDecoration(
                                                       color: sel
-                                                          ? AppColors.emerald500
+                                                          ? AppColors.primary500
                                                           : AppColors.slate50,
                                                       borderRadius:
                                                           BorderRadius.circular(
@@ -1003,7 +1003,7 @@ class _CashflowPageState extends State<CashflowPage> {
 
     final customCats = store.currentCustomThuChiCategories;
     final List<TransactionCategory> allKnownCats = [
-      TransactionCategory(type: 'thu', emoji: '🎉', label: 'Doanh thu', color: AppColors.emerald500, isCustom: false),
+      TransactionCategory(type: 'thu', emoji: '🎉', label: 'Doanh thu', color: AppColors.primary500, isCustom: false),
       TransactionCategory(type: 'thu', emoji: '+', label: 'Thêm mới', color: AppColors.slate400, isCustom: false),
       TransactionCategory(type: 'chi', emoji: '+', label: 'Thêm mới', color: AppColors.slate400, isCustom: false),
       ...customCats,
@@ -1029,9 +1029,9 @@ class _CashflowPageState extends State<CashflowPage> {
     final hasMore = sortedEntries.length > 5;
 
     final bool isExpenseTab = _tabIndex == 2;
-    final Color accentColor = isExpenseTab ? AppColors.red500 : AppColors.emerald500;
-    final Color accentLight = isExpenseTab ? AppColors.red50 : AppColors.emerald50;
-    final Color accentDark = isExpenseTab ? AppColors.red600 : AppColors.emerald600;
+    final Color accentColor = isExpenseTab ? AppColors.red500 : AppColors.primary500;
+    final Color accentLight = isExpenseTab ? AppColors.red50 : AppColors.primary50;
+    final Color accentDark = isExpenseTab ? AppColors.red600 : AppColors.primary600;
 
     return Container(
       padding: EdgeInsets.all(20),
@@ -1284,13 +1284,13 @@ class _CashflowPageState extends State<CashflowPage> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: t.isIncome ? AppColors.emerald50 : AppColors.red50,
+              color: t.isIncome ? AppColors.primary50 : AppColors.red50,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               t.icon,
               size: 20,
-              color: t.isIncome ? AppColors.emerald500 : AppColors.red500,
+              color: t.isIncome ? AppColors.primary500 : AppColors.red500,
             ),
           ),
           SizedBox(width: 12),
@@ -1331,7 +1331,7 @@ class _CashflowPageState extends State<CashflowPage> {
                         color: t.source == 'order'
                             ? AppColors.blue50
                             : t.isIncome
-                            ? AppColors.emerald50
+                            ? AppColors.primary50
                             : AppColors.red50,
                         borderRadius: BorderRadius.circular(6),
                       ),
@@ -1343,7 +1343,7 @@ class _CashflowPageState extends State<CashflowPage> {
                           color: t.source == 'order'
                               ? AppColors.blue600
                               : t.isIncome
-                              ? AppColors.emerald600
+                              ? AppColors.primary600
                               : AppColors.red500,
                         ),
                       ),
@@ -1359,7 +1359,7 @@ class _CashflowPageState extends State<CashflowPage> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: t.isIncome ? AppColors.emerald600 : AppColors.red500,
+              color: t.isIncome ? AppColors.primary600 : AppColors.red500,
             ),
           ),
           if (t.source != 'order' && t.originalTxn != null) ...[
@@ -1448,12 +1448,12 @@ class _CashflowPageState extends State<CashflowPage> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: isThu ? AppColors.emerald50 : AppColors.red50,
+                        color: isThu ? AppColors.primary50 : AppColors.red50,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         Icons.edit_document,
-                        color: isThu ? AppColors.emerald500 : AppColors.red500,
+                        color: isThu ? AppColors.primary500 : AppColors.red500,
                         size: 22,
                       ),
                     ),
@@ -1551,7 +1551,7 @@ class _CashflowPageState extends State<CashflowPage> {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: isThu
-                                ? AppColors.emerald500
+                                ? AppColors.primary500
                                 : AppColors.red500,
                             borderRadius: BorderRadius.circular(14),
                           ),
@@ -1607,7 +1607,7 @@ class _CashflowPageState extends State<CashflowPage> {
     required bool isIncome,
     bool center = false,
   }) {
-    final accent = isIncome ? AppColors.emerald600 : AppColors.red600;
+    final accent = isIncome ? AppColors.primary600 : AppColors.red600;
 
     return Container(
       constraints: const BoxConstraints(maxWidth: 52),
@@ -1729,7 +1729,7 @@ class _CashflowPageState extends State<CashflowPage> {
                                 height: 44,
                                 decoration: BoxDecoration(
                                   color: isThu
-                                      ? AppColors.emerald50
+                                      ? AppColors.primary50
                                       : AppColors.red50,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1738,7 +1738,7 @@ class _CashflowPageState extends State<CashflowPage> {
                                       ? Icons.trending_up_rounded
                                       : Icons.trending_down_rounded,
                                   color: isThu
-                                      ? AppColors.emerald500
+                                      ? AppColors.primary500
                                       : AppColors.red500,
                                   size: 22,
                                 ),
@@ -1829,7 +1829,7 @@ class _CashflowPageState extends State<CashflowPage> {
                                     Icon(
                                       Icons.trending_up,
                                       size: 16,
-                                      color: AppColors.emerald500,
+                                      color: AppColors.primary500,
                                     ),
                                     SizedBox(width: 6),
                                     Text('Nhập thu'),
@@ -1919,7 +1919,7 @@ class _CashflowPageState extends State<CashflowPage> {
                                       alignment: Alignment.center,
                                       decoration: BoxDecoration(
                                         color: isThu
-                                            ? AppColors.emerald500
+                                            ? AppColors.primary500
                                             : AppColors.red500,
                                         borderRadius: BorderRadius.circular(14),
                                       ),

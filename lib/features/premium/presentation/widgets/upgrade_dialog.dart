@@ -99,7 +99,7 @@ Future<bool> showUpgradePrompt(BuildContext context, String limitMsg) async {
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(ctx, true),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.emerald500,
+                        backgroundColor: AppColors.primary500,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -233,7 +233,7 @@ class _PricingDialogState extends State<_PricingDialog> {
               Container(
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.emerald50,
+                  color: AppColors.primary50,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Column(
@@ -285,11 +285,11 @@ class _PricingDialogState extends State<_PricingDialog> {
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: isSelected
-                              ? AppColors.emerald500
+                              ? AppColors.primary500
                               : AppColors.slate200,
                           width: isSelected ? 2 : 1,
                         ),
-                        color: isSelected ? AppColors.emerald50 : Colors.white,
+                        color: isSelected ? AppColors.primary50 : Colors.white,
                       ),
                       child: Row(
                         children: [
@@ -298,7 +298,7 @@ class _PricingDialogState extends State<_PricingDialog> {
                                 ? Icons.radio_button_checked
                                 : Icons.radio_button_off,
                             color: isSelected
-                                ? AppColors.emerald500
+                                ? AppColors.primary500
                                 : AppColors.slate300,
                             size: 22,
                           ),
@@ -315,7 +315,7 @@ class _PricingDialogState extends State<_PricingDialog> {
                                         fontSize: 15,
                                         fontWeight: FontWeight.w600,
                                         color: isSelected
-                                            ? AppColors.emerald700
+                                            ? AppColors.primary700
                                             : AppColors.slate800,
                                       ),
                                     ),
@@ -329,7 +329,7 @@ class _PricingDialogState extends State<_PricingDialog> {
                                         decoration: BoxDecoration(
                                           color: i == 2
                                               ? const Color(0xFFD97706)
-                                              : AppColors.emerald500,
+                                              : AppColors.primary500,
                                           borderRadius: BorderRadius.circular(
                                             6,
                                           ),
@@ -351,7 +351,7 @@ class _PricingDialogState extends State<_PricingDialog> {
                                     plan.savings,
                                     style: TextStyle(
                                       fontSize: 11,
-                                      color: AppColors.emerald600,
+                                      color: AppColors.primary600,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -367,7 +367,7 @@ class _PricingDialogState extends State<_PricingDialog> {
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                   color: isSelected
-                                      ? AppColors.emerald600
+                                      ? AppColors.primary600
                                       : AppColors.slate800,
                                 ),
                               ),
@@ -438,7 +438,7 @@ class _PricingDialogState extends State<_PricingDialog> {
                             if (context.mounted) Navigator.pop(context);
                           },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.emerald500,
+                      backgroundColor: AppColors.primary500,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -519,7 +519,7 @@ class _PricingDialogState extends State<_PricingDialog> {
   Widget _featureRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: AppColors.emerald500),
+        Icon(icon, size: 18, color: AppColors.primary500),
         SizedBox(width: 10),
         Text(
           text,

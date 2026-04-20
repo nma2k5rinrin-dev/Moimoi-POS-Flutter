@@ -306,10 +306,10 @@ class _CategoryChip extends StatelessWidget {
         duration: const Duration(milliseconds: 250),
         padding: EdgeInsets.symmetric(horizontal: 4, vertical: 20),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.emerald50 : Colors.transparent,
+          color: isActive ? AppColors.primary50 : Colors.transparent,
           border: Border(
             left: BorderSide(
-              color: isActive ? AppColors.emerald500 : Colors.transparent,
+              color: isActive ? AppColors.primary500 : Colors.transparent,
               width: 4,
             ),
           ),
@@ -323,7 +323,7 @@ class _CategoryChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
-                color: isActive ? AppColors.emerald700 : AppColors.slate600,
+                color: isActive ? AppColors.primary700 : AppColors.slate600,
               ),
             ),
           ],
@@ -358,7 +358,7 @@ class _ProductCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: inCart
-                        ? AppColors.emerald500
+                        ? AppColors.primary500
                         : (isOutOfStock
                               ? AppColors.slate200
                               : AppColors.slate100),
@@ -414,7 +414,7 @@ class _ProductCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.emerald500,
+                          color: AppColors.primary500,
                         ),
                       ),
                     ),
@@ -647,7 +647,7 @@ class _TableSelectorBtn extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   color: selected.isEmpty
                       ? AppColors.slate800
-                      : AppColors.emerald600,
+                      : AppColors.primary600,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -731,7 +731,7 @@ class _TableSelectorBtn extends StatelessWidget {
                         trailing: cartStore.selectedTable == raw
                             ? Icon(
                                 Icons.check_circle,
-                                color: AppColors.emerald500,
+                                color: AppColors.primary500,
                               )
                             : null,
                         onTap: () {
@@ -767,7 +767,7 @@ class _TableSelectorBtn extends StatelessWidget {
                                 Icons.table_restaurant_outlined,
                                 color: isBusy
                                     ? AppColors.slate400
-                                    : AppColors.emerald500,
+                                    : AppColors.primary500,
                               ),
                               title: Row(
                                 children: [
@@ -815,7 +815,7 @@ class _TableSelectorBtn extends StatelessWidget {
                               trailing: cartStore.selectedTable == t
                                   ? Icon(
                                       Icons.check_circle,
-                                      color: AppColors.emerald500,
+                                      color: AppColors.primary500,
                                     )
                                   : null,
                               onTap: isBusy
@@ -858,7 +858,7 @@ class _TableSelectorBtn extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         color: isSelected
-            ? AppColors.emerald50
+            ? AppColors.primary50
             : (isBusy ? AppColors.slate50 : Colors.transparent),
         child: Row(
           children: [
@@ -875,7 +875,7 @@ class _TableSelectorBtn extends StatelessWidget {
                       color: isBusy
                           ? AppColors.slate400
                           : isSelected
-                          ? AppColors.emerald600
+                          ? AppColors.primary600
                           : AppColors.slate700,
                     ),
                   ),
@@ -904,7 +904,7 @@ class _TableSelectorBtn extends StatelessWidget {
               Icon(
                 Icons.check_circle_rounded,
                 size: 18,
-                color: AppColors.emerald500,
+                color: AppColors.primary500,
               ),
           ],
         ),
@@ -969,7 +969,7 @@ class _CartItemCard extends StatelessWidget {
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
-                    color: AppColors.emerald600,
+                    color: AppColors.primary600,
                   ),
                 ),
                 if (item.note.isNotEmpty)
@@ -1046,7 +1046,7 @@ class _CartItemCard extends StatelessWidget {
           ),
           _QtyBtn(
             icon: Icons.add_rounded,
-            color: AppColors.emerald600,
+            color: AppColors.primary600,
             onTap: () => store.updateQuantity(item.id, 1),
           ),
         ],
@@ -1173,7 +1173,7 @@ void showCartBottomSheet(BuildContext context) {
                         children: [
                           Icon(
                             Icons.shopping_bag_rounded,
-                            color: AppColors.emerald500,
+                            color: AppColors.primary500,
                             size: 24,
                           ),
                           SizedBox(width: 10),
@@ -1255,7 +1255,7 @@ void showCartBottomSheet(BuildContext context) {
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 26,
-                            color: AppColors.emerald500,
+                            color: AppColors.primary500,
                           ),
                         ),
                       ],

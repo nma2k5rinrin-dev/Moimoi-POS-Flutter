@@ -210,7 +210,7 @@ class _TablesSectionState extends State<TablesSection> {
                                               Icon(
                                                 Icons.location_on_rounded,
                                                 size: 16,
-                                                color: AppColors.emerald600,
+                                                color: AppColors.primary600,
                                               ),
                                               SizedBox(width: 6),
                                               Expanded(
@@ -243,7 +243,7 @@ class _TablesSectionState extends State<TablesSection> {
                                                       Icons.edit,
                                                       size: 14,
                                                       color:
-                                                          AppColors.emerald500,
+                                                          AppColors.primary500,
                                                     ),
                                                   ),
                                                 ),
@@ -254,7 +254,7 @@ class _TablesSectionState extends State<TablesSection> {
                                                   vertical: 4,
                                                 ),
                                                 decoration: BoxDecoration(
-                                                  color: AppColors.emerald50,
+                                                  color: AppColors.primary50,
                                                   borderRadius:
                                                       BorderRadius.circular(10),
                                                 ),
@@ -263,7 +263,7 @@ class _TablesSectionState extends State<TablesSection> {
                                                   style: TextStyle(
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.w600,
-                                                    color: AppColors.emerald600,
+                                                    color: AppColors.primary600,
                                                   ),
                                                 ),
                                               ),
@@ -462,7 +462,7 @@ class _TablesSectionState extends State<TablesSection> {
                     child: Container(
                       height: 52,
                       decoration: BoxDecoration(
-                        color: AppColors.emerald500,
+                        color: AppColors.primary500,
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Row(
@@ -518,7 +518,7 @@ class _TablesSectionState extends State<TablesSection> {
               fillColor: AppColors.slate50,
               prefixIcon: Icon(
                 Icons.location_on_outlined,
-                color: AppColors.emerald500,
+                color: AppColors.primary500,
                 size: 18,
               ),
               border: OutlineInputBorder(
@@ -531,7 +531,7 @@ class _TablesSectionState extends State<TablesSection> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.emerald400),
+                borderSide: BorderSide(color: AppColors.primary400),
               ),
             ),
           ),
@@ -553,7 +553,7 @@ class _TablesSectionState extends State<TablesSection> {
               Navigator.pop(ctx);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.emerald500,
+              backgroundColor: AppColors.primary500,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -655,7 +655,7 @@ class _TablesSectionState extends State<TablesSection> {
                                 children: [
                                   Icon(
                                     Icons.table_restaurant_rounded,
-                                    color: AppColors.emerald600,
+                                    color: AppColors.primary600,
                                     size: 22,
                                   ),
                                   SizedBox(width: 10),
@@ -877,7 +877,7 @@ class _TablesSectionState extends State<TablesSection> {
                                         _newAreaCtrl.clear();
                                       }
                                     }),
-                                    activeTrackColor: AppColors.emerald500,
+                                    activeTrackColor: AppColors.primary500,
                                   ),
                                 ],
                               ),
@@ -888,7 +888,7 @@ class _TablesSectionState extends State<TablesSection> {
                                 child: ElevatedButton(
                                   onPressed: () => _saveTable(store),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.emerald500,
+                                    backgroundColor: AppColors.primary500,
                                     foregroundColor: Colors.white,
                                     elevation: 0,
                                     shape: RoundedRectangleBorder(

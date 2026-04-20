@@ -48,11 +48,11 @@ class GroupedEmojiPicker extends StatelessWidget {
                         padding: EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? AppColors.emerald100
+                              ? AppColors.primary100
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
                           border: isSelected
-                              ? Border.all(color: AppColors.emerald200)
+                              ? Border.all(color: AppColors.primary200)
                               : null,
                         ),
                         child: Text(emoji, style: TextStyle(fontSize: 28)),

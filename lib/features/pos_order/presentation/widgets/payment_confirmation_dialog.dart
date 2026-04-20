@@ -376,7 +376,7 @@ Widget _buildPaymentInfo(storeInfo) {
           Icon(
             Icons.account_balance_rounded,
             size: 28,
-            color: AppColors.emerald500,
+            color: AppColors.primary500,
           ),
           SizedBox(height: 8),
           Text(

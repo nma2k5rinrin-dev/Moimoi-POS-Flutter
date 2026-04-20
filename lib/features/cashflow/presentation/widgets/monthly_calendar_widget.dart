@@ -127,7 +127,7 @@ class _MonthlyCalendarWidgetState extends State<MonthlyCalendarWidget> {
                             height: 4,
                             margin: const EdgeInsets.only(right: 2),
                             decoration: BoxDecoration(
-                              color: AppColors.emerald500,
+                              color: AppColors.primary500,
                               shape: BoxShape.circle,
                             ),
                           ),

@@ -227,7 +227,7 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
                 width: 88,
                 height: 88,
                 decoration: BoxDecoration(
-                  color: AppColors.emerald50,
+                  color: AppColors.primary50,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: AppColors.slate200, width: 1.5),
                   image: info.logoUrl.isNotEmpty
@@ -244,7 +244,7 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
                     ? Icon(
                         Icons.storefront,
                         size: 36,
-                        color: AppColors.emerald500,
+                        color: AppColors.primary500,
                       )
                     : null,
               ),
@@ -257,7 +257,7 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
                     width: 28,
                     height: 28,
                     decoration: BoxDecoration(
-                      color: AppColors.emerald500,
+                      color: AppColors.primary500,
                       shape: BoxShape.circle,
                       border: Border.all(color: AppColors.cardBg, width: 2),
                     ),
@@ -291,7 +291,7 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
-        color: info.isPremium ? Color(0xFFECFDF5) : AppColors.emerald50,
+        color: info.isPremium ? Color(0xFFECFDF5) : AppColors.primary50,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -300,7 +300,7 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
           Icon(
             info.isPremium ? Icons.workspace_premium : Icons.verified_rounded,
             size: 13,
-            color: AppColors.emerald500,
+            color: AppColors.primary500,
           ),
           SizedBox(width: 4),
           Text(
@@ -308,7 +308,7 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: AppColors.emerald600,
+              color: AppColors.primary600,
             ),
           ),
         ],
@@ -455,7 +455,7 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
         Switch(
           value: _showTotalProducts,
           onChanged: (v) => setState(() => _showTotalProducts = v),
-          activeTrackColor: AppColors.emerald500,
+          activeTrackColor: AppColors.primary500,
         ),
       ],
     );
@@ -598,7 +598,7 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
                 child: Container(
                   height: 52,
                   decoration: BoxDecoration(
-                    color: AppColors.emerald500,
+                    color: AppColors.primary500,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(

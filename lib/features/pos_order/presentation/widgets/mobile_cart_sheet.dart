@@ -89,7 +89,7 @@ class MobileCartSheet extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.shopping_bag_rounded,
-                        color: AppColors.emerald500,
+                        color: AppColors.primary500,
                         size: 24,
                       ),
                       SizedBox(width: 10),
@@ -197,7 +197,7 @@ class MobileCartSheet extends StatelessWidget {
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 26,
-                                color: AppColors.emerald500,
+                                color: AppColors.primary500,
                               ),
                             ),
                           ],
@@ -368,7 +368,7 @@ class _CartItemState extends State<_CartItem> {
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
-                    color: AppColors.emerald500,
+                    color: AppColors.primary500,
                   ),
                 ),
                 SizedBox(height: 6),
@@ -505,7 +505,7 @@ class _CartItemState extends State<_CartItem> {
               child: Icon(
                 Icons.add_rounded,
                 size: 20,
-                color: AppColors.emerald600,
+                color: AppColors.primary600,
               ),
             ),
           ),
@@ -660,7 +660,7 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
                                 Icon(
                                   Icons.location_on_rounded,
                                   size: 14,
-                                  color: AppColors.emerald600,
+                                  color: AppColors.primary600,
                                 ),
                                 SizedBox(width: 4),
                                 Text(
@@ -761,12 +761,12 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
         padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.emerald100
-              : (isBusy ? AppColors.slate100 : AppColors.emerald50),
+              ? AppColors.primary100
+              : (isBusy ? AppColors.slate100 : AppColors.primary50),
           borderRadius: BorderRadius.circular(14),
           border: isSelected
-              ? Border.all(color: AppColors.emerald200)
-              : Border.all(color: AppColors.emerald100),
+              ? Border.all(color: AppColors.primary200)
+              : Border.all(color: AppColors.primary100),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -774,7 +774,7 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
             Icon(
               icon,
               size: 20,
-              color: isBusy ? AppColors.slate400 : AppColors.emerald600,
+              color: isBusy ? AppColors.slate400 : AppColors.primary600,
             ),
             SizedBox(width: 8),
             Text(
@@ -782,7 +782,7 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
-                color: isBusy ? AppColors.slate400 : AppColors.emerald700,
+                color: isBusy ? AppColors.slate400 : AppColors.primary700,
               ),
             ),
             if (isBusy) ...[
@@ -808,7 +808,7 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
               Icon(
                 Icons.check_circle_rounded,
                 size: 20,
-                color: AppColors.emerald500,
+                color: AppColors.primary500,
               ),
             ],
           ],
@@ -837,11 +837,11 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
         padding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.emerald50
+              ? AppColors.primary50
               : (isBusy ? AppColors.slate100 : AppColors.slate50),
           borderRadius: BorderRadius.circular(14),
           border: isSelected
-              ? Border.all(color: AppColors.emerald200, width: 1.5)
+              ? Border.all(color: AppColors.primary200, width: 1.5)
               : Border.all(color: Colors.transparent, width: 1.5),
         ),
         child: Row(
@@ -850,7 +850,7 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: (isSelected ? AppColors.emerald500 : AppColors.slate400)
+                color: (isSelected ? AppColors.primary500 : AppColors.slate400)
                     .withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(18),
               ),
@@ -860,7 +860,7 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
                 color: isBusy
                     ? AppColors.slate400
                     : isSelected
-                    ? AppColors.emerald500
+                    ? AppColors.primary500
                     : AppColors.slate400,
               ),
             ),
@@ -882,7 +882,7 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
                       color: isBusy
                           ? AppColors.slate400
                           : isSelected
-                          ? AppColors.emerald600
+                          ? AppColors.primary600
                           : AppColors.slate800,
                     ),
                   ),
@@ -909,7 +909,7 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.emerald500,
+                        color: AppColors.primary500,
                       ),
                     )
                   else
@@ -921,7 +921,7 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
               ),
             ),
             if (isSelected)
-              Icon(Icons.check_circle, size: 14, color: AppColors.emerald500),
+              Icon(Icons.check_circle, size: 14, color: AppColors.primary500),
           ],
         ),
       ),
@@ -950,10 +950,10 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
           height: 50,
           padding: EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: hasSelection ? AppColors.emerald50 : AppColors.cardBg,
+            color: hasSelection ? AppColors.primary50 : AppColors.cardBg,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: hasSelection ? AppColors.emerald500 : AppColors.slate200,
+              color: hasSelection ? AppColors.primary500 : AppColors.slate200,
               width: 1.5,
             ),
           ),
@@ -963,7 +963,7 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
               Icon(
                 Icons.table_restaurant_rounded,
                 size: 18,
-                color: hasSelection ? AppColors.emerald600 : AppColors.slate800,
+                color: hasSelection ? AppColors.primary600 : AppColors.slate800,
               ),
               SizedBox(width: 8),
               Text(
@@ -978,7 +978,7 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
                   fontSize: 14,
                   fontWeight: hasSelection ? FontWeight.w700 : FontWeight.w600,
                   color: hasSelection
-                      ? AppColors.emerald600
+                      ? AppColors.primary600
                       : AppColors.slate800,
                 ),
               ),
@@ -988,7 +988,7 @@ class _TableSelectorBtnState extends State<_TableSelectorBtn> {
                     ? Icons.keyboard_arrow_up_rounded
                     : Icons.keyboard_arrow_down_rounded,
                 size: 18,
-                color: hasSelection ? AppColors.emerald500 : AppColors.slate400,
+                color: hasSelection ? AppColors.primary500 : AppColors.slate400,
               ),
             ],
           ),

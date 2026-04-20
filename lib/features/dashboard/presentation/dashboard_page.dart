@@ -1134,7 +1134,7 @@ class _BestSellersCard extends StatelessWidget {
               if (items.length > 5)
                 InkWell(
                   onTap: () => _showAllBestSellersDialog(context, items),
-                  child: Text('Xem tất cả', style: TextStyle(fontSize: 11, color: AppColors.emerald600, fontWeight: FontWeight.w500)),
+                  child: Text('Xem tất cả', style: TextStyle(fontSize: 11, color: AppColors.primary600, fontWeight: FontWeight.w500)),
                 ),
             ],
           ),
@@ -1156,7 +1156,7 @@ class _BestSellersCard extends StatelessWidget {
                     SizedBox(width: 8),
                     SizedBox(
                       width: 45,
-                      child: Text(_formatShortRevenue(item.revenue), textAlign: TextAlign.right, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.emerald600)),
+                      child: Text(_formatShortRevenue(item.revenue), textAlign: TextAlign.right, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primary600)),
                     ),
                   ],
                 ),
@@ -1386,7 +1386,7 @@ class _TopProductsPanel extends StatelessWidget {
         color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.slate200),
-        boxShadow: [BoxShadow(color: AppColors.emerald500.withValues(alpha: 0.03), blurRadius: 15, offset: Offset(0, 4))],
+        boxShadow: [BoxShadow(color: AppColors.primary500.withValues(alpha: 0.03), blurRadius: 15, offset: Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1395,8 +1395,8 @@ class _TopProductsPanel extends StatelessWidget {
             children: [
               Container(
                 padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(color: AppColors.emerald50, borderRadius: BorderRadius.circular(10)),
-                child: Icon(Icons.star_rounded, color: AppColors.emerald600, size: 18),
+                decoration: BoxDecoration(color: AppColors.primary50, borderRadius: BorderRadius.circular(10)),
+                child: Icon(Icons.star_rounded, color: AppColors.primary600, size: 18),
               ),
               SizedBox(width: 10),
               Text('Sản phẩm nổi bật', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.slate800, letterSpacing: -0.3)),
@@ -1407,7 +1407,7 @@ class _TopProductsPanel extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Text('Xem thêm', style: TextStyle(color: AppColors.emerald600, fontSize: 13, fontWeight: FontWeight.w700)),
+                    child: Text('Xem thêm', style: TextStyle(color: AppColors.primary600, fontSize: 13, fontWeight: FontWeight.w700)),
                   ),
                 ),
             ],
@@ -1452,8 +1452,8 @@ class _TopProductsPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.emerald500.withValues(alpha: 0.15),
-                      AppColors.emerald500.withValues(alpha: 0.05),
+                      AppColors.primary500.withValues(alpha: 0.15),
+                      AppColors.primary500.withValues(alpha: 0.05),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(12),
@@ -1608,8 +1608,8 @@ class _AllProductsDialog extends StatelessWidget {
               children: [
                 Container(
                   padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: AppColors.emerald50, borderRadius: BorderRadius.circular(10)),
-                  child: Icon(Icons.star_rounded, color: AppColors.emerald600, size: 18),
+                  decoration: BoxDecoration(color: AppColors.primary50, borderRadius: BorderRadius.circular(10)),
+                  child: Icon(Icons.star_rounded, color: AppColors.primary600, size: 18),
                 ),
                 SizedBox(width: 12),
                 Expanded(
@@ -1649,7 +1649,7 @@ class _AllProductsDialog extends StatelessWidget {
           return Stack(
             children: [
               Container(height: 56, width: barWidth, decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(12))),
-              Container(height: 56, width: barWidth * factor, decoration: BoxDecoration(gradient: LinearGradient(colors: [AppColors.emerald500.withValues(alpha: 0.15), AppColors.emerald500.withValues(alpha: 0.05)]), borderRadius: BorderRadius.circular(12))),
+              Container(height: 56, width: barWidth * factor, decoration: BoxDecoration(gradient: LinearGradient(colors: [AppColors.primary500.withValues(alpha: 0.15), AppColors.primary500.withValues(alpha: 0.05)]), borderRadius: BorderRadius.circular(12))),
               Container(
                 height: 56, width: barWidth, padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Row(

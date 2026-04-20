@@ -78,9 +78,9 @@ class QrMenuPage extends StatelessWidget {
                 width: double.infinity,
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.emerald50,
+                  color: AppColors.primary50,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.emerald200),
+                  border: Border.all(color: AppColors.primary200),
                 ),
                 child: Row(
                   children: [
@@ -88,7 +88,7 @@ class QrMenuPage extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.emerald500,
+                        color: AppColors.primary500,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -107,7 +107,7 @@ class QrMenuPage extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.emerald700,
+                              color: AppColors.primary700,
                             ),
                           ),
                           SizedBox(height: 2),
@@ -115,7 +115,7 @@ class QrMenuPage extends StatelessWidget {
                             '${tables.length} bàn • Bấm vào bàn để xem & tải QR',
                             style: TextStyle(
                               fontSize: 12,
-                              color: AppColors.emerald600,
+                              color: AppColors.primary600,
                             ),
                           ),
                         ],
@@ -176,7 +176,7 @@ class _TableQrCard extends StatelessWidget {
 
   // Dùng Getter thay vì static final để luôn lấy được màu chuẩn khi đổi Dark/Light mode
   List<List<Color>> get _cardColors => [
-    [const Color(0xFF10B981), AppColors.emerald50],
+    [const Color(0xFF10B981), AppColors.primary50],
     [const Color(0xFF6366F1), const Color(0xFFF0F5FF)],
     [const Color(0xFFF59E0B), AppColors.orange50],
     [const Color(0xFFF97316), const Color(0xFFFFF3E0)],

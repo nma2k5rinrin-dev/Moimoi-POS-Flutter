@@ -131,7 +131,7 @@ class _CircleCropDialogState extends State<_CircleCropDialog> {
                         Icon(
                           Icons.crop_rounded,
                           size: 20,
-                          color: AppColors.emerald600,
+                          color: AppColors.primary600,
                         ),
                         SizedBox(width: 8),
                         Text(
@@ -258,10 +258,10 @@ class _CircleCropDialogState extends State<_CircleCropDialog> {
                     Expanded(
                       child: SliderTheme(
                         data: SliderThemeData(
-                          activeTrackColor: AppColors.emerald500,
+                          activeTrackColor: AppColors.primary500,
                           inactiveTrackColor: AppColors.slate200,
-                          thumbColor: AppColors.emerald500,
-                          overlayColor: AppColors.emerald500.withOpacity(0.15),
+                          thumbColor: AppColors.primary500,
+                          overlayColor: AppColors.primary500.withOpacity(0.15),
                           trackHeight: 3,
                           thumbShape: const RoundSliderThumbShape(
                             enabledThumbRadius: 7,

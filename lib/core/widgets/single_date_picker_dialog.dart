@@ -122,7 +122,7 @@ class _DatePickerContentState extends State<_DatePickerContent> {
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.emerald500,
+                    backgroundColor: AppColors.primary500,
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: AppColors.slate200,
                     disabledForegroundColor: AppColors.slate400,
@@ -248,9 +248,9 @@ class _DatePickerContentState extends State<_DatePickerContent> {
             child: Container(
               margin: EdgeInsets.symmetric(horizontal: 2, vertical: 2),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.emerald500 : Colors.transparent,
+                color: isSelected ? AppColors.primary500 : Colors.transparent,
                 border: isToday && !isSelected
-                    ? Border.all(color: AppColors.emerald200, width: 1.5)
+                    ? Border.all(color: AppColors.primary200, width: 1.5)
                     : null,
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -278,7 +278,7 @@ class _DatePickerContentState extends State<_DatePickerContent> {
                             : isDisabled
                             ? AppColors.slate300
                             : isToday
-                            ? AppColors.emerald600
+                            ? AppColors.primary600
                             : AppColors.slate700,
                       ),
                     ),

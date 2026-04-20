@@ -363,14 +363,14 @@ class _AddProductPanelState extends State<AddProductPanel>
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [AppColors.emerald50, AppColors.cardBg],
+          colors: [AppColors.primary50, AppColors.cardBg],
         ),
       ),
       child: Row(
         children: [
           Icon(
             Icons.add_shopping_cart_rounded,
-            color: AppColors.emerald600,
+            color: AppColors.primary600,
             size: 22,
           ),
           SizedBox(width: 10),
@@ -517,7 +517,7 @@ class _AddProductPanelState extends State<AddProductPanel>
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.emerald400),
+          borderSide: BorderSide(color: AppColors.primary400),
         ),
       ),
     );
@@ -565,7 +565,7 @@ class _AddProductPanelState extends State<AddProductPanel>
                     Icons.sell_outlined,
                     size: 16,
                     color: c.id == _selectedCategory
-                        ? AppColors.emerald600
+                        ? AppColors.primary600
                         : AppColors.slate400,
                   ),
                   SizedBox(width: 10),
@@ -578,7 +578,7 @@ class _AddProductPanelState extends State<AddProductPanel>
                             ? FontWeight.w700
                             : FontWeight.w500,
                         color: c.id == _selectedCategory
-                            ? AppColors.emerald600
+                            ? AppColors.primary600
                             : AppColors.slate800,
                       ),
                     ),
@@ -587,7 +587,7 @@ class _AddProductPanelState extends State<AddProductPanel>
                     Icon(
                       Icons.check_circle,
                       size: 18,
-                      color: AppColors.emerald600,
+                      color: AppColors.primary600,
                     ),
                 ],
               ),
@@ -691,7 +691,7 @@ class _AddProductPanelState extends State<AddProductPanel>
             child: Container(
               height: 48,
               decoration: BoxDecoration(
-                color: AppColors.emerald500,
+                color: AppColors.primary500,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Row(
@@ -813,17 +813,17 @@ class _AddProductPanelState extends State<AddProductPanel>
                               child: Container(
                                 padding: EdgeInsets.symmetric(vertical: 24),
                                 decoration: BoxDecoration(
-                                  color: AppColors.emerald50,
+                                  color: AppColors.primary50,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                    color: AppColors.emerald200,
+                                    color: AppColors.primary200,
                                   ),
                                 ),
                                 child: Column(
                                   children: [
                                     Icon(
                                       Icons.photo_library_rounded,
-                                      color: AppColors.emerald500,
+                                      color: AppColors.primary500,
                                       size: 40,
                                     ),
                                     SizedBox(height: 8),
@@ -832,7 +832,7 @@ class _AddProductPanelState extends State<AddProductPanel>
                                       style: TextStyle(
                                         fontWeight: FontWeight.w600,
                                         fontSize: 15,
-                                        color: AppColors.emerald500,
+                                        color: AppColors.primary500,
                                       ),
                                     ),
                                   ],
@@ -1025,7 +1025,7 @@ class _AddProductPanelState extends State<AddProductPanel>
             child: Switch(
               value: value,
               onChanged: onChanged,
-              activeTrackColor: AppColors.emerald500,
+              activeTrackColor: AppColors.primary500,
             ),
           ),
         ],

@@ -124,7 +124,7 @@ class _MenuManagementSectionState extends State<MenuManagementSection>
                         fontSize: 14,
                       ),
                       indicator: BoxDecoration(
-                        color: AppColors.emerald500,
+                        color: AppColors.primary500,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       indicatorSize: TabBarIndicatorSize.tab,
@@ -275,12 +275,12 @@ class _MenuManagementSectionState extends State<MenuManagementSection>
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [AppColors.emerald500, AppColors.emerald600],
+                          colors: [AppColors.primary500, AppColors.primary600],
                         ),
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.emerald500.withValues(alpha: 0.25),
+                            color: AppColors.primary500.withValues(alpha: 0.25),
                             blurRadius: 16,
                             offset: const Offset(0, 4),
                           ),
@@ -460,7 +460,7 @@ class _ProductsTabState extends State<_ProductsTab> {
                         size: 16,
                         color: catId == '_uncategorized'
                             ? AppColors.slate400
-                            : AppColors.emerald600,
+                            : AppColors.primary600,
                       ),
                       SizedBox(width: 6),
                       Expanded(
@@ -479,7 +479,7 @@ class _ProductsTabState extends State<_ProductsTab> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.emerald50,
+                          color: AppColors.primary50,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
@@ -487,7 +487,7 @@ class _ProductsTabState extends State<_ProductsTab> {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.emerald600,
+                            color: AppColors.primary600,
                           ),
                         ),
                       ),
@@ -527,7 +527,7 @@ class _ProductsTabState extends State<_ProductsTab> {
                           itemName: p.name,
                           itemSubtitle: catDisplayName ?? 'Không có danh mục',
                           avatarInitials: initials,
-                          avatarColor: AppColors.emerald500,
+                          avatarColor: AppColors.primary500,
                         );
                       },
                       onToggleStock: () {
@@ -683,7 +683,7 @@ class _ProductListTile extends StatelessWidget {
                           formatCurrency(product.price),
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
-                            color: AppColors.emerald500,
+                            color: AppColors.primary500,
                             fontSize: 12,
                           ),
                         ),
@@ -734,7 +734,7 @@ class _CategoriesTab extends StatelessWidget {
   });
 
   static final _catColors = [
-    (AppColors.emerald50, AppColors.emerald500, PhosphorIconsDuotone.coffee),
+    (AppColors.primary50, AppColors.primary500, PhosphorIconsDuotone.coffee),
     (AppColors.blue50, const Color(0xFF3B82F6), PhosphorIconsDuotone.forkKnife),
     (AppColors.amber50, const Color(0xFFF59E0B), PhosphorIconsDuotone.cake),
     (

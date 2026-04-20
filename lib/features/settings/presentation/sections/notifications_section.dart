@@ -243,12 +243,12 @@ class _NotificationsSectionState extends State<NotificationsSection> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? AppColors.emerald50
+                                      ? AppColors.primary50
                                       : AppColors.slate50,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: isSelected
-                                        ? AppColors.emerald200
+                                        ? AppColors.primary200
                                         : Colors.transparent,
                                   ),
                                 ),
@@ -263,7 +263,7 @@ class _NotificationsSectionState extends State<NotificationsSection> {
                                                 : Icons.payments_rounded),
                                       size: 20,
                                       color: isSelected
-                                          ? AppColors.emerald600
+                                          ? AppColors.primary600
                                           : AppColors.slate400,
                                     ),
                                     SizedBox(width: 12),
@@ -276,7 +276,7 @@ class _NotificationsSectionState extends State<NotificationsSection> {
                                               ? FontWeight.w600
                                               : FontWeight.w500,
                                           color: isSelected
-                                              ? AppColors.emerald700
+                                              ? AppColors.primary700
                                               : AppColors.slate700,
                                         ),
                                       ),
@@ -285,7 +285,7 @@ class _NotificationsSectionState extends State<NotificationsSection> {
                                       Icon(
                                         Icons.check_circle_rounded,
                                         size: 20,
-                                        color: AppColors.emerald500,
+                                        color: AppColors.primary500,
                                       ),
                                   ],
                                 ),
@@ -511,7 +511,7 @@ class _NotificationsSectionState extends State<NotificationsSection> {
                   height: 52,
                   decoration: BoxDecoration(
                     color: hasChanges
-                        ? AppColors.emerald500
+                        ? AppColors.primary500
                         : AppColors.slate100,
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -569,7 +569,7 @@ class _NotificationsSectionState extends State<NotificationsSection> {
             Icon(
               icon,
               size: 16,
-              color: isSelected ? AppColors.emerald600 : AppColors.slate500,
+              color: isSelected ? AppColors.primary600 : AppColors.slate500,
             ),
             SizedBox(width: 6),
             Text(
@@ -577,7 +577,7 @@ class _NotificationsSectionState extends State<NotificationsSection> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                color: isSelected ? AppColors.emerald700 : AppColors.slate500,
+                color: isSelected ? AppColors.primary700 : AppColors.slate500,
               ),
             ),
           ],

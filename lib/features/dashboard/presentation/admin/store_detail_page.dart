@@ -258,9 +258,9 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isActive ? AppColors.emerald50 : AppColors.slate100,
+                  color: isActive ? AppColors.primary50 : AppColors.slate100,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: isActive ? AppColors.emerald200 : AppColors.slate200),
+                  border: Border.all(color: isActive ? AppColors.primary200 : AppColors.slate200),
                 ),
                 child: Row(
                   children: [
@@ -268,7 +268,7 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
                       width: 6, height: 6,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isActive ? AppColors.emerald500 : AppColors.slate400,
+                        color: isActive ? AppColors.primary500 : AppColors.slate400,
                       ),
                     ),
                     SizedBox(width: 6),
@@ -276,7 +276,7 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
                       isActive ? 'Đang hoạt động' : 'Ngoại tuyến',
                       style: TextStyle(
                         fontSize: 12, fontWeight: FontWeight.w700,
-                        color: isActive ? AppColors.emerald700 : AppColors.slate600,
+                        color: isActive ? AppColors.primary700 : AppColors.slate600,
                       ),
                     ),
                   ],
@@ -406,7 +406,7 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
                           SizedBox(width: 8),
                           Text('Thanh toán:', style: TextStyle(color: AppColors.slate600, fontSize: 13, fontWeight: FontWeight.w600)),
                           Spacer(),
-                          Text(_formatCurrency(req.amount), style: TextStyle(color: AppColors.emerald600, fontSize: 16, fontWeight: FontWeight.w800)),
+                          Text(_formatCurrency(req.amount), style: TextStyle(color: AppColors.primary600, fontSize: 16, fontWeight: FontWeight.w800)),
                         ],
                       ),
                     ],
@@ -668,7 +668,7 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
                   Text('Đăng ký: ${_formatDateString(DateTime.tryParse(pendingRequest.createdAt.toString()))}',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate600)),
                   Text('Thanh toán: ${_fmtCurrency(pendingRequest.amount)}',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.emerald600)),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary600)),
                   SizedBox(height: 2),
                   Text(
                     isPremium ? 'Gói đang dùng: Hết hạn ${_formatDateString(widget.info.premiumExpiresAt)}' : 'Gói đang dùng: Cơ Bản',
@@ -739,7 +739,7 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
               Navigator.pop(ctx);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.emerald500, foregroundColor: Colors.white,
+              backgroundColor: AppColors.primary500, foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: Text('Lưu', style: TextStyle(fontWeight: FontWeight.w700)),

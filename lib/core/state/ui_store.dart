@@ -12,6 +12,7 @@ class UIStore extends ChangeNotifier {
 
   // ── Global App Visual State ───────────────────────────────
   bool isDarkMode = false;
+  AppTheme activeTheme = AppTheme.emerald;
   bool isBackgroundServiceEnabled = true;
 
   // ── Toast State ───────────────────────────────────────────
@@ -53,7 +54,12 @@ class UIStore extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       isDarkMode = prefs.getBool('isDarkMode') ?? false;
       isBackgroundServiceEnabled = prefs.getBool('isBackgroundEnabled') ?? true;
+      
+      final themeIndex = prefs.getInt('activeTheme') ?? AppTheme.emerald.index;
+      activeTheme = AppTheme.values[themeIndex];
+      
       AppColors.switchTheme(isDarkMode);
+      AppColors.switchColorTheme(activeTheme);
       notifyListeners();
     } catch (e) {
       debugPrint('[Theme] Error loading theme: $e');
@@ -69,6 +75,18 @@ class UIStore extends ChangeNotifier {
       await prefs.setBool('isDarkMode', isDarkMode);
     } catch (e) {
       debugPrint('[Theme] Error saving theme: $e');
+    }
+  }
+
+  Future<void> changeColorTheme(AppTheme newTheme) async {
+    activeTheme = newTheme;
+    AppColors.switchColorTheme(activeTheme);
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('activeTheme', activeTheme.index);
+    } catch (e) {
+      debugPrint('[Theme] Error saving color theme: $e');
     }
   }
 

@@ -55,7 +55,7 @@ class _PrinterSectionState extends State<PrinterSection> {
                               height: 72,
                               decoration: BoxDecoration(
                                 color: _printer.isConnected
-                                    ? AppColors.emerald50
+                                    ? AppColors.primary50
                                     : AppColors.slate100,
                                 borderRadius: BorderRadius.circular(20),
                               ),
@@ -65,7 +65,7 @@ class _PrinterSectionState extends State<PrinterSection> {
                                     : Icons.print_disabled_rounded,
                                 size: 36,
                                 color: _printer.isConnected
-                                    ? AppColors.emerald500
+                                    ? AppColors.primary500
                                     : AppColors.slate400,
                               ),
                             ),
@@ -78,7 +78,7 @@ class _PrinterSectionState extends State<PrinterSection> {
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
                                 color: _printer.isConnected
-                                    ? AppColors.emerald600
+                                    ? AppColors.primary600
                                     : AppColors.slate800,
                               ),
                             ),
@@ -102,7 +102,7 @@ class _PrinterSectionState extends State<PrinterSection> {
                                     child: _buildActionButton(
                                       icon: Icons.receipt_long_rounded,
                                       label: 'In thử',
-                                      color: AppColors.emerald500,
+                                      color: AppColors.primary500,
                                       isLoading: _isTestPrinting,
                                       onTap: () async {
                                         setState(() => _isTestPrinting = true);
@@ -229,13 +229,13 @@ class _PrinterSectionState extends State<PrinterSection> {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: isCurrentPrinter ? AppColors.emerald50 : AppColors.blue50,
+          color: isCurrentPrinter ? AppColors.primary50 : AppColors.blue50,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(
           Icons.print_rounded,
           size: 22,
-          color: isCurrentPrinter ? AppColors.emerald500 : AppColors.blue500,
+          color: isCurrentPrinter ? AppColors.primary500 : AppColors.blue500,
         ),
       ),
       title: Text(
@@ -254,7 +254,7 @@ class _PrinterSectionState extends State<PrinterSection> {
           ? Container(
               padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: AppColors.emerald50,
+                color: AppColors.primary50,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -262,7 +262,7 @@ class _PrinterSectionState extends State<PrinterSection> {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.emerald600,
+                  color: AppColors.primary600,
                 ),
               ),
             )

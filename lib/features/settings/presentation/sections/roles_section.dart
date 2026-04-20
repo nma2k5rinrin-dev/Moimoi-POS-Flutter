@@ -240,10 +240,10 @@ class _RolesSectionState extends State<RolesSection> {
                             leading: Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: AppColors.emerald50,
+                                color: AppColors.primary50,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Icon(Icons.admin_panel_settings, color: AppColors.emerald600),
+                              child: Icon(Icons.admin_panel_settings, color: AppColors.primary600),
                             ),
                             title: Text(
                               role.roleName,
@@ -275,12 +275,12 @@ class _RolesSectionState extends State<RolesSection> {
         width: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppColors.emerald500, AppColors.emerald600],
+            colors: [AppColors.primary500, AppColors.primary600],
           ),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: AppColors.emerald500.withValues(alpha: 0.25),
+              color: AppColors.primary500.withValues(alpha: 0.25),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
@@ -433,7 +433,7 @@ class _RoleFormDialogState extends State<_RoleFormDialog> {
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
         value: _permissions[key]!,
-        activeColor: AppColors.emerald500,
+        activeColor: AppColors.primary500,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16),
         onChanged: (val) {
           setState(() {
@@ -471,7 +471,7 @@ class _RoleFormDialogState extends State<_RoleFormDialog> {
                 children: [
                   Icon(
                     widget.existingRole == null ? Icons.add_circle : Icons.edit,
-                    color: AppColors.emerald600,
+                    color: AppColors.primary600,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -557,7 +557,7 @@ class _RoleFormDialogState extends State<_RoleFormDialog> {
                 onPressed: _isLoading ? null : _save,
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 52),
-                  backgroundColor: AppColors.emerald500,
+                  backgroundColor: AppColors.primary500,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
