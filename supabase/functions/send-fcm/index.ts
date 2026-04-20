@@ -45,6 +45,20 @@ serve(async (req: any) => {
             return new Response(JSON.stringify({ message: "Not an insert/update event" }), { headers: corsHeaders })
         }
 
+        if (eventType === 'UPDATE') {
+            const getNewItemsCount = (items: any) => {
+                if (!items || !Array.isArray(items)) return 0;
+                return items.filter((i: any) => i.isNewlyAdded === true || String(i.isNewlyAdded) === 'true').length;
+            };
+            const newCount = getNewItemsCount(order.items);
+            const oldCount = getNewItemsCount(oldOrder?.items);
+
+            if (newCount <= oldCount) {
+                console.log(`Skipping UPDATE event: no new items added.`);
+                return new Response(JSON.stringify({ message: "Update without new items ignored" }), { headers: corsHeaders });
+            }
+        }
+
         // Khởi tạo Supabase client bằng quyền Admin (Service Role)
         const supabaseClient = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
@@ -127,10 +141,14 @@ serve(async (req: any) => {
                         priority: "HIGH", // Quan trọng nhất để đánh thức màn hình (Doze mode)
                         notification: {
                             sound: customSound === 'new_order_channel_v2' ? "default" : customSound,
-                            channel_id: channelId
+                            channel_id: channelId,
+                            tag: order.id
                         }
                     },
                     apns: {
+                        headers: {
+                            "apns-collapse-id": order.id
+                        },
                         payload: {
                             aps: {
                                 sound: customSound === 'new_order_channel_v2' ? "default" : (customSound === 'bell' ? "bell.wav" : `${customSound}.mp3`)

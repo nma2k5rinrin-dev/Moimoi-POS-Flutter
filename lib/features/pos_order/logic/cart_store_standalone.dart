@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:moimoi_pos/features/inventory/models/product_model.dart';
 import 'package:moimoi_pos/features/pos_order/models/order_model.dart';
+import 'package:moimoi_pos/core/utils/notification_helper.dart';
 
 class CartStore extends ChangeNotifier {
   List<OrderItemModel> cart = [];
@@ -77,6 +78,9 @@ class CartStore extends ChangeNotifier {
 
   void setSelectedTable(String table) {
     selectedTable = table;
+    try {
+      NotificationHelper.clearAppBadge();
+    } catch (_) {}
     notifyListeners();
   }
 }
