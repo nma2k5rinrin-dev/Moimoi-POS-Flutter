@@ -47,6 +47,8 @@ class _CashflowPageState extends State<CashflowPage> {
   // Local reference to syncEngine for safe listener cleanup in dispose
   dynamic _syncEngine;
 
+  int _visibleTxnCount = 5;
+
   @override
   void initState() {
     super.initState();
@@ -319,8 +321,8 @@ class _CashflowPageState extends State<CashflowPage> {
           )
           .toList();
     } else {
-      if (filteredTxns.length > 5) {
-        filteredTxns = filteredTxns.take(5).toList();
+      if (filteredTxns.length > _visibleTxnCount) {
+        filteredTxns = filteredTxns.take(_visibleTxnCount).toList();
         isListCapped = true;
       }
     }
@@ -753,18 +755,38 @@ class _CashflowPageState extends State<CashflowPage> {
                             _buildCalendar(allTxns),
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 12),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                              child: Column(
                                 children: [
-                                  Icon(Icons.touch_app_rounded, size: 14, color: AppColors.slate400),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'Bấm đúp (2 lần) vào ngày để thêm giao dịch',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: AppColors.slate500,
-                                      fontStyle: FontStyle.italic,
-                                    ),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.touch_app_rounded, size: 14, color: AppColors.slate400),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Bấm đúp (2 lần) vào ngày để thêm giao dịch',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: AppColors.slate500,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 6),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.keyboard_double_arrow_down_rounded, size: 14, color: AppColors.slate400),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Vuốt xuống để xem chi tiết giao dịch ngày đã chọn',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: AppColors.slate500,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -888,16 +910,38 @@ class _CashflowPageState extends State<CashflowPage> {
                                   txnWidgets.add(
                                     Padding(
                                       padding: EdgeInsets.symmetric(
-                                        vertical: 24,
+                                        vertical: 16,
                                       ),
                                       child: Center(
-                                        child: Text(
-                                          '* Đã giới hạn hiển thị 5 giao dịch mới nhất.\nChọn một ngày trên lịch để tra cứu thêm.',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: AppColors.slate500,
-                                            fontSize: 13,
-                                            fontStyle: FontStyle.italic,
+                                        child: InkWell(
+                                          onTap: () {
+                                            setState(() {
+                                              _visibleTxnCount += 10;
+                                            });
+                                          },
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Container(
+                                            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.blue50,
+                                              borderRadius: BorderRadius.circular(12),
+                                              border: Border.all(color: AppColors.blue200, width: 1.5),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.blue600, size: 20),
+                                                SizedBox(width: 8),
+                                                Text(
+                                                  'Xem thêm',
+                                                  style: TextStyle(
+                                                    color: AppColors.blue600,
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -1957,20 +2001,6 @@ class _CashflowPageState extends State<CashflowPage> {
                 _selectedDate = DateTime(year, month, day);
               }
             });
-            if (!isSelected) {
-              Future.delayed(const Duration(milliseconds: 100), () {
-                final keyStr = "$year-$month-$day";
-                final key = _dateKeys[keyStr];
-                if (key != null && key.currentContext != null) {
-                  Scrollable.ensureVisible(
-                    key.currentContext!,
-                    duration: Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    alignment: 0.1,
-                  );
-                }
-              });
-            }
           },
           onDoubleTap: () =>
               _showActionChoiceDialog(DateTime(year, month, day)),

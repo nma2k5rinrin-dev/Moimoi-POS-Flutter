@@ -11,6 +11,7 @@ import 'package:moimoi_pos/core/widgets/animated_dialogs.dart';
 import 'package:moimoi_pos/core/widgets/single_date_picker_dialog.dart';
 import 'package:moimoi_pos/features/cashflow/models/transaction_category_model.dart';
 import 'package:moimoi_pos/features/cashflow/models/transaction_model.dart';
+import 'dart:math' as math;
 
 class IncomePage extends StatefulWidget {
   final bool asDialog;
@@ -33,12 +34,13 @@ class IncomePage extends StatefulWidget {
   IncomePageState createState() => IncomePageState();
 }
 
-class IncomePageState extends State<IncomePage> {
+class IncomePageState extends State<IncomePage> with SingleTickerProviderStateMixin {
   final _amountCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   int _selectedCategory = 0;
   late DateTime _selectedDate;
   bool _isEditMode = false;
+  late AnimationController _jiggleController;
 
   final List<TransactionCategory> _defaultCategories = [];
 
@@ -62,6 +64,10 @@ class IncomePageState extends State<IncomePage> {
   @override
   void initState() {
     super.initState();
+    _jiggleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
     _selectedDate = widget.initialDate ?? DateTime.now();
     if (widget.initialTransaction != null) {
       final t = widget.initialTransaction!;
@@ -90,9 +96,21 @@ class IncomePageState extends State<IncomePage> {
 
   @override
   void dispose() {
+    _jiggleController.dispose();
     _amountCtrl.dispose();
     _noteCtrl.dispose();
     super.dispose();
+  }
+
+  void _setEditMode(bool value) {
+    setState(() {
+      _isEditMode = value;
+      if (value) {
+        _jiggleController.repeat();
+      } else {
+        _jiggleController.reset();
+      }
+    });
   }
 
   @override
@@ -357,49 +375,34 @@ class IncomePageState extends State<IncomePage> {
                                           ),
                                         ),
                                         Spacer(),
-                                        GestureDetector(
-                                          onTap: () => setState(
-                                            () => _isEditMode = !_isEditMode,
-                                          ),
-                                          child: Container(
-                                            padding: EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 8,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: _isEditMode
-                                                  ? AppColors.emerald100
-                                                  : AppColors.slate100,
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                if (!_isEditMode) ...[
-                                                  Icon(
-                                                    Icons.tune_rounded,
-                                                    size: 16,
-                                                    color: AppColors.slate500,
+                                        if (_isEditMode)
+                                          GestureDetector(
+                                            onTap: () => _setEditMode(false),
+                                            child: Container(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 16,
+                                                vertical: 8,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.emerald100,
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    'Xong',
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: AppColors.emerald600,
+                                                    ),
                                                   ),
-                                                  SizedBox(width: 6),
                                                 ],
-                                                Text(
-                                                  _isEditMode
-                                                      ? 'Xong'
-                                                      : 'Chỉnh sửa',
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: _isEditMode
-                                                        ? AppColors.emerald600
-                                                        : AppColors.slate600,
-                                                  ),
-                                                ),
-                                              ],
+                                              ),
                                             ),
                                           ),
-                                        ),
                                       ],
                                     ),
                                     SizedBox(height: 12),
@@ -545,8 +548,113 @@ class IncomePageState extends State<IncomePage> {
     bool isSelected = false,
     bool isAdd = false,
   }) {
+    Widget itemContent = Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
+      children: [
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: Duration(milliseconds: 200),
+              width: isSelected ? 64 : 56,
+              height: isSelected ? 64 : 56,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? cat.color
+                    : isAdd
+                    ? AppColors.slate100
+                    : cat.color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: cat.color.withValues(alpha: 0.35),
+                          blurRadius: 12,
+                          offset: Offset(0, 4),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Center(
+                child: Text(
+                  cat.emoji,
+                  style: TextStyle(fontSize: isSelected ? 42 : 36),
+                ),
+              ),
+            ),
+            SizedBox(height: 6),
+            Text(
+              cat.label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected
+                    ? cat.color
+                    : (AppColors.cardBg != Colors.white
+                          ? AppColors.slate400
+                          : AppColors.slate500),
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (isSelected && !_isEditMode)
+              Container(
+                margin: EdgeInsets.only(top: 3),
+                width: 5,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: cat.color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+          ],
+        ),
+        if (_isEditMode && cat.isCustom)
+          Positioned(
+            top: 0,
+            right: 0,
+            child: GestureDetector(
+              onTap: () => _showManageCategoryOptions(index, cat),
+              child: Container(
+                padding: EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: AppColors.slate100,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.remove_circle,
+                  color: AppColors.red500,
+                  size: 16,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+
+    if (_isEditMode && !isAdd) {
+      itemContent = AnimatedBuilder(
+        animation: _jiggleController,
+        builder: (context, child) {
+          final offsetMultiplier = index % 2 == 0 ? 1 : -1;
+          final angle = math.sin(_jiggleController.value * math.pi * 2) * 0.05 * offsetMultiplier;
+          return Transform.rotate(
+            angle: angle,
+            child: child,
+          );
+        },
+        child: itemContent,
+      );
+    }
+
     return GestureDetector(
       key: ValueKey(cat.id ?? 'item_$index'),
+      onLongPress: _isEditMode ? null : () {
+        HapticFeedback.heavyImpact();
+        _setEditMode(true);
+      },
       onTap: () {
         HapticFeedback.lightImpact();
         if (_isEditMode) return;
@@ -556,91 +664,7 @@ class IncomePageState extends State<IncomePage> {
           setState(() => _selectedCategory = index);
         }
       },
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedContainer(
-                duration: Duration(milliseconds: 200),
-                width: isSelected ? 64 : 56,
-                height: isSelected ? 64 : 56,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? cat.color
-                      : isAdd
-                      ? AppColors.slate100
-                      : cat.color.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: cat.color.withValues(alpha: 0.35),
-                            blurRadius: 12,
-                            offset: Offset(0, 4),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Center(
-                  child: Text(
-                    cat.emoji,
-                    style: TextStyle(fontSize: isSelected ? 42 : 36),
-                  ),
-                ),
-              ),
-              SizedBox(height: 6),
-              Text(
-                cat.label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: isSelected
-                      ? cat.color
-                      : (AppColors.cardBg != Colors.white
-                            ? AppColors.slate400
-                            : AppColors.slate500),
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (isSelected && !_isEditMode)
-                Container(
-                  margin: EdgeInsets.only(top: 3),
-                  width: 5,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: cat.color,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-            ],
-          ),
-          if (_isEditMode && cat.isCustom)
-            Positioned(
-              top: 0,
-              right: 0,
-              child: GestureDetector(
-                onTap: () => _showManageCategoryOptions(index, cat),
-                child: Container(
-                  padding: EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: AppColors.slate100,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.remove_circle,
-                    color: AppColors.red500,
-                    size: 16,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+      child: itemContent,
     );
   }
 
@@ -723,6 +747,7 @@ class IncomePageState extends State<IncomePage> {
           child: Material(
             color: Colors.transparent,
             child: Container(
+              constraints: BoxConstraints(maxWidth: 400),
               margin: EdgeInsets.symmetric(horizontal: 32),
               padding: EdgeInsets.fromLTRB(20, 20, 20, 20),
               decoration: BoxDecoration(
