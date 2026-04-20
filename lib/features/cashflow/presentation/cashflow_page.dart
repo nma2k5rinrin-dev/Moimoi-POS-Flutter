@@ -320,11 +320,11 @@ class _CashflowPageState extends State<CashflowPage> {
                 t.date.day == _selectedDate!.day,
           )
           .toList();
-    } else {
-      if (filteredTxns.length > _visibleTxnCount) {
-        filteredTxns = filteredTxns.take(_visibleTxnCount).toList();
-        isListCapped = true;
-      }
+    }
+
+    if (filteredTxns.length > _visibleTxnCount) {
+      filteredTxns = filteredTxns.take(_visibleTxnCount).toList();
+      isListCapped = true;
     }
 
     // Calculate totals from cached state
@@ -1210,7 +1210,10 @@ class _CashflowPageState extends State<CashflowPage> {
     return Expanded(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => setState(() => _tabIndex = index),
+        onTap: () => setState(() {
+          _tabIndex = index;
+          _visibleTxnCount = 5;
+        }),
         child: AnimatedContainer(
           duration: Duration(milliseconds: 200),
           padding: EdgeInsets.symmetric(vertical: 14),
@@ -2000,6 +2003,7 @@ class _CashflowPageState extends State<CashflowPage> {
               } else {
                 _selectedDate = DateTime(year, month, day);
               }
+              _visibleTxnCount = 5;
             });
           },
           onDoubleTap: () =>
@@ -2016,32 +2020,51 @@ class _CashflowPageState extends State<CashflowPage> {
                     ),
             ),
             padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 2),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Stack(
               children: [
-                Text(
-                  '${day}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.1,
-                    fontWeight: isSelected || isToday ? FontWeight.w900 : FontWeight.w600,
-                    color: isToday || isSelected ? AppColors.blue600 : AppColors.slate800,
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        '${day}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.1,
+                          fontWeight: isSelected || isToday ? FontWeight.w900 : FontWeight.w600,
+                          color: isToday || isSelected ? AppColors.blue600 : AppColors.slate800,
+                        ),
+                      ),
+                      if (inc > 0)
+                        _buildCalendarAmountBadge(
+                          label: 'Thu',
+                          amount: inc,
+                          isIncome: true,
+                          center: true,
+                        ),
+                      if (exp > 0)
+                        _buildCalendarAmountBadge(
+                          label: 'Chi',
+                          amount: exp,
+                          isIncome: false,
+                          center: true,
+                        ),
+                    ],
                   ),
                 ),
-                if (inc > 0)
-                  _buildCalendarAmountBadge(
-                    label: 'Thu',
-                    amount: inc,
-                    isIncome: true,
-                    center: true,
-                  ),
-                if (exp > 0)
-                  _buildCalendarAmountBadge(
-                    label: 'Chi',
-                    amount: exp,
-                    isIncome: false,
-                    center: true,
+                if (isToday)
+                  Positioned(
+                    top: 2,
+                    right: 2,
+                    child: Text(
+                      'Hôm nay',
+                      style: TextStyle(
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.blue600,
+                      ),
+                    ),
                   ),
               ],
             ),
