@@ -102,8 +102,8 @@ serve(async (req: any) => {
         // Firebase HTTP v1 chỉ cho phép gửi từng thiết bị, ta dùng vòng lặp push
         for (const tokenData of tokensData) {
             const token = tokenData.token;
-            const customSound = tokenData.sound && tokenData.sound !== 'default' ? tokenData.sound : 'high_importance_channel';
-            const channelId = customSound === 'high_importance_channel' ? customSound : `channel_${customSound}`;
+            const customSound = tokenData.sound && tokenData.sound !== 'default' ? tokenData.sound : 'new_order_channel_v2';
+            const channelId = customSound === 'new_order_channel_v2' ? customSound : `channel_${customSound}`;
 
             const isUpdate = eventType === 'UPDATE';
             const titleMsg = isUpdate ? "Cập nhật đơn hàng!" : "Đơn hàng mới!";
@@ -124,16 +124,16 @@ serve(async (req: any) => {
                         body: bodyMsg
                     },
                     android: {
-                        priority: "high", // Quan trọng nhất để đánh thức màn hình (Doze mode)
+                        priority: "HIGH", // Quan trọng nhất để đánh thức màn hình (Doze mode)
                         notification: {
-                            sound: customSound === 'high_importance_channel' ? "default" : customSound,
+                            sound: customSound === 'new_order_channel_v2' ? "default" : customSound,
                             channel_id: channelId
                         }
                     },
                     apns: {
                         payload: {
                             aps: {
-                                sound: customSound === 'high_importance_channel' ? "default" : (customSound === 'bell' ? "bell.wav" : `${customSound}.mp3`)
+                                sound: customSound === 'new_order_channel_v2' ? "default" : (customSound === 'bell' ? "bell.wav" : `${customSound}.mp3`)
                             }
                         }
                     },
