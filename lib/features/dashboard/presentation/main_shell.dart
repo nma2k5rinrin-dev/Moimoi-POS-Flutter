@@ -184,7 +184,7 @@ class _MainShellState extends State<MainShell> {
     final pendingCount = filterState.pendingProcessing;
     final processingCount = filterState.processingProcessing;
 
-    final store = context.read<UIStore>();
+    final store = context.watch<UIStore>();
     final menuItems = _getMenuItems(store);
     final currentIdx = _getCurrentIndex(menuItems);
 
@@ -234,20 +234,37 @@ class _MainShellState extends State<MainShell> {
             }
           },
           child: Scaffold(
-            backgroundColor: AppColors.scaffoldBg,
-            body: SafeArea(
-              bottom: false,
-              child: Column(
-                children: [
-                  _MobileHeader(
-                    store: store,
-                    storeInfo: storeInfo,
+            backgroundColor: AppColors.cardBg,
+            body: Stack(
+              children: [
+                Positioned.fill(
+                  child: Container(
+                    color: AppColors.primary.withValues(alpha: 0.04),
                   ),
-                  Expanded(
-                    child: widget.navigationShell,
+                ),
+                Positioned.fill(
+                  child: ClipRect(
+                    child: ThematicMotifWidget(
+                      theme: store.activeTheme,
+                      overrideColor: AppColors.primary,
+                    ),
                   ),
-                ],
-              ),
+                ),
+                SafeArea(
+                  bottom: false,
+                  child: Column(
+                    children: [
+                      _MobileHeader(
+                        store: store,
+                        storeInfo: storeInfo,
+                      ),
+                      Expanded(
+                        child: widget.navigationShell,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
 
             bottomNavigationBar: Column(
@@ -293,25 +310,12 @@ class _MobileHeader extends StatelessWidget {
     return Container(
       height: 76,
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: Colors.transparent,
         border: Border(bottom: BorderSide(color: AppColors.slate200, width: 1)),
       ),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned.fill(
-             child: Container(
-                color: AppColors.primary.withValues(alpha: 0.08),
-             ),
-          ),
-          Positioned.fill(
-            child: ClipRect(
-              child: ThematicMotifWidget(
-                theme: store.activeTheme,
-                overrideColor: AppColors.primary,
-              ),
-            ),
-          ),
           Positioned.fill(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),

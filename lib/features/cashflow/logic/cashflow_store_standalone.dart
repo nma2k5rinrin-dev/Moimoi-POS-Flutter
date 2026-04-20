@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
-import 'package:drift/drift.dart' show Value, OrderingTerm, OrderingMode, CustomExpression;
+import 'package:drift/drift.dart' show Value, OrderingTerm, OrderingMode;
 import 'package:moimoi_pos/core/state/base_mixin.dart';
 import 'package:moimoi_pos/core/database/app_database.dart';
 import 'package:moimoi_pos/features/cashflow/models/transaction_model.dart';

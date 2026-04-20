@@ -1574,7 +1574,7 @@ class _StoreCard extends StatelessWidget {
     Color expiryColor;
     if (info.daysUntilExpiry != null) {
       final expDate = DateTime.now().add(Duration(days: info.daysUntilExpiry!));
-      expiryText = '${_formatDate(expDate)}';
+      expiryText = _formatDate(expDate);
       expiryColor = info.daysUntilExpiry! <= 7
           ? Color(0xFFEF4444)
           : AppColors.slate500;
@@ -2226,8 +2226,7 @@ class _WavePainter extends CustomPainter {
       case AppTheme.violet: f = 1.6; a = 10.0; break;
       case AppTheme.amber: f = 0.8; a = 18.0; break;
       case AppTheme.rose: f = 2.0; a = 6.0; break;
-      case AppTheme.emerald: 
-      default: break;
+      case AppTheme.emerald: break;
     }
 
     _drawWaveLayer(canvas, size, paint, f, a, size.height * 0.65, 0);

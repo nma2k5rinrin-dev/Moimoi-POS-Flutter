@@ -67,7 +67,7 @@ class _PremiumPageState extends State<PremiumPage> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg, // slate-50
+      backgroundColor: Colors.transparent, // Let root theme reflect
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Column(

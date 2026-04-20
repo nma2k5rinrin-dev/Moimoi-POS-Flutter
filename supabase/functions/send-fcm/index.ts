@@ -1,13 +1,18 @@
+// @ts-ignore
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+// @ts-ignore
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// @ts-ignore
 import { JWT } from "npm:google-auth-library@9"
+
+declare const Deno: any;
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+serve(async (req: any) => {
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
     }
@@ -57,7 +62,7 @@ serve(async (req) => {
             return new Response(JSON.stringify({ message: "No users found for this store" }), { headers: corsHeaders })
         }
 
-        const userIds = users.map(u => u.id)
+        const userIds = users.map((u: any) => u.id)
 
         // Lấy các mã FCM Tokens của những user đó cùng cấu hình âm thanh
         const { data: tokensData, error: tokenError } = await supabaseClient
@@ -162,7 +167,7 @@ serve(async (req) => {
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         )
 
-    } catch (error) {
+    } catch (error: any) {
         return new Response(JSON.stringify({ error: error.message }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400,

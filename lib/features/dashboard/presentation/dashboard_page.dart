@@ -12,7 +12,6 @@ import 'package:moimoi_pos/features/pos_order/models/order_model.dart';
 import 'package:moimoi_pos/core/widgets/date_range_picker_dialog.dart';
 
 import 'package:fl_chart/fl_chart.dart';
-import 'package:moimoi_pos/features/notifications/presentation/notification_bell.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -135,13 +134,13 @@ class _DashboardPageState extends State<DashboardPage> {
         List<double> transferSpots = hourlyData.map((e) => e.transfer).toList();
     
         final mainContent = Container(
-          color: AppColors.scaffoldBg, // light sleek background -> adapts
+          color: Colors.transparent, // Let root theme bleed through
           child: Column(
             children: [
               // Sleek App Bar Header
               Container(
                 padding: EdgeInsets.fromLTRB(16, 20, 16, 12),
-                color: AppColors.cardBg,
+                color: Colors.transparent,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

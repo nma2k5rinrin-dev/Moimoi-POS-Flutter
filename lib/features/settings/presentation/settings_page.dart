@@ -12,9 +12,7 @@ import 'package:moimoi_pos/features/cashflow/presentation/cashflow_page.dart';
 import 'package:moimoi_pos/features/settings/presentation/printer_section.dart';
 import 'package:moimoi_pos/features/premium/presentation/premium_page.dart';
 import 'package:moimoi_pos/features/settings/presentation/qr_menu_page.dart';
-import 'package:moimoi_pos/core/state/ui_store.dart';
 import 'package:moimoi_pos/core/utils/quota_helper.dart';
-import 'package:moimoi_pos/core/widgets/thematic_motif_painter.dart';
 import 'package:moimoi_pos/features/premium/presentation/widgets/upgrade_dialog.dart';
 
 // Modular Sections
@@ -740,45 +738,20 @@ class _SettingsMenuList extends StatelessWidget {
     );
 
     return Container(
-      color: AppColors.slate50,
+      color: Colors.transparent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: double.infinity,
-            padding: EdgeInsets.fromLTRB(20, 48, 20, 24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.primary600, AppColors.primary400],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+            padding: EdgeInsets.fromLTRB(20, 24, 20, 16),
+            child: Text(
+              'Cài Đặt',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                color: AppColors.slate800,
               ),
-              borderRadius: BorderRadius.only(bottomRight: Radius.circular(40), bottomLeft: Radius.circular(16)),
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned.fill(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.only(bottomRight: Radius.circular(40), bottomLeft: Radius.circular(16)),
-                    child: ThematicMotifWidget(
-                      theme: context.watch<UIStore>().activeTheme,
-                      overrideColor: Colors.white,
-                    ),
-                  ),
-                ),
-                Text(
-                  'Cài Đặt',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: Offset(0, 2))
-                    ],
-                  ),
-                ),
-              ],
             ),
           ),
           Expanded(

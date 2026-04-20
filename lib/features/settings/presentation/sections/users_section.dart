@@ -1036,6 +1036,7 @@ class _UsersSectionState extends State<UsersSection> with SingleTickerProviderSt
             phone: _phoneCtrl.text.trim(),
             address: _addressCtrl.text.trim(),
           );
+          // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
           store.notifyListeners();
         } catch (e) {
           debugPrint('[saveEmployee] $e');

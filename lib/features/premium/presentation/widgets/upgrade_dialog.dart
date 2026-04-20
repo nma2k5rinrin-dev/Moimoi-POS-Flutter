@@ -5,6 +5,9 @@ import 'package:moimoi_pos/features/premium/logic/premium_store_standalone.dart'
 import 'package:moimoi_pos/core/utils/constants.dart';
 import 'package:moimoi_pos/core/widgets/animated_dialogs.dart';
 import 'package:moimoi_pos/core/router/app_router.dart';
+import 'package:moimoi_pos/features/auth/logic/auth_store_standalone.dart';
+import 'package:moimoi_pos/features/settings/logic/management_store_standalone.dart';
+import 'package:moimoi_pos/features/settings/models/store_info_model.dart';
 
 /// Shows the upgrade prompt when a quota limit is hit.
 /// Returns true if user chose to view plans, false otherwise.
@@ -152,6 +155,7 @@ class _PricingDialogState extends State<_PricingDialog> {
     _PlanInfo(
       id: 'premium_1_month',
       name: '1 Tháng',
+      months: 1,
       price: '299.000đ',
       pricePerMonth: '299.000đ/tháng',
       badge: '',
@@ -160,6 +164,7 @@ class _PricingDialogState extends State<_PricingDialog> {
     _PlanInfo(
       id: 'premium_3_months',
       name: '3 Tháng',
+      months: 3,
       price: '749.000đ',
       pricePerMonth: '249.000đ/tháng',
       badge: 'Phổ biến',
@@ -168,6 +173,7 @@ class _PricingDialogState extends State<_PricingDialog> {
     _PlanInfo(
       id: 'premium_6_months',
       name: '6 Tháng',
+      months: 6,
       price: '1.099.000đ',
       pricePerMonth: '183.000đ/tháng',
       badge: 'Tốt nhất',
@@ -176,6 +182,7 @@ class _PricingDialogState extends State<_PricingDialog> {
     _PlanInfo(
       id: 'premium_12_months',
       name: '1 Năm',
+      months: 12,
       price: '1.799.000đ',
       pricePerMonth: '149.000đ/tháng',
       badge: 'Siêu tiết kiệm',
@@ -186,12 +193,39 @@ class _PricingDialogState extends State<_PricingDialog> {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<PremiumStore>();
+    final authStore = context.watch<AuthStore>();
+    final mngStore = context.watch<ManagementStore>();
+    
+    final user = authStore.currentUser;
+    final storeInfo = mngStore.storeInfos[mngStore.getStoreId()] ?? const StoreInfoModel();
+
+    DateTime? expiry;
+    if (storeInfo.premiumExpiresAt != null) {
+      expiry = storeInfo.premiumExpiresAt;
+    } else if (user?.expiresAt != null && user!.expiresAt!.isNotEmpty) {
+      try {
+        expiry = DateTime.parse(user.expiresAt!);
+      } catch (_) {}
+    }
+
+    final now = DateTime.now();
+    DateTime baseDate = (expiry != null && expiry.isAfter(now)) ? expiry : now;
 
     List<_PlanInfo> displayPlans = _fallbackPlans.toList();
 
-
     if (_selectedPlan >= displayPlans.length) {
       _selectedPlan = 0;
+    }
+    
+    final selectedPlan = displayPlans[_selectedPlan];
+    DateTime newExpiry = DateTime(baseDate.year, baseDate.month + selectedPlan.months, baseDate.day);
+    
+    String currentPlanText = 'Miễn phí';
+    if (expiry != null && expiry.isAfter(now)) {
+      currentPlanText = 'Premium (Đến ${expiry.day.toString().padLeft(2, '0')}/${expiry.month.toString().padLeft(2, '0')}/${expiry.year})';
+    } else if (user?.role == 'sadmin') {
+      currentPlanText = 'SAdmin (Không giới hạn)';
+      newExpiry = DateTime(baseDate.year + 10, baseDate.month, baseDate.day);
     }
 
     return Dialog(
@@ -222,10 +256,32 @@ class _PricingDialogState extends State<_PricingDialog> {
                   ),
                 ],
               ),
-              SizedBox(height: 6),
-              Text(
-                'Mở khóa toàn bộ tính năng, không giới hạn',
-                style: TextStyle(fontSize: 13, color: AppColors.slate500),
+              SizedBox(height: 12),
+              
+              // Current Plan Info
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.slate50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.slate200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.stars_rounded, color: AppColors.amber500, size: 24),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Gói hiện tại:', style: TextStyle(fontSize: 12, color: AppColors.slate500)),
+                          Text(currentPlanText, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.slate800)),
+                        ]
+                      )
+                    )
+                  ]
+                )
               ),
               SizedBox(height: 20),
 
@@ -454,12 +510,26 @@ class _PricingDialogState extends State<_PricingDialog> {
                               strokeWidth: 2,
                             ),
                           )
-                        : Text(
-                            'Đăng ký ${displayPlans[_selectedPlan].name} - ${displayPlans[_selectedPlan].price}',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Đăng ký ${displayPlans[_selectedPlan].name} - ${displayPlans[_selectedPlan].price}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Sử dụng đến: ${newExpiry.day.toString().padLeft(2, '0')}/${newExpiry.month.toString().padLeft(2, '0')}/${newExpiry.year}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white.withOpacity(0.8),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ]
                           ),
                   ),
                 ),
@@ -537,6 +607,7 @@ class _PricingDialogState extends State<_PricingDialog> {
 class _PlanInfo {
   final String id;
   final String name;
+  final int months;
   final String price;
   final String pricePerMonth;
   final String badge;
@@ -545,6 +616,7 @@ class _PlanInfo {
   const _PlanInfo({
     required this.id,
     required this.name,
+    required this.months,
     required this.price,
     required this.pricePerMonth,
     required this.badge,

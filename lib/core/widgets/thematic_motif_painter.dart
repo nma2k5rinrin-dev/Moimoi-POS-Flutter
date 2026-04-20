@@ -6,7 +6,7 @@ class ThematicMotifWidget extends StatelessWidget {
   final AppTheme theme;
   final Color overrideColor;
 
-  const ThematicMotifWidget({Key? key, required this.theme, required this.overrideColor}) : super(key: key);
+  const ThematicMotifWidget({super.key, required this.theme, required this.overrideColor});
 
   @override
   Widget build(BuildContext context) {

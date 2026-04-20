@@ -6,7 +6,7 @@ import 'package:moimoi_pos/features/pos_order/logic/order_store_standalone.dart'
 import 'package:moimoi_pos/features/pos_order/models/order_model.dart';
 import 'package:moimoi_pos/features/auth/models/user_model.dart';
 import 'dart:convert';
-import 'package:drift/drift.dart' show OrderingTerm, OrderingMode, CustomExpression, Value;
+import 'package:drift/drift.dart' show OrderingTerm, OrderingMode, Value;
 import 'package:moimoi_pos/core/database/app_database.dart';
 /// Provides filtered/computed order views that depend on both
 /// OrderStore (orders data) and AuthStore (user/role info).

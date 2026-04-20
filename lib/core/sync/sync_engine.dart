@@ -283,8 +283,10 @@ class SyncEngine extends ChangeNotifier {
     }
   }
 
+  @override
   void dispose() {
     _periodicTimer?.cancel();
     _connectivitySub?.cancel();
+    super.dispose();
   }
 }

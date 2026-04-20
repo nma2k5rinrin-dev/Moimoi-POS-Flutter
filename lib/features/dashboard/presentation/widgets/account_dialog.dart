@@ -13,6 +13,7 @@ import 'package:moimoi_pos/core/utils/constants.dart';
 import 'package:moimoi_pos/services/api/cloudflare_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:moimoi_pos/features/premium/presentation/widgets/payment_history_dialog.dart';
+import 'package:moimoi_pos/features/premium/presentation/widgets/upgrade_dialog.dart';
 import 'package:moimoi_pos/core/utils/image_helper.dart';
 import 'package:moimoi_pos/core/widgets/thematic_motif_painter.dart';
 
@@ -138,7 +139,8 @@ class _AccountDialogContent extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) { 
+
     return Stack(
       children: [
         Positioned(
@@ -152,7 +154,17 @@ class _AccountDialogContent extends StatelessWidget {
                 maxWidth: MediaQuery.of(context).size.width - 32,
               ),
               decoration: BoxDecoration(
-                color: AppColors.cardBg,
+                gradient: store.currentUser?.isPremium == true || store.currentUser?.role == 'sadmin'
+                    ? LinearGradient(
+                        colors: [AppColors.primary100, AppColors.blue50, AppColors.primary50],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      )
+                    : LinearGradient(
+                        colors: [AppColors.slate100, AppColors.blue50, AppColors.slate200],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
@@ -167,10 +179,22 @@ class _AccountDialogContent extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              child: Stack(
                 children: [
-                  // ── User Header ──
+                   // Thematic Motif Layer for the entire dialog
+                   Positioned.fill(
+                     child: ClipRRect(
+                       borderRadius: BorderRadius.circular(20),
+                       child: ThematicMotifWidget(
+                         theme: context.watch<UIStore>().activeTheme,
+                         overrideColor: (store.currentUser?.isPremium == true || store.currentUser?.role == 'sadmin') ? AppColors.primary500 : AppColors.slate400,
+                       ),
+                     ),
+                   ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ── User Header ──
                   _buildUserHeader(context),
 
                   // ── Group 1: General Settings ──
@@ -178,9 +202,9 @@ class _AccountDialogContent extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppColors.slate50,
+                        color: Colors.white.withValues(alpha: 0.75),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.slate100),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
                       ),
                       child: Column(
                         children: [
@@ -228,50 +252,61 @@ class _AccountDialogContent extends StatelessWidget {
                           
                           // Theme Selector
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            child: Row(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  padding: EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.cardBg,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: AppColors.slate200),
-                                  ),
-                                  child: Icon(Icons.palette_rounded, size: 18, color: AppColors.slate700),
-                                ),
-                                SizedBox(width: 12),
-                                Text(
-                                  'Chủ đề',
-                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.slate800),
-                                ),
-                                Spacer(),
-                                ...AppTheme.values.map((theme) {
-                                  final uiStore = context.watch<UIStore>();
-                                  final isSelected = uiStore.activeTheme == theme;
-                                  Color themeColor = AppColors.emerald500;
-                                  switch (theme) {
-                                    case AppTheme.blue: themeColor = AppColors.blue500; break;
-                                    case AppTheme.violet: themeColor = AppColors.violet500; break;
-                                    case AppTheme.amber: themeColor = AppColors.amber500; break;
-                                    case AppTheme.rose: themeColor = AppColors.rose500; break;
-                                    case AppTheme.emerald: themeColor = AppColors.emerald500; break;
-                                  }
-                                  return GestureDetector(
-                                    onTap: () => context.read<UIStore>().changeColorTheme(theme),
-                                    child: Container(
-                                      margin: EdgeInsets.only(left: 8),
-                                      width: 24,
-                                      height: 24,
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.all(6),
                                       decoration: BoxDecoration(
-                                        color: themeColor,
-                                        shape: BoxShape.circle,
-                                        border: isSelected ? Border.all(color: AppColors.slate800, width: 2) : Border.all(color: Colors.transparent, width: 2),
+                                        color: AppColors.cardBg,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: AppColors.slate200),
                                       ),
-                                      child: isSelected ? Icon(Icons.check_rounded, size: 14, color: Colors.white) : null,
+                                      child: Icon(Icons.palette_rounded, size: 18, color: AppColors.slate700),
                                     ),
-                                  );
-                                }),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      'Chủ đề giao diện',
+                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.slate800),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                  children: AppTheme.values.map((theme) {
+                                    final uiStore = context.watch<UIStore>();
+                                    final isSelected = uiStore.activeTheme == theme;
+                                    Color themeColor = AppColors.emerald500;
+                                    switch (theme) {
+                                      case AppTheme.blue: themeColor = AppColors.blue500; break;
+                                      case AppTheme.violet: themeColor = AppColors.violet500; break;
+                                      case AppTheme.amber: themeColor = AppColors.amber500; break;
+                                      case AppTheme.rose: themeColor = AppColors.rose500; break;
+                                      case AppTheme.emerald: themeColor = AppColors.emerald500; break;
+                                    }
+                                    return GestureDetector(
+                                      onTap: () => context.read<UIStore>().changeColorTheme(theme),
+                                      child: Container(
+                                        width: 38,
+                                        height: 38,
+                                        decoration: BoxDecoration(
+                                          color: themeColor,
+                                          shape: BoxShape.circle,
+                                          border: isSelected ? Border.all(color: AppColors.slate800, width: 3) : Border.all(color: Colors.transparent, width: 3),
+                                          boxShadow: [
+                                            if (isSelected)
+                                              BoxShadow(color: themeColor.withOpacity(0.4), blurRadius: 8, offset: Offset(0, 4)),
+                                          ],
+                                        ),
+                                        child: isSelected ? Icon(Icons.check_rounded, size: 18, color: Colors.white) : null,
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
                               ],
                             ),
                           ),
@@ -320,6 +355,8 @@ class _AccountDialogContent extends StatelessWidget {
                   ),
                 ],
               ),
+                ],
+              ),
             ),
           ),
         ),
@@ -343,83 +380,25 @@ class _AccountDialogContent extends StatelessWidget {
         expiry = DateTime.parse(user.expiresAt!);
       } catch (_) {}
     }
+    String remainingDaysStr = '';
     if (expiry != null) {
       expiryDate = '${expiry.day.toString().padLeft(2, '0')}/${expiry.month.toString().padLeft(2, '0')}/${expiry.year}';
       hasExpiry = true;
+      final diff = expiry.difference(DateTime.now()).inDays;
+      if (diff > 0) {
+        remainingDaysStr = ' (còn $diff ngày)';
+      } else if (diff == 0) {
+        remainingDaysStr = ' (hết hạn hôm nay)';
+      } else {
+        remainingDaysStr = ' (đã hết hạn)';
+      }
     }
 
-    return Stack(
-      children: [
-        // Bottom Wave layer (deep, longest wave)
-        Positioned.fill(
-          child: ClipPath(
-            clipper: _AccountHeaderWaveClipper(yOffset: 0, phaseOffset: 0.5, frequency: 1.2, amplitude: 24.0, theme: context.watch<UIStore>().activeTheme),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: isPremium 
-                      ? [AppColors.primary400.withOpacity(0.6), AppColors.blue200.withOpacity(0.3)]
-                      : [AppColors.slate400.withOpacity(0.5), AppColors.slate200.withOpacity(0.2)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-              )
-            ),
-          ),
-        ),
-        // Middle Wave layer (dense, shifted wave)
-        Positioned.fill(
-          child: ClipPath(
-            clipper: _AccountHeaderWaveClipper(yOffset: -8, phaseOffset: 2.0, frequency: 1.8, amplitude: 20.0, theme: context.watch<UIStore>().activeTheme),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: isPremium 
-                      ? [AppColors.blue200.withOpacity(0.4), AppColors.primary400.withOpacity(0.7)]
-                      : [AppColors.slate200.withOpacity(0.3), AppColors.slate400.withOpacity(0.6)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-              )
-            ),
-          ),
-        ),
-        // Top Wave (Main content, large smooth wave)
-        ClipPath(
-          clipper: _AccountHeaderWaveClipper(yOffset: -16, phaseOffset: 0.0, frequency: 1.0, amplitude: 28.0, theme: context.watch<UIStore>().activeTheme),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: isPremium
-                  ? LinearGradient(
-                      colors: [AppColors.primary100, AppColors.blue50, AppColors.primary50],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : LinearGradient(
-                      colors: [AppColors.slate50, AppColors.blue50, AppColors.slate100],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-            ),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: ThematicMotifWidget(
-                    theme: context.watch<UIStore>().activeTheme,
-                    overrideColor: isPremium ? AppColors.primary500 : AppColors.slate400,
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(28, 32, 28, 96),
-                  child: Column(
-                    children: [
-                      Row(
+    return Padding(
+      padding: EdgeInsets.fromLTRB(28, 32, 28, 24),
+      child: Column(
+        children: [
+          Row(
             children: [
                _buildDialogAvatar(),
                SizedBox(width: 20),
@@ -448,8 +427,8 @@ class _AccountDialogContent extends StatelessWidget {
                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.5),
                            ),
                          ),
-                         if (hasExpiry && store.currentUser?.role != 'sadmin')
-                           Text('Đến $expiryDate', style: TextStyle(fontSize: 13, color: AppColors.slate600, fontWeight: FontWeight.w600)),
+                          if (hasExpiry && store.currentUser?.role != 'sadmin')
+                            Text('Đến $expiryDate$remainingDaysStr', style: TextStyle(fontSize: 13, color: AppColors.slate600, fontWeight: FontWeight.w600)),
                        ],
                      ),
                    ]
@@ -466,7 +445,7 @@ class _AccountDialogContent extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: () {
                     Navigator.pop(context);
-                    context.go('/settings?tab=premium');
+                    showPricingDialog(context);
                   },
                   icon: Icon(Icons.workspace_premium_rounded, size: 18),
                   label: Text('Gia hạn / Nâng cấp gói', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
@@ -499,13 +478,7 @@ class _AccountDialogContent extends StatelessWidget {
           ]
         ],
       ), // Column
-      ), // Padding
-              ],
-            ), // Stack
-    ), // Container
-        ), // ClipPath
-      ], // Stack children
-    ); // Stack
+    );
   }
 
   Widget _buildMenuItem(
@@ -749,7 +722,6 @@ class _AccountHeaderWaveClipper extends CustomClipper<Path> {
         a *= 0.5;
         break;
       case AppTheme.emerald:
-      default:
         break; // Default fluid tech waves
     }
 
@@ -775,7 +747,6 @@ class _AccountHeaderWaveClipper extends CustomClipper<Path> {
           break;
         case AppTheme.blue:
         case AppTheme.emerald:
-        default:
           yOffsetWave = math.sin(rad) * a;
           break;
       }

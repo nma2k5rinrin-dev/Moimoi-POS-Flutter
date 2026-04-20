@@ -41,7 +41,6 @@ class AppColors {
         primary = rose500; primaryLight = rose100; primaryDark = rose700;
         break;
       case AppTheme.emerald:
-      default:
         primary50 = emerald50; primary100 = emerald100; primary200 = emerald200; primary300 = emerald400; primary400 = emerald400; primary500 = emerald500; primary600 = emerald600; primary700 = emerald700; primary800 = emerald800;
         primary = emerald500; primaryLight = emerald100; primaryDark = emerald800;
         break;

@@ -12,7 +12,6 @@ import 'package:moimoi_pos/core/utils/format.dart';
 import 'package:moimoi_pos/core/widgets/confirm_modal.dart';
 import 'package:moimoi_pos/core/models/confirm_dialog_data.dart';
 import 'package:moimoi_pos/features/premium/models/upgrade_request_model.dart';
-import 'package:moimoi_pos/core/utils/notification_helper.dart';
 
 class NotificationBell extends StatelessWidget {
   const NotificationBell({super.key});

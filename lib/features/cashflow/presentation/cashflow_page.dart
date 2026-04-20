@@ -375,7 +375,7 @@ class _CashflowPageState extends State<CashflowPage> {
     final expenseSpots = buildSpots(false, true);
 
     return Container(
-      color: AppColors.slate50,
+      color: Colors.transparent,
       child: Column(
         children: [
           // ── Header (only when not embedded) ──
