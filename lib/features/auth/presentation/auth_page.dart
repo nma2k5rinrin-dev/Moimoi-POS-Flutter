@@ -784,9 +784,9 @@ class _AuthPageState extends State<AuthPage>
       children: [
         _buildField(
           controller: _usernameController,
-          label: 'Email / Tên đăng nhập',
+          label: 'Tên đăng nhập',
           icon: Icons.person_outline_rounded,
-          hint: 'Email / Tên đăng nhập',
+          hint: 'Tên đăng nhập',
         ),
         SizedBox(height: 14),
         _buildField(

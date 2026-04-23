@@ -257,28 +257,12 @@ class AuthStore extends ChangeNotifier with BaseMixin {
 
   Future<String> login(String input, String password) async {
     final cleanInput = input.trim();
-    // Admin login via Email, Staff login via Username
     final isEmail = cleanInput.contains('@');
-    String loginEmail;
-    if (isEmail) {
-      loginEmail = cleanInput.toLowerCase();
-    } else {
-      // Dò Email thật thông qua RPC get_auth_email (nếu đây là Admin)
-      try {
-        final rpcEmail = await _supabase.rpc(
-          'get_auth_email',
-          params: {'p_username': cleanInput.toLowerCase()},
-        );
-        if (rpcEmail != null && rpcEmail.toString().isNotEmpty) {
-          loginEmail = rpcEmail.toString();
-        } else {
-          loginEmail = '${cleanInput.toLowerCase()}@moimoi.local';
-        }
-      } catch (e) {
-        debugPrint('[Auth] get_auth_email error: $e, fallback to local');
-        loginEmail = '${cleanInput.toLowerCase()}@moimoi.local';
-      }
-    }
+    // Email chỉ hỗ trợ đăng ký & lấy lại mật khẩu
+    // Login luôn dùng username@moimoi.local
+    final loginEmail = isEmail
+        ? cleanInput.toLowerCase()
+        : '${cleanInput.toLowerCase()}@moimoi.local';
 
     try {
       final authResponse = await _supabase.auth.signInWithPassword(
