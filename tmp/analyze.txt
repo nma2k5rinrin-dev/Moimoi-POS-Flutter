@@ -1,0 +1,10 @@
+﻿Analyzing main.dart, notification_helper.dart...
+
+  error - lib\core\utils\notification_helper.dart:162:43 - The named parameter 'id' is required, but there's no corresponding argument. Try adding the required argument. - missing_required_argument
+  error - lib\core\utils\notification_helper.dart:163:7 - Too many positional arguments: 0 expected, but 3 found. Try removing the extra positional arguments, or specifying the name for named arguments. - extra_positional_arguments_could_be_named
+  error - lib\core\utils\notification_helper.dart:193:43 - The named parameter 'id' is required, but there's no corresponding argument. Try adding the required argument. - missing_required_argument
+  error - lib\core\utils\notification_helper.dart:194:7 - Too many positional arguments: 0 expected, but 3 found. Try removing the extra positional arguments, or specifying the name for named arguments. - extra_positional_arguments_could_be_named
+  error - lib\core\utils\notification_helper.dart:229:43 - The named parameter 'id' is required, but there's no corresponding argument. Try adding the required argument. - missing_required_argument
+  error - lib\core\utils\notification_helper.dart:230:7 - Too many positional arguments: 0 expected, but 3 found. Try removing the extra positional arguments, or specifying the name for named arguments. - extra_positional_arguments_could_be_named
+
+6 issues found.

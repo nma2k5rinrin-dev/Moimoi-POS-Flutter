@@ -10,6 +10,17 @@ class SupabaseService {
 
   static Future<void> initialize() async {
     await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+    
+    // Force refresh session at startup to fetch latest JWT claims (RLS optimization)
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null) {
+      try {
+        await Supabase.instance.client.auth.refreshSession();
+        debugPrint('[Auth] ✅ Forced token refresh on startup for custom claims');
+      } catch (e) {
+        debugPrint('[Auth] ⚠️ Token refresh failed on startup: $e');
+      }
+    }
   }
 
   static Future<void> registerFcmToken(String token) async {
