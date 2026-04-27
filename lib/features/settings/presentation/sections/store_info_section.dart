@@ -34,6 +34,7 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
   final _bankOwnerController = TextEditingController();
   String _qrImageUrl = '';
   bool _showTotalProducts = true;
+  bool _isStoreOpen = true;
 
   @override
   void initState() {
@@ -50,6 +51,7 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
     _bankOwnerController.text = info.bankOwner;
     _qrImageUrl = info.qrImageUrl;
     _showTotalProducts = info.showTotalProducts;
+    _isStoreOpen = info.isStoreOpen;
   }
 
   @override
@@ -158,6 +160,7 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
       bankOwner: _bankOwnerController.text.trim(),
       qrImageUrl: _qrImageUrl,
       showTotalProducts: _showTotalProducts,
+      isStoreOpen: _isStoreOpen,
     );
     store.updateStoreInfo(info);
     store.showToast('Cập nhật thông tin thành công!');
@@ -195,9 +198,10 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
                         SizedBox(height: 16),
                         _buildBankFields(),
                         SizedBox(height: 20),
-                        Divider(color: AppColors.slate200),
                         SizedBox(height: 12),
                         _buildTotalProductsToggle(),
+                        SizedBox(height: 12),
+                        _buildStoreOpenToggle(),
                         SizedBox(height: 12),
                         Divider(color: AppColors.slate200),
                         SizedBox(height: 16),
@@ -455,6 +459,39 @@ class _StoreInfoSectionState extends State<StoreInfoSection> {
         Switch(
           value: _showTotalProducts,
           onChanged: (v) => setState(() => _showTotalProducts = v),
+          activeTrackColor: AppColors.primary500,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStoreOpenToggle() {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Mở cửa hàng (QR Menu)',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.slate700,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Cho phép khách hàng xem menu và đặt món khi quét QR.',
+                style: TextStyle(fontSize: 12, color: AppColors.slate500),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(width: 16),
+        Switch(
+          value: _isStoreOpen,
+          onChanged: (v) => setState(() => _isStoreOpen = v),
           activeTrackColor: AppColors.primary500,
         ),
       ],

@@ -11,6 +11,7 @@ class StoreInfoModel {
   final String qrImageUrl;
   final bool isPremium;
   final bool showTotalProducts;
+  final bool isStoreOpen;
 
   // ── Sadmin Management Fields ──
   final bool isOnline;
@@ -33,6 +34,7 @@ class StoreInfoModel {
     this.qrImageUrl = '',
     this.isPremium = false,
     this.showTotalProducts = true,
+    this.isStoreOpen = true,
     this.isOnline = true,
     this.premiumActivatedAt,
     this.premiumExpiresAt,
@@ -55,6 +57,7 @@ class StoreInfoModel {
       qrImageUrl: map['qr_image_url'] ?? '',
       isPremium: map['is_premium'] ?? false,
       showTotalProducts: map['show_total_products'] ?? true,
+      isStoreOpen: map['is_store_open'] ?? true,
       isOnline: map['is_online'] ?? true,
       premiumActivatedAt: map['premium_activated_at'] != null
           ? DateTime.tryParse(map['premium_activated_at'])
@@ -139,6 +142,7 @@ class StoreInfoModel {
     String? qrImageUrl,
     bool? isPremium,
     bool? showTotalProducts,
+    bool? isStoreOpen,
     bool? isOnline,
     DateTime? premiumActivatedAt,
     DateTime? premiumExpiresAt,
@@ -159,6 +163,7 @@ class StoreInfoModel {
       qrImageUrl: qrImageUrl ?? this.qrImageUrl,
       isPremium: isPremium ?? this.isPremium,
       showTotalProducts: showTotalProducts ?? this.showTotalProducts,
+      isStoreOpen: isStoreOpen ?? this.isStoreOpen,
       isOnline: isOnline ?? this.isOnline,
       premiumActivatedAt: premiumActivatedAt ?? this.premiumActivatedAt,
       premiumExpiresAt: premiumExpiresAt ?? this.premiumExpiresAt,

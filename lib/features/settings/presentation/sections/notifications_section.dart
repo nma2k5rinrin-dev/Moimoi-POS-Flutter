@@ -26,7 +26,7 @@ class _NotificationsSectionState extends State<NotificationsSection> {
   final List<Map<String, String>> _sounds = [
     {'name': 'Chuông (Bell)', 'path': 'sounds/bell.wav'},
     {'name': 'Tiếng Ding', 'path': 'sounds/ding.mp3'},
-    {'name': 'Tiếng Giao dịch (Shopee)', 'path': 'sounds/buy.mp3'},
+    {'name': 'Tiếng Giao dịch (Moimoi)', 'path': 'sounds/buy.mp3'},
     {'name': 'Tiếng Chọn (Check Mark)', 'path': 'sounds/check_mark.mp3'},
     {'name': 'Tiếng Boom', 'path': 'sounds/boom.mp3'},
     {'name': 'Tiếng Bonk', 'path': 'sounds/bonk.mp3'},

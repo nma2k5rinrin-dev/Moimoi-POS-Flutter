@@ -609,7 +609,7 @@ class OrderStore extends ChangeNotifier with BaseMixin {
     try {
       final response = await supabaseClient
           .from('orders')
-          .select('id, table_name, status, payment_status, total_amount, time, created_by, store_id, payment_method')
+          .select('id, table_name, status, payment_status, total_amount, time, created_by, store_id, payment_method, items')
           .eq('store_id', sid)
           .isFilter('deleted_at', null)
           .gte('time', fromStr)

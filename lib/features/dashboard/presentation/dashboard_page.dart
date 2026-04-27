@@ -234,12 +234,14 @@ class _DashboardPageState extends State<DashboardPage> {
                                     child: Icon(Icons.receipt_long_rounded, size: 16, color: AppColors.blue500),
                                   ),
                                   SizedBox(width: 8),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('Tổng đơn', style: TextStyle(fontSize: 10, color: AppColors.slate500)),
-                                      Text('$totalOrders', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.slate800)),
-                                    ],
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Tổng đơn', style: TextStyle(fontSize: 10, color: AppColors.slate500), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                        Text('$totalOrders', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.slate800), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
@@ -255,12 +257,14 @@ class _DashboardPageState extends State<DashboardPage> {
                                     child: Icon(Icons.analytics_rounded, size: 16, color: AppColors.violet500),
                                   ),
                                   SizedBox(width: 8),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('TB/đơn', style: TextStyle(fontSize: 10, color: AppColors.slate500)),
-                                      Text(totalOrders > 0 ? _formatShortCurrency(totalRevenue / totalOrders) : '0', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.slate800)),
-                                    ],
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('TB/đơn', style: TextStyle(fontSize: 10, color: AppColors.slate500), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                        Text(totalOrders > 0 ? _formatShortCurrency(totalRevenue / totalOrders) : '0', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.slate800), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
@@ -276,12 +280,14 @@ class _DashboardPageState extends State<DashboardPage> {
                                     child: Icon(Icons.cancel_rounded, size: 16, color: AppColors.red500),
                                   ),
                                   SizedBox(width: 8),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('Đơn huỷ', style: TextStyle(fontSize: 10, color: AppColors.slate500)),
-                                      Text('$totalCancelled', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: totalCancelled > 0 ? AppColors.red500 : AppColors.slate800)),
-                                    ],
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Đơn huỷ', style: TextStyle(fontSize: 10, color: AppColors.slate500), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                        Text('$totalCancelled', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: totalCancelled > 0 ? AppColors.red500 : AppColors.slate800), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),

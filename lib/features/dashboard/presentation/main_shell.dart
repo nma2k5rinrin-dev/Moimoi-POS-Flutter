@@ -239,7 +239,7 @@ class _MainShellState extends State<MainShell> {
               children: [
                 Positioned.fill(
                   child: Container(
-                    color: AppColors.primary.withValues(alpha: 0.04),
+                    color: AppColors.primary.withValues(alpha: 0.06),
                   ),
                 ),
                 Positioned.fill(

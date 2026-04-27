@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:moimoi_pos/services/api/supabase_service.dart';
 import 'package:moimoi_pos/features/auth/logic/auth_store_standalone.dart' as standalone_auth;
 import 'package:moimoi_pos/core/state/ui_store.dart' as standalone;
@@ -172,7 +173,7 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> with WidgetsBindingObserver {
     _cashflowStore = standalone_cash.CashflowStore(
       quotaProvider: _quotaStore,
       getCurrentUser: () => _authStore.currentUser,
-    );
+    )..externalShowToast = _uiStore.showToast;
     _premiumStore = standalone_prem.PremiumStore(
       authStore: _authStore,
       managementStore: _mgmtStore,
@@ -183,6 +184,9 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> with WidgetsBindingObserver {
     
     // Assign data loader to AuthStore so it triggers after login
     _authStore.onLoadInitialData = _loadData;
+
+    // Wire UIStore username provider for theme sync to DB
+    _uiStore.onGetUsername = () => _authStore.currentUser?.username ?? '';
     
     // Wire up QuotaStore (aggregates from individual stores)
     _quotaStore.init(
@@ -269,6 +273,8 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> with WidgetsBindingObserver {
     try {
       if (user.role == 'sadmin' && sid == 'sadmin') {
         await _mgmtStore.initManagementStore(null, user);
+        // Load user's theme from DB
+        _loadAndApplyUserTheme(user.username);
         return;
       }
 
@@ -304,6 +310,19 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> with WidgetsBindingObserver {
     } catch (e) {
       debugPrint('Error loading initial data: $e');
     }
+
+    // Load user's theme from DB
+    _loadAndApplyUserTheme(user.username);
+  }
+
+  void _loadAndApplyUserTheme(String username) {
+    Supabase.instance.client
+        .from('users')
+        .select('app_theme, is_dark_mode')
+        .eq('username', username)
+        .maybeSingle()
+        .then((data) => _uiStore.applyUserTheme(data))
+        .catchError((e) => debugPrint('[Theme] Load from DB error: $e'));
   }
 
   @override

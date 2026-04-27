@@ -905,6 +905,7 @@ class IncomePageState extends State<IncomePage> with SingleTickerProviderStateMi
     }
     final store = context.read<CashflowStore>();
     if (widget.initialTransaction != null) {
+      // Edit mode → save and close
       await store.updateTransaction(
         id: widget.initialTransaction!.id,
         amount: amount,
@@ -914,7 +915,16 @@ class IncomePageState extends State<IncomePage> with SingleTickerProviderStateMi
       );
       if (!mounted) return;
       store.showToast('Đã lưu thay đổi!');
+
+      if (widget.onSaved != null) {
+        await widget.onSaved!();
+      } else if (widget.embedded && widget.onBack != null) {
+        widget.onBack!();
+      } else {
+        if (Navigator.canPop(context)) Navigator.pop(context);
+      }
     } else {
+      // Add mode → save, reset form, stay open
       await store.addTransaction(
         type: 'thu',
         amount: amount,
@@ -923,15 +933,14 @@ class IncomePageState extends State<IncomePage> with SingleTickerProviderStateMi
         date: _selectedDate,
       );
       if (!mounted) return;
-      store.showToast('Đã lưu khoản thu thành công!');
-    }
-
-    if (widget.onSaved != null) {
-      await widget.onSaved!();
-    } else if (widget.embedded && widget.onBack != null) {
-      widget.onBack!();
-    } else {
-      if (Navigator.canPop(context)) Navigator.pop(context);
+      store.showToast('Đã thêm khoản thu thành công!');
+      // Reset form to add more
+      setState(() {
+        _amountCtrl.clear();
+        _noteCtrl.clear();
+      });
+      // Refresh data in background
+      if (widget.onSaved != null) widget.onSaved!();
     }
   }
 }

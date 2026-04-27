@@ -14,10 +14,10 @@ ALTER TABLE "public"."products" ADD COLUMN IF NOT EXISTS "updated_at" timestamp 
 ALTER TABLE "public"."categories" ADD COLUMN IF NOT EXISTS "updated_at" timestamp with time zone DEFAULT now();
 
 -- 4. Fix policy evaluating non-existent function from block_staff_exfiltration.sql
-DROP POLICY IF EXISTS "tenant_all_thuchi" ON thu_chi_transactions;
+DROP POLICY IF EXISTS "tenant_all_thuchi" ON transactions;
 
 CREATE POLICY "tenant_all_thuchi" 
-ON thu_chi_transactions FOR ALL 
+ON transactions FOR ALL 
 USING (
     auth.role() = 'authenticated' 
     AND store_id = public.get_my_store_uuid() 

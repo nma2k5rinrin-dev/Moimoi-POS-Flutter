@@ -9,8 +9,8 @@ class AudioStore extends ChangeNotifier {
   final AudioPlayer _orderSoundPlayer = AudioPlayer();
   final AudioPlayer _paymentSoundPlayer = AudioPlayer();
 
-  String _notificationSound = 'sounds/bell.wav';
-  String _paymentSound = 'sounds/buy_1.mp3';
+  String _notificationSound = 'sounds/check_mark.mp3';
+  String _paymentSound = 'sounds/buy.mp3';
 
   String get notificationSound => _notificationSound;
   String get paymentSound => _paymentSound;
@@ -42,8 +42,8 @@ class AudioStore extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       _notificationSound =
-          prefs.getString('notification_sound') ?? 'sounds/bell.wav';
-      _paymentSound = prefs.getString('payment_sound') ?? 'sounds/buy_1.mp3';
+          prefs.getString('notification_sound') ?? 'sounds/check_mark.mp3';
+      _paymentSound = prefs.getString('payment_sound') ?? 'sounds/buy.mp3';
     } catch (e) {
       debugPrint('[AudioStore] loadAudioPreferences error: $e');
     }

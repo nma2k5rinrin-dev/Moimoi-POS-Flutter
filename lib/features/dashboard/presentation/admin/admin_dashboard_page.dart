@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -35,8 +35,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   String _filter = 'all'; // 'all' | 'attention' | 'online' | 'expiring'
   String _searchQuery = '';
 
-  // Date range state � default: first of current month to today
+  // Date range state — default: first of current month to today
   late DateTimeRange _dateRange;
+  int _maxStores = 20;
 
   @override
   void initState() {
@@ -46,6 +47,62 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       start: DateTime(now.year, now.month, 1),
       end: now,
     );
+    _loadMaxStores();
+  }
+
+  Future<void> _loadMaxStores() async {
+    try {
+      final result = await context.read<ManagementStore>().supabaseClient.rpc('check_store_limit') as Map<String, dynamic>?;
+      if (result != null && mounted) {
+        setState(() => _maxStores = result['max'] ?? 100);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _editMaxStores() async {
+    final controller = TextEditingController(text: _maxStores.toString());
+    final newVal = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Giới hạn cửa hàng', style: TextStyle(fontWeight: FontWeight.w700)),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Số lượng tối đa',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Hủy')),
+          ElevatedButton(
+            onPressed: () {
+              final val = int.tryParse(controller.text);
+              if (val != null && val > 0) Navigator.pop(ctx, val);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary500,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+    if (newVal != null && newVal != _maxStores) {
+      try {
+        await context.read<ManagementStore>().supabaseClient
+            .from('system_config')
+            .update({'value': newVal.toString(), 'updated_at': DateTime.now().toIso8601String()})
+            .eq('key', 'max_stores');
+        setState(() => _maxStores = newVal);
+        if (mounted) context.read<ManagementStore>().showToast('Đã cập nhật giới hạn thành $newVal cửa hàng');
+      } catch (e) {
+        if (mounted) context.read<ManagementStore>().showToast('Lỗi: $e', 'error');
+      }
+    }
   }
 
   Future<void> _pickDateRange() async {
@@ -230,6 +287,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 yearlyCount: yearlyCount,
                 monthlyCount: monthlyCount,
                 revenuePoints: revenuePoints,
+                maxStores: _maxStores,
+                onEditMaxStores: _editMaxStores,
               );
             },
           ),
@@ -358,6 +417,8 @@ class _PortraitLayout extends StatelessWidget {
   final int totalRevenue, yearlyRevenue, monthlyRevenue;
   final int yearlyCount, monthlyCount;
   final List<double> revenuePoints;
+  final int maxStores;
+  final VoidCallback onEditMaxStores;
 
   const _PortraitLayout({
     required this.store,
@@ -381,6 +442,8 @@ class _PortraitLayout extends StatelessWidget {
     required this.yearlyCount,
     required this.monthlyCount,
     required this.revenuePoints,
+    required this.maxStores,
+    required this.onEditMaxStores,
   });
 
   @override
@@ -398,7 +461,7 @@ class _PortraitLayout extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Qu?n l� t�i kho?n h? th?ng',
+                  'Quản lý tài khoản hệ thống',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
@@ -485,7 +548,7 @@ class _PortraitLayout extends StatelessWidget {
                         SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'C?nh b�o: $expiringCount c?a h�ng s?p h?t h?n trong 7 ng�y',
+                            'Cảnh báo: $expiringCount cửa hàng sắp hết hạn trong 7 ngày',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -598,7 +661,7 @@ class _PortraitLayout extends StatelessWidget {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'G�i Nam ($yearlyCount):',
+                                        'Gói Năm ($yearlyCount):',
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w500,
@@ -631,7 +694,7 @@ class _PortraitLayout extends StatelessWidget {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'G�i Th�ng ($monthlyCount):',
+                                        'Gói Tháng ($monthlyCount):',
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w500,
@@ -665,10 +728,12 @@ class _PortraitLayout extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // C?a h�ng (Width ~50%)
+                      // Cửa hàng (Width ~50%)
                       Expanded(
                         flex: 11,
-                        child: Container(
+                        child: GestureDetector(
+                          onTap: onEditMaxStores,
+                          child: Container(
                           padding: EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: AppColors.primary500,
@@ -688,7 +753,7 @@ class _PortraitLayout extends StatelessWidget {
                                   SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      '$totalStores C?a h�ng',
+                                      '$totalStores/$maxStores Cửa hàng',
                                       style: TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.bold,
@@ -731,9 +796,10 @@ class _PortraitLayout extends StatelessWidget {
                             ],
                           ),
                         ),
+                        ),
                       ),
                       SizedBox(width: 8),
-                      // Nh�n vi�n (Width ~25%)
+                      // Nhân viên (Width ~25%)
                       Expanded(
                         flex: 6,
                         child: Container(
@@ -765,7 +831,7 @@ class _PortraitLayout extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                'Nh�n vi�n',
+                                'Nhân viên',
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: Colors.white.withValues(alpha: 0.9),
@@ -834,7 +900,7 @@ class _PortraitLayout extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Danh s�ch c?a h�ng',
+                  'Danh sách cửa hàng',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -854,7 +920,7 @@ class _PortraitLayout extends StatelessWidget {
                     onChanged: onSearchChanged,
                     style: TextStyle(fontSize: 13, color: AppColors.slate800),
                     decoration: InputDecoration(
-                      hintText: 'T�m t�n, S�T ch? shop...',
+                      hintText: 'Tìm tên, SĐT chủ shop...',
                       hintStyle: TextStyle(
                         fontSize: 13,
                         color: AppColors.slate400,
@@ -876,7 +942,7 @@ class _PortraitLayout extends StatelessWidget {
                   child: Row(
                     children: [
                       _FilterChip(
-                        label: 'T?t c?',
+                        label: 'Tất cả',
                         count: allEntries.length,
                         isActive: filter == 'all',
                         onTap: () => onFilterChanged('all'),
@@ -885,7 +951,7 @@ class _PortraitLayout extends StatelessWidget {
                       ),
                       SizedBox(width: 8),
                       _FilterChip(
-                        label: 'C?n ch� �',
+                        label: 'Cần chú ý',
                         count: attentionCount,
                         isActive: filter == 'attention',
                         onTap: () => onFilterChanged('attention'),
@@ -904,7 +970,7 @@ class _PortraitLayout extends StatelessWidget {
                       ),
                       SizedBox(width: 8),
                       _FilterChip(
-                        label: 'S?p h?t h?n',
+                        label: 'Sắp hết hạn',
                         count: expiringCount,
                         isActive: filter == 'expiring',
                         onTap: () => onFilterChanged('expiring'),
@@ -2779,4 +2845,3 @@ class _LandscapeStatPill extends StatelessWidget {
 // -----------------------------------------------------------
 // STORE DETAIL PAGE (Sadmin ? Tap on store card)
 // -----------------------------------------------------------
-

@@ -25,8 +25,8 @@ BEGIN
         DELETE FROM public.orders WHERE store_id = my_username;
         DELETE FROM public.products WHERE store_id = my_username;
         DELETE FROM public.categories WHERE store_id = my_username;
-        DELETE FROM public.thu_chi_transactions WHERE store_id = my_username;
-        DELETE FROM public.thu_chi_categories WHERE store_id = my_username;
+        DELETE FROM public.transactions WHERE store_id = my_username;
+        DELETE FROM public.transaction_categories WHERE store_id = my_username;
         DELETE FROM public.app_roles WHERE store_id = my_username;
         DELETE FROM public.store_infos WHERE store_id = my_username;
 

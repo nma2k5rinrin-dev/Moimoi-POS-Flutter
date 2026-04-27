@@ -443,6 +443,31 @@ class AuthStore extends ChangeNotifier with BaseMixin {
         return 'rate_limit';
       }
 
+      // Kiểm tra giới hạn store trước khi đăng ký
+      try {
+        final limitCheck = await _supabase.rpc('check_store_limit') as Map<String, dynamic>?;
+        if (limitCheck != null && limitCheck['available'] == false) {
+          final max = limitCheck['max'] ?? 100;
+          showToast('Hệ thống đã đạt giới hạn $max cửa hàng. Vui lòng liên hệ Zalo Admin.', 'error');
+
+          // Gửi ngầm notification cho sadmin
+          try {
+            await _supabase.from('notifications').insert({
+              'id': DateTime.now().millisecondsSinceEpoch.toString(),
+              'user_id': 'sadmin',
+              'title': 'Yêu cầu đăng ký mới (đã đạt giới hạn)',
+              'message': 'Người dùng $fullname ($email, SĐT: $phone) muốn đăng ký cửa hàng "$storeName" nhưng hệ thống đã đạt giới hạn $max stores.',
+              'time': DateTime.now().toIso8601String(),
+              'read': false,
+            });
+          } catch (_) {}
+
+          return 'store_limit';
+        }
+      } catch (_) {
+        // Nếu RPC chưa tồn tại (chưa chạy SQL), bỏ qua check
+      }
+
       final isOverlap = await _supabase.rpc(
         'check_registration_overlap',
         params: {
@@ -491,6 +516,11 @@ class AuthStore extends ChangeNotifier with BaseMixin {
       return 'error';
     } catch (e) {
       debugPrint('[Auth] Register error: $e');
+      // Bắt lỗi từ DB trigger nếu pre-check bị bypass
+      if (e.toString().contains('STORE_LIMIT_REACHED')) {
+        showToast('Hệ thống đã đạt giới hạn cửa hàng. Vui lòng liên hệ Zalo Admin.', 'error');
+        return 'store_limit';
+      }
       showToast('Đăng ký thất bại: $e', 'error');
       return 'error';
     }

@@ -469,39 +469,21 @@ class _PricingDialogState extends State<_PricingDialog> {
                             final storeId = store.getStoreId();
                             if (storeId.isEmpty) return;
 
+                            // Gửi ngầm thông tin cho sadmin (không block UI)
                             try {
-                              final now = DateTime.now();
-                              final cleanStr = plan.price.replaceAll(RegExp(r'[^0-9]'), '');
-                              final amt = int.tryParse(cleanStr) ?? 0;
-
-                              await store.supabaseClient.from('upgrade_requests').insert({
-                                'username': storeId,
-                                'plan_name': plan.name,
-                                'amount': amt,
-                                'status': 'pending',
-                                'transfer_content': '',
-                                'created_at': now.toIso8601String(),
-                              });
-                            } catch (e) {
-                              store.showToast('Lỗi gửi Data: $e', 'error');
-                              return; // Stop if core table fails
-                            }
-
-                            try {
-                              final now = DateTime.now();
                               await store.supabaseClient.from('notifications').insert({
                                 'id': const Uuid().v4(),
                                 'user_id': 'sadmin',
                                 'title': 'Yêu cầu nâng cấp Premium',
-                                'message': 'Cửa hàng $storeId yêu cầu đăng ký gói ${plan.name}.',
-                                'time': now.toIso8601String(),
+                                'message': 'Cửa hàng $storeId yêu cầu đăng ký gói ${plan.name} (${plan.price}).',
+                                'time': DateTime.now().toIso8601String(),
                                 'read': false,
                               });
                             } catch (_) {
-                              // Ignore RLS errors for admin sending to sadmin
+                              // Bỏ qua lỗi RLS — thông báo phụ không quan trọng
                             }
 
-                            store.showToast('Vui lòng liên hệ Hotline/Zalo: 033.9524.898 để hướng dẫn thanh toán', 'info');
+                            store.showToast('Vui lòng liên hệ Zalo: 033.9524.898 để được hướng dẫn thanh toán gói ${plan.name}', 'info');
                             if (context.mounted) Navigator.pop(context);
                           },
                     style: ElevatedButton.styleFrom(
@@ -525,7 +507,7 @@ class _PricingDialogState extends State<_PricingDialog> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Đăng ký ${displayPlans[_selectedPlan].name} - ${displayPlans[_selectedPlan].price}',
+                                'Liên hệ Zalo để đăng ký',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
@@ -533,7 +515,7 @@ class _PricingDialogState extends State<_PricingDialog> {
                               ),
                               SizedBox(height: 2),
                               Text(
-                                'Sử dụng đến: ${newExpiry.day.toString().padLeft(2, '0')}/${newExpiry.month.toString().padLeft(2, '0')}/${newExpiry.year}',
+                                '${displayPlans[_selectedPlan].name} - ${displayPlans[_selectedPlan].price}',
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: Colors.white.withOpacity(0.8),

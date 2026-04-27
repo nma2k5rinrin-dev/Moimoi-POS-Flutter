@@ -1221,7 +1221,7 @@ class _OrderCardState extends State<_OrderCard> {
                                         : Icons.radio_button_unchecked_rounded,
                                     size: 20,
                                     color: item.isDone
-                                        ? AppColors.primary500
+                                        ? AppColors.emerald500
                                         : AppColors.slate300,
                                   ),
                                   SizedBox(width: 10),
@@ -1234,7 +1234,7 @@ class _OrderCardState extends State<_OrderCard> {
                                     decoration: BoxDecoration(
                                       color: item.isDone
                                           ? AppColors.slate200
-                                          : AppColors.primary100,
+                                          : AppColors.emerald100,
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
@@ -1244,7 +1244,7 @@ class _OrderCardState extends State<_OrderCard> {
                                         fontWeight: FontWeight.w700,
                                         color: item.isDone
                                             ? AppColors.slate500
-                                            : AppColors.primary700,
+                                            : AppColors.emerald700,
                                       ),
                                     ),
                                   ),
@@ -1310,20 +1310,20 @@ class _OrderCardState extends State<_OrderCard> {
                                         style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w700,
-                                          color: AppColors.primary600,
+                                          color: AppColors.emerald600,
                                         ),
                                       ),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: item.isDone ? AppColors.primary50 : AppColors.red50,
+                                          color: item.isDone ? AppColors.emerald50 : AppColors.red50,
                                           borderRadius: BorderRadius.circular(4),
-                                          border: Border.all(color: item.isDone ? AppColors.primary200 : Colors.transparent),
+                                          border: Border.all(color: item.isDone ? AppColors.emerald200 : Colors.transparent),
                                         ),
                                         child: Text(
                                           item.isDone ? 'Đã xong' : 'Chưa xong',
                                           style: TextStyle(
-                                            color: item.isDone ? AppColors.primary600 : AppColors.red500,
+                                            color: item.isDone ? AppColors.emerald600 : AppColors.red500,
                                             fontSize: 9,
                                             fontWeight: FontWeight.w700,
                                           ),

@@ -208,6 +208,14 @@ class _CashflowPageState extends State<CashflowPage> {
       calcTotalIncome += order.totalAmount;
     }
 
+    // Build category emoji lookup
+    final store = context.read<CashflowStore>();
+    final allCats = store.currentCustomThuChiCategories;
+    final catEmojiMap = <String, String>{};
+    for (final cat in allCats) {
+      catEmojiMap[cat.label] = cat.emoji;
+    }
+
     for (final txn in sourceTxns) {
       final txnDate = _parseLocal(txn.time);
       if (txnDate == null) continue;
@@ -227,6 +235,7 @@ class _CashflowPageState extends State<CashflowPage> {
           icon: txn.type == 'thu'
               ? Icons.trending_up_rounded
               : Icons.trending_down_rounded,
+          emoji: catEmojiMap[txn.category],
           source: txn.type == 'thu' ? 'manual_thu' : 'manual_chi',
           originalTxn: txn,
         ),
@@ -1287,10 +1296,14 @@ class _CashflowPageState extends State<CashflowPage> {
               color: t.isIncome ? AppColors.primary50 : AppColors.red50,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              t.icon,
-              size: 20,
-              color: t.isIncome ? AppColors.primary500 : AppColors.red500,
+            child: Center(
+              child: t.emoji != null
+                  ? Text(t.emoji!, style: TextStyle(fontSize: 22))
+                  : Icon(
+                      t.icon,
+                      size: 20,
+                      color: t.isIncome ? AppColors.primary500 : AppColors.red500,
+                    ),
             ),
           ),
           SizedBox(width: 12),
@@ -1601,13 +1614,24 @@ class _CashflowPageState extends State<CashflowPage> {
         .replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
   }
 
+  String _formatAmountCompact(double amount) {
+    if (amount >= 1000000) {
+      final m = amount / 1000000;
+      return '${m.toStringAsFixed(m.truncateToDouble() == m ? 0 : 1)}M';
+    } else if (amount >= 1000) {
+      final k = amount / 1000;
+      return '${k.toStringAsFixed(k.truncateToDouble() == k ? 0 : 1)}K';
+    }
+    return _formatAmount(amount);
+  }
+
   Widget _buildCalendarAmountBadge({
     required String label,
     required double amount,
     required bool isIncome,
     bool center = false,
   }) {
-    final accent = isIncome ? AppColors.primary600 : AppColors.red600;
+    final accent = isIncome ? AppColors.emerald600 : AppColors.red600;
 
     return Container(
       constraints: const BoxConstraints(maxWidth: 52),
@@ -1618,9 +1642,10 @@ class _CashflowPageState extends State<CashflowPage> {
         child: Text(
           _formatAmount(amount),
           style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
             color: accent,
+            height: 1.0,
           ),
         ),
       ),
@@ -1848,10 +1873,9 @@ class _CashflowPageState extends State<CashflowPage> {
                                 asDialog: true,
                                 initialDate: date,
                                 onSaved: () async {
-                                  // Offline-first: refresh data from local DB FIRST, then close
+                                  // Refresh data after save
                                   final store = context.read<CashflowStore>();
                                   await _fetchData(store, _dateFrom, _dateTo, silent: true);
-                                  if (ctx.mounted) Navigator.pop(ctx);
                                 },
                               ),
                               IncomePage(
@@ -1859,10 +1883,9 @@ class _CashflowPageState extends State<CashflowPage> {
                                 asDialog: true,
                                 initialDate: date,
                                 onSaved: () async {
-                                  // Offline-first: refresh data from local DB FIRST, then close
+                                  // Refresh data after save
                                   final store = context.read<CashflowStore>();
                                   await _fetchData(store, _dateFrom, _dateTo, silent: true);
-                                  if (ctx.mounted) Navigator.pop(ctx);
                                 },
                               ),
                             ],
@@ -1924,7 +1947,7 @@ class _CashflowPageState extends State<CashflowPage> {
                                         borderRadius: BorderRadius.circular(14),
                                       ),
                                       child: Text(
-                                        'Lưu',
+                                        isThu ? 'Thêm khoản thu' : 'Thêm khoản chi',
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
@@ -2030,12 +2053,21 @@ class _CashflowPageState extends State<CashflowPage> {
                       Text(
                         '${day}',
                         style: TextStyle(
-                          fontSize: 14,
-                          height: 1.1,
-                          fontWeight: isSelected || isToday ? FontWeight.w900 : FontWeight.w600,
+                          fontSize: 13,
+                          height: 1.0,
+                          fontWeight: isSelected || isToday ? FontWeight.w900 : FontWeight.w700,
                           color: isToday || isSelected ? AppColors.blue600 : AppColors.slate800,
                         ),
                       ),
+                      if (hasSummary) ...[
+                        SizedBox(height: 4),
+                        Container(
+                          width: 16,
+                          height: 0.5,
+                          color: AppColors.slate300,
+                        ),
+                        SizedBox(height: 3),
+                      ],
                       if (inc > 0)
                         _buildCalendarAmountBadge(
                           label: 'Thu',
@@ -2043,6 +2075,7 @@ class _CashflowPageState extends State<CashflowPage> {
                           isIncome: true,
                           center: true,
                         ),
+                      if (inc > 0 && exp > 0) SizedBox(height: 1),
                       if (exp > 0)
                         _buildCalendarAmountBadge(
                           label: 'Chi',
@@ -2055,14 +2088,14 @@ class _CashflowPageState extends State<CashflowPage> {
                 ),
                 if (isToday)
                   Positioned(
-                    top: 2,
-                    right: 2,
-                    child: Text(
-                      'Hôm nay',
-                      style: TextStyle(
-                        fontSize: 8,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.blue600,
+                    top: 3,
+                    right: 3,
+                    child: Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: AppColors.blue500,
+                        shape: BoxShape.circle,
                       ),
                     ),
                   ),
@@ -2154,6 +2187,7 @@ class _DisplayTxn {
   final double amount;
   final bool isIncome;
   final IconData icon;
+  final String? emoji;
   final String source;
   final Transaction? originalTxn;
 
@@ -2166,6 +2200,7 @@ class _DisplayTxn {
     required this.amount,
     required this.isIncome,
     required this.icon,
+    this.emoji,
     required this.source,
     this.originalTxn,
   });

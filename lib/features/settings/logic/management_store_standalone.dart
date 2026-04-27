@@ -101,7 +101,7 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
       }
 
       var storeInfoQuery = supabaseClient.from('store_infos').select(
-        'store_id, name, phone, address, logo_url, tax_id, open_hours, bank_id, bank_account, bank_owner, qr_image_url, is_premium, show_total_products, is_online, premium_activated_at, premium_expires_at, total_offline_days, created_at',
+        'store_id, name, phone, address, logo_url, tax_id, open_hours, bank_id, bank_account, bank_owner, qr_image_url, is_premium, show_total_products, is_store_open, is_online, premium_activated_at, premium_expires_at, total_offline_days, created_at',
       );
       if (storeId != null) {
         storeInfoQuery = storeInfoQuery
@@ -480,6 +480,7 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
       'bank_owner': info.bankOwner,
       'qr_image_url': info.qrImageUrl,
       'show_total_products': info.showTotalProducts,
+      'is_store_open': info.isStoreOpen,
     };
     // Keep qr_image_url even if empty (user may want to clear it)
     final keepKeys = {'qr_image_url', 'show_total_products'};
@@ -517,6 +518,7 @@ class ManagementStore extends ChangeNotifier with BaseMixin {
       'bank_owner': info.bankOwner,
       'qr_image_url': info.qrImageUrl,
       'show_total_products': info.showTotalProducts,
+      'is_store_open': info.isStoreOpen,
     };
     // Keep qr_image_url even if empty (user may want to clear it)
     final keepKeys = {'qr_image_url', 'show_total_products'};

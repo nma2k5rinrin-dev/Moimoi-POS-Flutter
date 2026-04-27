@@ -67,6 +67,18 @@ class CashflowStore extends ChangeNotifier with BaseMixin {
         }
       }
 
+      // Deduplicate categories by (label + type), keep first occurrence
+      for (final sid in customTransactionCategories.keys) {
+        final cats = customTransactionCategories[sid]!;
+        final seen = <String>{};
+        customTransactionCategories[sid] = cats.where((c) {
+          final key = '${c.type}::${c.label}';
+          if (seen.contains(key)) return false;
+          seen.add(key);
+          return true;
+        }).toList();
+      }
+
       if (storeId != 'sadmin' && (customTransactionCategories[storeId] == null || customTransactionCategories[storeId]!.isEmpty)) {
         await _seedDefaultCategories(storeId);
       }

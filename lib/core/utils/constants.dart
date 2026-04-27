@@ -7,19 +7,19 @@ class AppColors {
   static AppTheme currentTheme = AppTheme.emerald;
 
   // Primary - Dynamic scale
-  static Color primary50 = const Color(0xFFECFDF5);
-  static Color primary100 = const Color(0xFFD1FAE5);
-  static Color primary200 = const Color(0xFFA7F3D0);
+  static Color primary50 = const Color(0xFFD1FAE5);
+  static Color primary100 = const Color(0xFFA7F3D0);
+  static Color primary200 = const Color(0xFF6EE7B7);
   static Color primary300 = const Color(0xFF34D399); 
-  static Color primary400 = const Color(0xFF34D399);
-  static Color primary500 = const Color(0xFF10B981);
-  static Color primary600 = const Color(0xFF059669);
-  static Color primary700 = const Color(0xFF047857);
-  static Color primary800 = const Color(0xFF065F46);
+  static Color primary400 = const Color(0xFF10B981);
+  static Color primary500 = const Color(0xFF059669);
+  static Color primary600 = const Color(0xFF047857);
+  static Color primary700 = const Color(0xFF065F46);
+  static Color primary800 = const Color(0xFF064E3B);
 
-  static Color primary = const Color(0xFF10B981);
-  static Color primaryLight = const Color(0xFFD1FAE5);
-  static Color primaryDark = const Color(0xFF065F46);
+  static Color primary = const Color(0xFF059669);
+  static Color primaryLight = const Color(0xFFA7F3D0);
+  static Color primaryDark = const Color(0xFF064E3B);
 
   static void switchColorTheme(AppTheme theme) {
     currentTheme = theme;
@@ -41,8 +41,8 @@ class AppColors {
         primary = rose500; primaryLight = rose100; primaryDark = rose700;
         break;
       case AppTheme.emerald:
-        primary50 = emerald50; primary100 = emerald100; primary200 = emerald200; primary300 = emerald400; primary400 = emerald400; primary500 = emerald500; primary600 = emerald600; primary700 = emerald700; primary800 = emerald800;
-        primary = emerald500; primaryLight = emerald100; primaryDark = emerald800;
+        primary50 = emerald50; primary100 = emerald100; primary200 = emerald200; primary300 = emerald400; primary400 = emerald500; primary500 = emerald600; primary600 = emerald700; primary700 = emerald800; primary800 = const Color(0xFF064E3B);
+        primary = emerald600; primaryLight = emerald100; primaryDark = const Color(0xFF064E3B);
         break;
     }
   }
@@ -115,7 +115,7 @@ class AppColors {
   static Color rose700 = const Color(0xFFBE123C);
   static Color rose800 = const Color(0xFF9F1239);
 
-  // Emerald
+  // Emerald (original Tailwind values — used directly for badges, calendar, etc.)
   static Color emerald50 = const Color(0xFFECFDF5);
   static Color emerald100 = const Color(0xFFD1FAE5);
   static Color emerald200 = const Color(0xFFA7F3D0);

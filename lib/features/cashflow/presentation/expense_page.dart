@@ -912,6 +912,7 @@ class ExpensePageState extends State<ExpensePage> with SingleTickerProviderState
     final store = context.read<CashflowStore>();
 
     if (widget.initialTransaction != null) {
+      // Edit mode → save and close
       await store.updateTransaction(
         id: widget.initialTransaction!.id,
         amount: amount,
@@ -921,7 +922,20 @@ class ExpensePageState extends State<ExpensePage> with SingleTickerProviderState
       );
       if (!mounted) return;
       store.showToast('Đã lưu thay đổi!');
+
+      if (widget.onSaved != null) {
+        await widget.onSaved!();
+      } else if (widget.embedded && widget.onBack != null) {
+        widget.onBack!();
+      } else {
+        if (GoRouter.of(context).canPop()) {
+          context.pop();
+        } else {
+          context.go('/settings?tab=cashflow');
+        }
+      }
     } else {
+      // Add mode → save, reset form, stay open
       await store.addTransaction(
         type: 'chi',
         amount: amount,
@@ -930,19 +944,14 @@ class ExpensePageState extends State<ExpensePage> with SingleTickerProviderState
         date: _selectedDate,
       );
       if (!mounted) return;
-      store.showToast('Đã lưu khoản chi thành công!');
-    }
-
-    if (widget.onSaved != null) {
-      await widget.onSaved!();
-    } else if (widget.embedded && widget.onBack != null) {
-      widget.onBack!();
-    } else {
-      if (GoRouter.of(context).canPop()) {
-        context.pop();
-      } else {
-        context.go('/settings?tab=cashflow');
-      }
+      store.showToast('Đã thêm khoản chi thành công!');
+      // Reset form to add more
+      setState(() {
+        _amountCtrl.clear();
+        _noteCtrl.clear();
+      });
+      // Refresh data in background
+      if (widget.onSaved != null) widget.onSaved!();
     }
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:moimoi_pos/core/models/confirm_dialog_data.dart';
 import 'package:moimoi_pos/core/utils/constants.dart';
 import 'package:moimoi_pos/core/services/background_service.dart';
@@ -9,6 +10,9 @@ import 'package:moimoi_pos/core/services/background_service.dart';
 /// selection, and sadmin view. Replaces the old UIStore mixin.
 class UIStore extends ChangeNotifier {
   BuildContext? rootContext;
+
+  // ── Dependency: username provider for syncing theme to DB ──
+  String Function()? onGetUsername;
 
   // ── Global App Visual State ───────────────────────────────
   bool isDarkMode = false;
@@ -66,6 +70,31 @@ class UIStore extends ChangeNotifier {
     }
   }
 
+  /// Load theme from user's DB profile after login
+  void applyUserTheme(Map<String, dynamic>? userData) {
+    if (userData == null) return;
+    try {
+      final themeIndex = userData['app_theme'] as int?;
+      final darkMode = userData['is_dark_mode'] as bool?;
+      if (themeIndex != null && themeIndex >= 0 && themeIndex < AppTheme.values.length) {
+        activeTheme = AppTheme.values[themeIndex];
+        AppColors.switchColorTheme(activeTheme);
+      }
+      if (darkMode != null) {
+        isDarkMode = darkMode;
+        AppColors.switchTheme(isDarkMode);
+      }
+      notifyListeners();
+      // Also cache locally
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setInt('activeTheme', activeTheme.index);
+        prefs.setBool('isDarkMode', isDarkMode);
+      });
+    } catch (e) {
+      debugPrint('[Theme] Error applying user theme: $e');
+    }
+  }
+
   Future<void> toggleTheme() async {
     isDarkMode = !isDarkMode;
     AppColors.switchTheme(isDarkMode);
@@ -76,6 +105,7 @@ class UIStore extends ChangeNotifier {
     } catch (e) {
       debugPrint('[Theme] Error saving theme: $e');
     }
+    _syncThemeToDB();
   }
 
   Future<void> changeColorTheme(AppTheme newTheme) async {
@@ -88,6 +118,19 @@ class UIStore extends ChangeNotifier {
     } catch (e) {
       debugPrint('[Theme] Error saving color theme: $e');
     }
+    _syncThemeToDB();
+  }
+
+  /// Fire-and-forget: push current theme to users table
+  void _syncThemeToDB() {
+    final username = onGetUsername?.call();
+    if (username == null || username.isEmpty) return;
+    Supabase.instance.client
+        .from('users')
+        .update({'app_theme': activeTheme.index, 'is_dark_mode': isDarkMode})
+        .eq('username', username)
+        .then((_) => debugPrint('[Theme] Synced to DB'))
+        .catchError((e) => debugPrint('[Theme] DB sync error: $e'));
   }
 
   Future<void> toggleBackgroundService(bool val, {String? storeId}) async {

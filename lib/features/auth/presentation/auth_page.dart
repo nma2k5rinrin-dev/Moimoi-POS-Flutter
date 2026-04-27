@@ -309,6 +309,9 @@ class _AuthPageState extends State<AuthPage>
           ],
         ),
       );
+    } else if (result == 'store_limit') {
+      _clearRegisterForm();
+      _switchMode(); // Trở về Login
     } else if (result == 'exists') {
       _regEmailFocus.requestFocus();
       setState(() => _errorMessage = 'Email này đã tồn tại trên hệ thống');
