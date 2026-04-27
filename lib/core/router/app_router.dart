@@ -9,11 +9,11 @@ import 'package:moimoi_pos/features/pos_order/presentation/history/orders_page.d
 import 'package:moimoi_pos/features/dashboard/presentation/dashboard_page.dart';
 import 'package:moimoi_pos/features/settings/presentation/settings_page.dart';
 import 'package:moimoi_pos/features/settings/presentation/menu_management.dart';
-import 'package:moimoi_pos/features/dashboard/presentation/admin/admin_dashboard_page.dart';
+import 'package:moimoi_pos/features/sadmin/presentation/admin_dashboard_page.dart';
 
 import 'package:moimoi_pos/features/cashflow/presentation/income_page.dart';
 import 'package:moimoi_pos/features/cashflow/presentation/expense_page.dart';
-import 'package:moimoi_pos/features/dashboard/presentation/admin/sadmin_notifications_page.dart';
+import 'package:moimoi_pos/features/sadmin/presentation/sadmin_notifications_page.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',

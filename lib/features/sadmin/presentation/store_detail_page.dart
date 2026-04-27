@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:moimoi_pos/core/state/ui_store.dart';
 import 'package:moimoi_pos/core/utils/constants.dart';
-import 'package:moimoi_pos/features/settings/logic/management_store_standalone.dart';
+import 'package:moimoi_pos/features/sadmin/logic/sadmin_store.dart';
 import 'package:moimoi_pos/features/settings/models/store_info_model.dart';
 import 'package:moimoi_pos/services/api/cloudflare_service.dart';
-import 'package:moimoi_pos/features/notifications/presentation/notification_bell.dart';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:convert';
 import 'dart:math';
@@ -28,7 +28,7 @@ const _storeColors = [
 class StoreDetailPage extends StatefulWidget {
   final String storeId;
   final StoreInfoModel info;
-  final ManagementStore store;
+  final SadminStore store;
   final int colorIndex;
 
   const StoreDetailPage({
@@ -103,7 +103,7 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
         : widget.storeId;
     final isPremium = widget.info.isPremium;
     final isActive = context
-        .watch<ManagementStore>()
+        .watch<SadminStore>()
         .users
         .any((u) => u.username == widget.storeId && u.isOnline);
 
@@ -152,7 +152,7 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
     bool isPremium,
     List<Color> colors,
   ) {
-    final pendingRequest = context.watch<ManagementStore>().upgradeRequests.where((r) => r.storeId == widget.storeId && r.status == 'pending').firstOrNull;
+    final pendingRequest = context.watch<SadminStore>().upgradeRequests.where((r) => r.storeId == widget.storeId && r.status == 'pending').firstOrNull;
 
     return Container(
       color: Colors.transparent,
@@ -327,7 +327,7 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
               SizedBox(width: 16),
               _heroActionBtn(
                 Icons.notifications_outlined, 'Thông báo', Colors.purple,
-                () => showBroadcastDialog(context, context.read<UIStore>(), specificStoreId: widget.storeId, specificStoreName: storeName),
+                () => _showSadminBroadcastDialog(context, widget.storeId, storeName),
               ),
               SizedBox(width: 16),
               _heroActionBtn(Icons.lock_outline, 'Đóng băng', Colors.red, _showDeleteConfirm),
@@ -347,7 +347,7 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
 
     final requestDate = DateTime.tryParse(req.createdAt) ?? DateTime.now();
     DateTime baseDate = DateTime.now();
-    final targetUser = context.read<ManagementStore>().users.where((u) => u.username == req.storeId || u.createdBy == req.storeId).firstOrNull;
+    final targetUser = context.read<SadminStore>().users.where((u) => u.username == req.storeId || u.createdBy == req.storeId).firstOrNull;
     if (targetUser?.expiresAt != null) {
       final currentExpiry = DateTime.tryParse(targetUser!.expiresAt!) ?? DateTime.now();
       if (currentExpiry.isAfter(DateTime.now())) baseDate = currentExpiry;
@@ -438,10 +438,10 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
                         child: ElevatedButton(
                           onPressed: () async {
                             Navigator.pop(dialogCtx);
-                            context.read<ManagementStore>().showToast('Đang phê duyệt...', 'info');
-                            await context.read<ManagementStore>().approveVIPRequest(req.id);
+                            context.read<SadminStore>().showToast('Đang phê duyệt...', 'info');
+                            await context.read<SadminStore>().approveVIPRequest(req.id);
                             if (context.mounted) {
-                              context.read<ManagementStore>().showToast('Đã phê duyệt gói Premium thành công!', 'success');
+                              context.read<SadminStore>().showToast('Đã phê duyệt gói Premium thành công!', 'success');
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -707,6 +707,114 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
               child: Text(isPremium ? 'Gia hạn' : 'Nâng cấp', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
             ),
         ],
+      ),
+    );
+  }
+
+  void _showSadminBroadcastDialog(BuildContext context, String storeId, String storeName) {
+    final titleCtrl = TextEditingController();
+    final messageCtrl = TextEditingController();
+    String target = storeId;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (stfCtx, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(children: [
+              Icon(Icons.campaign, color: AppColors.blue500, size: 24),
+              SizedBox(width: 8),
+              Text('Phát sóng', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppColors.slate800)),
+            ]),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Tiêu đề', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.slate600)),
+                  SizedBox(height: 6),
+                  TextField(
+                    controller: titleCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'VD: Bảo trì hệ thống',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      isDense: true,
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Text('Nội dung', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.slate600)),
+                  SizedBox(height: 6),
+                  TextField(
+                    controller: messageCtrl,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      hintText: 'Nhập nội dung thông báo...',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Text('Đối tượng nhận', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.slate600)),
+                  SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.scaffoldBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.slate200),
+                    ),
+                    child: Column(children: [
+                      RadioListTile<String>(
+                        value: storeId,
+                        groupValue: target,
+                        onChanged: (val) => setDialogState(() => target = val!),
+                        title: Text('Chỉ cửa hàng $storeName', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary600)),
+                        activeColor: AppColors.primary500,
+                        contentPadding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      Divider(height: 1, color: AppColors.slate200),
+                      RadioListTile<String>(
+                        value: 'all_stores',
+                        groupValue: target,
+                        onChanged: (val) => setDialogState(() => target = val!),
+                        title: Text('Tất cả cửa hàng', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                        activeColor: AppColors.blue500,
+                        contentPadding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ]),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Hủy', style: TextStyle(color: AppColors.slate400, fontWeight: FontWeight.w600)),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final title = titleCtrl.text.trim();
+                  final msg = messageCtrl.text.trim();
+                  if (title.isEmpty || msg.isEmpty) {
+                    context.read<UIStore>().showToast('Vui lòng nhập đầy đủ tiêu đề và nội dung', 'error');
+                    return;
+                  }
+                  context.read<SadminStore>().broadcastNotification(title: title, message: msg, target: target);
+                  Navigator.pop(ctx);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.blue500, foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: Text('Gửi', style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

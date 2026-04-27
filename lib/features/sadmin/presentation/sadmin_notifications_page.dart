@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:moimoi_pos/core/state/ui_store.dart';
-import 'package:moimoi_pos/features/settings/logic/management_store_standalone.dart';
+import 'package:moimoi_pos/features/sadmin/logic/sadmin_store.dart';
 import 'package:moimoi_pos/features/auth/models/user_model.dart';
 import 'package:moimoi_pos/core/utils/constants.dart';
 import 'package:uuid/uuid.dart';
@@ -28,7 +28,7 @@ class _SadminNotificationsPageState extends State<SadminNotificationsPage> {
 
     setState(() => _isSending = true);
     final store = context.read<UIStore>();
-    final mStore = context.read<ManagementStore>();
+    final mStore = context.read<SadminStore>();
     final List<UserModel> users = mStore.users;
     final supabase = Supabase.instance.client;
 

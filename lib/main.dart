@@ -13,6 +13,7 @@ import 'package:moimoi_pos/features/pos_order/logic/order_store_standalone.dart'
 import 'package:moimoi_pos/features/settings/logic/management_store_standalone.dart' as standalone_mgmt;
 import 'package:moimoi_pos/features/cashflow/logic/cashflow_store_standalone.dart' as standalone_cash;
 import 'package:moimoi_pos/features/premium/logic/premium_store_standalone.dart' as standalone_prem;
+import 'package:moimoi_pos/features/sadmin/logic/sadmin_store.dart' as standalone_sadmin;
 import 'package:moimoi_pos/core/state/quota_store.dart';
 import 'package:moimoi_pos/core/state/order_filter_store.dart';
 import 'package:moimoi_pos/core/router/app_router.dart';
@@ -151,6 +152,7 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> with WidgetsBindingObserver {
   final QuotaStore _quotaStore = QuotaStore();
   late final OrderFilterStore _orderFilterStore;
   late final standalone_prem.PremiumStore _premiumStore;
+  late final standalone_sadmin.SadminStore _sadminStore;
   late final GoRouter _router;
 
   @override
@@ -174,6 +176,8 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> with WidgetsBindingObserver {
       quotaProvider: _quotaStore,
       getCurrentUser: () => _authStore.currentUser,
     )..externalShowToast = _uiStore.showToast;
+    _sadminStore = standalone_sadmin.SadminStore();
+    _sadminStore.externalShowToast = _uiStore.showToast;
     _premiumStore = standalone_prem.PremiumStore(
       authStore: _authStore,
       managementStore: _mgmtStore,
@@ -272,8 +276,8 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> with WidgetsBindingObserver {
 
     try {
       if (user.role == 'sadmin' && sid == 'sadmin') {
-        await _mgmtStore.initManagementStore(null, user);
-        // Load user's theme from DB
+        await _sadminStore.init(user);
+        _sadminStore.setupNotificationsRealtime(user.username);
         _loadAndApplyUserTheme(user.username);
         return;
       }
@@ -338,6 +342,7 @@ class _MoiMoiPOSState extends State<MoiMoiPOS> with WidgetsBindingObserver {
         ChangeNotifierProvider<standalone_mgmt.ManagementStore>.value(value: _mgmtStore),
         ChangeNotifierProvider<standalone_cash.CashflowStore>.value(value: _cashflowStore),
         ChangeNotifierProvider<standalone_prem.PremiumStore>.value(value: _premiumStore),
+        ChangeNotifierProvider<standalone_sadmin.SadminStore>.value(value: _sadminStore),
         ChangeNotifierProvider<OrderFilterStore>.value(value: _orderFilterStore),
         Provider<QuotaStore>.value(value: _quotaStore),
       ],
